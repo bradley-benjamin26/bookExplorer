@@ -1,0 +1,20 @@
+{
+  "name": "@book-explorer/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@book-explorer/shared": "*",
+    "fastify": "^5.1.0",
+    "@fastify/cors": "^10.0.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.9.0"
+  }
+}

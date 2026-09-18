@@ -1,0 +1,13 @@
+{
+  "name": "book-explorer",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:app": "npm run start --workspace=apps/app",
+    "build:shared": "npm run build --workspace=packages/shared"
+  }
+}
