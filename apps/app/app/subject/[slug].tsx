@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { fetchSubject } from "../../src/api/client";
+import { routes } from "../../src/navigation";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -57,6 +58,10 @@ export default function SubjectDetail() {
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>
           )}
 
+          <Pressable style={styles.graphButton} onPress={() => router.push(routes.graph("subject", data.slug))}>
+            <Text style={styles.graphButtonText}>View as Graph</Text>
+          </Pressable>
+
           {[
             { title: "Broader topics", items: broader },
             { title: "Narrower topics", items: narrower },
@@ -70,7 +75,7 @@ export default function SubjectDetail() {
                       <Pressable
                         key={concept.wikidataId}
                         style={styles.conceptTag}
-                        onPress={() => router.push(`/subject/${slugifySubject(concept.label)}`)}
+                        onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
                       >
                         <Text style={styles.conceptTagText}>{concept.label}</Text>
                       </Pressable>
@@ -84,7 +89,7 @@ export default function SubjectDetail() {
         </View>
       }
       renderItem={({ item }) => (
-        <Pressable style={styles.bookRow} onPress={() => router.push(`/work/${item.openLibraryWorkId}`)}>
+        <Pressable style={styles.bookRow} onPress={() => router.push(routes.work(item.openLibraryWorkId))}>
           {item.coverUrl && <Image source={{ uri: item.coverUrl }} style={styles.bookCover} resizeMode="contain" />}
           <View style={styles.bookInfo}>
             <Text style={styles.bookTitle}>{item.title}</Text>
@@ -104,6 +109,14 @@ const styles = StyleSheet.create({
   name: { fontSize: 26, fontWeight: "700", textTransform: "capitalize" },
   workCount: { fontSize: 15, color: "#888", marginTop: 4 },
   noMatch: { fontSize: 13, color: "#a80", marginTop: 12, fontStyle: "italic" },
+  graphButton: {
+    backgroundColor: "#1a1a2e",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  graphButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   conceptSection: { marginTop: 20 },
   sectionTitle: { fontSize: 15, fontWeight: "600", color: "#888", marginTop: 8, marginBottom: 10 },
   conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

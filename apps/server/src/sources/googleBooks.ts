@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "../httpClient.js";
+
 export interface GoogleBooksResult {
   description: string | null;
   coverUrl: string | null;
@@ -5,7 +7,7 @@ export interface GoogleBooksResult {
 
 export async function lookupByIsbn(isbn: string): Promise<GoogleBooksResult | null> {
   const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`;
-  const res = await fetch(url);
+  const res = await fetchWithTimeout(url);
   if (!res.ok) throw new Error(`Google Books request failed: ${res.status}`);
 
   const body = (await res.json()) as {

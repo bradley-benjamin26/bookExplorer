@@ -1,5 +1,12 @@
 import type { AuthorRelation, SubjectConcept } from "@book-explorer/shared";
+import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
+
+// The public SPARQL endpoint is noticeably slower than a plain REST call —
+// a live run of the query below took ~8s for one moderately-connected
+// author — so it gets a longer allowance than httpClient's 15s default
+// rather than sharing it and risking healthy-but-slow queries timing out.
+const SPARQL_TIMEOUT_MS = 25_000;
 
 interface WbSearchResult {
   search: { id: string; description?: string }[];
@@ -45,7 +52,7 @@ async function wbSearchEntities(name: string, limit: number): Promise<WbSearchRe
   const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(
     name
   )}&language=en&format=json&type=item&limit=${limit}`;
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+  const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Wikidata search failed: ${res.status}`);
   return res.json();
 }
@@ -68,6 +75,15 @@ function qidFromUri(uri: string): string {
   return uri.split("/").pop() ?? uri;
 }
 
+// QIDs are spliced directly into SPARQL query strings below. Wikidata's own
+// search API only ever returns well-formed ids, but Open Library's
+// `remote_ids.wikidata` field is free-text on a wiki anyone can edit, so it
+// isn't trustworthy input — an unvalidated value here would be a SPARQL
+// injection vector against Wikidata's public endpoint.
+function isValidQid(qid: string): boolean {
+  return /^Q[1-9]\d*$/.test(qid);
+}
+
 /**
  * Runs a UNION-shaped SPARQL query where each branch binds its own `?relation`
  * label — this avoids the cross-product blowup that several `OPTIONAL` blocks
@@ -76,9 +92,11 @@ function qidFromUri(uri: string): string {
  * (P648), which produces duplicate rows per relation; those are collapsed here.
  */
 async function runRelationQuery(query: string): Promise<RelationRow[]> {
-  const res = await fetch(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/sparql-results+json" },
-  });
+  const res = await fetchWithTimeout(
+    `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`,
+    { headers: { "User-Agent": USER_AGENT, Accept: "application/sparql-results+json" } },
+    SPARQL_TIMEOUT_MS
+  );
   if (!res.ok) throw new Error(`Wikidata SPARQL query failed: ${res.status}`);
 
   const body = (await res.json()) as { results: { bindings: SparqlBinding[] } };
@@ -101,6 +119,8 @@ async function runRelationQuery(query: string): Promise<RelationRow[]> {
 
 /** Influenced-by (P737, and its inverse), notable works (P800), and literary movement (P135). */
 export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[]> {
+  if (!isValidQid(qid)) return [];
+
   const rows = await runRelationQuery(`
     SELECT ?relation ?item ?itemLabel ?openLibraryId WHERE {
       { wd:${qid} wdt:P737 ?item . BIND("influencedBy" AS ?relation) }
@@ -119,6 +139,8 @@ export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[
 
 /** Broader (P279) and narrower (inverse P279) concepts. */
 export async function fetchRelatedConcepts(qid: string): Promise<SubjectConcept[]> {
+  if (!isValidQid(qid)) return [];
+
   const rows = await runRelationQuery(`
     SELECT ?relation ?item ?itemLabel WHERE {
       { wd:${qid} wdt:P279 ?item . BIND("broader" AS ?relation) }

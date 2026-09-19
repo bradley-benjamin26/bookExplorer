@@ -16,6 +16,7 @@ export default function RootLayout() {
         <Stack.Screen name="author/[id]" options={{ title: "Author" }} />
         <Stack.Screen name="subject/[slug]" options={{ title: "Subject" }} />
         <Stack.Screen name="work/[id]" options={{ title: "Book" }} />
+        <Stack.Screen name="graph/[type]/[id]" options={{ title: "Explore Graph" }} />
       </Stack>
     </QueryClientProvider>
   );

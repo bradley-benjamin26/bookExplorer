@@ -77,8 +77,12 @@ export function slugifySubject(name: string): string {
 
 export const GraphNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(["book", "author", "subject"]),
+  type: z.enum(["author", "work", "subject"]),
   label: z.string(),
+  // Most nodes link straight to their detail screen. The exception is an
+  // author known only by Wikidata QID (no Open Library id) — the author
+  // route can't resolve that, so the node is shown but isn't tappable.
+  navigable: z.boolean(),
 });
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 
@@ -90,6 +94,7 @@ export const GraphEdgeSchema = z.object({
 export type GraphEdge = z.infer<typeof GraphEdgeSchema>;
 
 export const GraphSchema = z.object({
+  centerId: z.string(),
   nodes: z.array(GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
 });

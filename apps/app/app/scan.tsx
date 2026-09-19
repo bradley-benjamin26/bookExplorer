@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { routes } from "../src/navigation";
 
 export default function Scan() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function Scan() {
   const handleScanned = (result: BarcodeScanningResult) => {
     if (hasScanned.current) return;
     hasScanned.current = true;
-    router.replace(`/book/${result.data}`);
+    router.replace(routes.book(result.data));
   };
 
   if (!permission) {

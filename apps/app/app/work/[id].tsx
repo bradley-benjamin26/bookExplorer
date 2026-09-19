@@ -3,6 +3,7 @@ import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
+import { routes } from "../../src/navigation";
 
 export default function WorkDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,11 +37,16 @@ export default function WorkDetail() {
       {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
       <Text style={styles.title}>{data.title}</Text>
       {data.authors.map((author) => (
-        <Pressable key={author.openLibraryId} onPress={() => router.push(`/author/${author.openLibraryId}`)}>
+        <Pressable key={author.openLibraryId} onPress={() => router.push(routes.author(author.openLibraryId))}>
           <Text style={styles.author}>{author.name}</Text>
         </Pressable>
       ))}
       {data.description && <Text style={styles.description}>{data.description}</Text>}
+
+      <Pressable style={styles.graphButton} onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}>
+        <Text style={styles.graphButtonText}>View as Graph</Text>
+      </Pressable>
+
       {data.subjects.length > 0 && (
         <View style={styles.subjectsSection}>
           <Text style={styles.sectionTitle}>Subjects</Text>
@@ -49,7 +55,7 @@ export default function WorkDetail() {
               <Pressable
                 key={subject}
                 style={styles.subjectTag}
-                onPress={() => router.push(`/subject/${slugifySubject(subject)}`)}
+                onPress={() => router.push(routes.subject(slugifySubject(subject)))}
               >
                 <Text style={styles.subjectTagText}>{subject}</Text>
               </Pressable>
@@ -70,6 +76,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "700", textAlign: "center" },
   author: { fontSize: 17, color: "#1a4fba", marginTop: 4, textDecorationLine: "underline" },
   description: { fontSize: 15, color: "#333", marginTop: 16, lineHeight: 22 },
+  graphButton: {
+    backgroundColor: "#1a1a2e",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  graphButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   subjectsSection: { marginTop: 24, width: "100%" },
   sectionTitle: { fontSize: 15, fontWeight: "600", color: "#888", marginBottom: 10 },
   subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

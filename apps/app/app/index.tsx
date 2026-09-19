@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { routes } from "../src/navigation";
 import { getRecentIsbns } from "../src/storage/history";
 
 export default function Home() {
@@ -25,7 +26,7 @@ export default function Home() {
   const goToBook = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) return;
-    router.push(`/book/${trimmed}`);
+    router.push(routes.book(trimmed));
   };
 
   return (
