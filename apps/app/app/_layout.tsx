@@ -14,6 +14,8 @@ export default function RootLayout() {
         <Stack.Screen name="scan" options={{ title: "Scan Barcode", presentation: "modal" }} />
         <Stack.Screen name="book/[isbn]" options={{ title: "Book" }} />
         <Stack.Screen name="author/[id]" options={{ title: "Author" }} />
+        <Stack.Screen name="subject/[slug]" options={{ title: "Subject" }} />
+        <Stack.Screen name="work/[id]" options={{ title: "Book" }} />
       </Stack>
     </QueryClientProvider>
   );

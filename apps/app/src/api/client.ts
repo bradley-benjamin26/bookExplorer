@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import type { Author, Book } from "@book-explorer/shared";
+import type { Author, Book, Subject, Work } from "@book-explorer/shared";
 
 function resolveApiBaseUrl(): string {
   if (Platform.OS === "web") return "http://localhost:3001";
@@ -35,4 +35,12 @@ export function fetchBookByIsbn(isbn: string): Promise<Book> {
 
 export function fetchAuthor(openLibraryId: string): Promise<Author> {
   return getJson<Author>(`/api/authors/${encodeURIComponent(openLibraryId)}`);
+}
+
+export function fetchSubject(slug: string): Promise<Subject> {
+  return getJson<Subject>(`/api/subjects/${encodeURIComponent(slug)}`);
+}
+
+export function fetchWork(workId: string): Promise<Work> {
+  return getJson<Work>(`/api/works/${encodeURIComponent(workId)}`);
 }

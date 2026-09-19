@@ -1,23 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { fetchBookByIsbn } from "../../src/api/client";
-import { addRecentIsbn } from "../../src/storage/history";
+import { fetchWork } from "../../src/api/client";
 
-export default function BookDetail() {
-  const { isbn } = useLocalSearchParams<{ isbn: string }>();
+export default function WorkDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["book", isbn],
-    queryFn: () => fetchBookByIsbn(isbn),
-    enabled: !!isbn,
+    queryKey: ["work", id],
+    queryFn: () => fetchWork(id),
+    enabled: !!id,
   });
-
-  useEffect(() => {
-    if (data) addRecentIsbn(data.isbn);
-  }, [data]);
 
   if (isLoading) {
     return (
@@ -31,7 +25,7 @@ export default function BookDetail() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>
-          {error instanceof Error ? error.message : `No book found for ISBN ${isbn}`}
+          {error instanceof Error ? error.message : `No work found for ${id}`}
         </Text>
       </View>
     );
