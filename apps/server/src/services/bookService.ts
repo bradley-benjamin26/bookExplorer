@@ -2,11 +2,10 @@ import type { Book } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
-import * as hardcover from "../sources/hardcover.js";
 import * as wikidata from "../sources/wikidata.js";
-import { combineRatings } from "../ratings.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
-import { fetchMetadataByIsbn, mergeLabelLists } from "../sources/loc.js";
+import { mergeLabelLists } from "../sources/loc.js";
+import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid } from "./bookEnrichment.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
 
@@ -29,36 +28,11 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
 
-    // Open Library's own subjects are often just a couple of loosely-tagged
-    // terms (a book's own title, one genre word), and rarely include a real
-    // genre at all — so LOC's controlled, catalog-assigned subject headings
-    // and genre/form terms are fetched to fill that out — started here,
-    // alongside everything else below, since it doesn't depend on any of it.
-    // Best-effort: most books LOC hasn't catalogued (self-published,
-    // small-press) simply come back with nothing.
-    const locMetadataPromise = fetchMetadataByIsbn(isbn).catch((err) => {
-      console.warn(`[loc] Failed to fetch metadata for ISBN ${isbn}:`, err);
-      return { subjects: [], genres: [] };
-    });
-
-    // Ratings are keyed by work on Open Library, so this needs the work id
-    // resolved above — best-effort, since plenty of works simply have no
-    // ratings yet.
-    const olRatingsPromise = ol.workId
-      ? openLibrary.getRatings(ol.workId).catch((err) => {
-          console.warn(`[openLibrary] Failed to fetch ratings for work ${ol.workId}:`, err);
-          return null;
-        })
-      : Promise.resolve(null);
-
-    // Independent of everything else here — keyed by ISBN, not the Wikidata
-    // work match below — so it's kicked off early and only awaited once
-    // everything else is ready. Silently skipped (no key configured) or
-    // best-effort-failed the same way every other optional source here is.
-    const hardcoverPromise = hardcover.lookupByIsbn(isbn).catch((err) => {
-      console.warn(`[hardcover] Lookup failed for ISBN ${isbn}:`, err);
-      return null;
-    });
+    // LOC subject/genre headings, Hardcover, and Open Library's own ratings
+    // — same shared pipeline a work page uses (see bookEnrichment.ts),
+    // started here, alongside everything else below, since none of it
+    // depends on any of it.
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId);
 
     // Best-effort match of the work itself (not a specific edition or film
     // adaptation) to a Wikidata item, so its Wikipedia lead can be used as
@@ -69,11 +43,8 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // that's already fully usable without it (unlike the author-relations
     // case, a failure here is caught rather than left to fail the whole
     // request — scanning a barcode shouldn't break over a title search).
-    // The same match doubles as the source for Wikidata's genre property
-    // (P136), which — unlike LOC's fiction-focused GSAFD terms — covers
-    // nonfiction books too.
     const firstAuthorName = ol.authors[0]?.name ?? null;
-    const workQid = firstAuthorName ? await wikidata.searchWorkQid(ol.title, firstAuthorName).catch(() => null) : null;
+    const workQid = await findWorkQid(ol.title, firstAuthorName);
     const [wikipedia, wikidataGenres] = workQid
       ? await Promise.all([
           fetchWikipediaExtract(workQid).catch(() => null),
@@ -82,37 +53,39 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       : [null, [] as string[]];
 
     // Awaited here (rather than folded into the Promise.all below) because
-    // its cover, not just its rating/reviews, factors into the Google Books
-    // gating decision right after this — Google Books' shared/keyless quota
-    // is the one most likely to run dry, so it's only spent once both of the
-    // keyless sources (Open Library, then Hardcover) have had a chance to
-    // cover the same need first.
-    const hc = await hardcoverPromise;
+    // its cover and rating, not just its reviews, factor into the Google
+    // Books gating decision right after this — Google Books' shared/keyless
+    // quota is the one most likely to run dry, so it's only spent once both
+    // of the keyless sources (Open Library, then Hardcover) have had a
+    // chance to cover the same need first.
+    const [hc, olRatings] = await Promise.all([hardcoverPromise, olRatingsPromise]);
 
-    // Google Books is only queried if neither a cover nor a description was
-    // already found — Open Library's `description` is actually its `notes`
-    // field (catalog/edition metadata, not a real synopsis, so it's often
-    // junk like "USA/CAN"), so a non-empty value there doesn't count as
-    // "already have a description" the way it used to.
-    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !(wikipedia?.text ?? ol.description);
+    // Google Books is only queried if a cover, a description, or a rating
+    // wasn't already found from the keyless sources above — Open Library's
+    // `description` is actually its `notes` field (catalog/edition metadata,
+    // not a real synopsis, so it's often junk like "USA/CAN"), so a
+    // non-empty value there doesn't count as "already have a description"
+    // the way it used to. Checking rating here too (rather than only
+    // consulting gb?.rating below when gb happens to already be non-null for
+    // another reason) means a book with a cover and description from other
+    // sources, but no rating anywhere else, still gets a chance at Google
+    // Books' rating instead of silently showing none.
+    const hasRating = Boolean(hc?.rating && hc.ratingsCount) || Boolean(olRatings);
+    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !(wikipedia?.text ?? ol.description) || !hasRating;
     const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(() => null) : null;
-    const [locMetadata, olRatings] = await Promise.all([locMetadataPromise, olRatingsPromise]);
+    const locMetadata = await locMetadataPromise;
 
     const coverUrl = ol.coverUrl ?? hc?.coverUrl ?? gb?.coverUrl ?? null;
     const coverSource = ol.coverUrl ? "openLibrary" : hc?.coverUrl ? "hardcover" : gb?.coverUrl ? "googleBooks" : null;
     const description = wikipedia?.text ?? gb?.description ?? ol.description;
     const descriptionSource = wikipedia ? "wikipedia" : gb?.description ? "googleBooks" : ol.description ? "openLibrary" : null;
-    // Hardcover and Open Library are blended into one count-weighted average
-    // (see combineRatings) rather than picking just one. Google Books' is
-    // only used on its own, as a last resort, when neither of those has a
-    // rating at all — it's never blended in, since folding it in would mean
-    // an extra request against its shared quota just to move the average
-    // slightly (see RatingSchema).
+    // Google Books' rating is only used on its own, as a last resort, when
+    // neither Hardcover nor Open Library has one at all — it's never
+    // blended in, since folding it in would mean an extra request against
+    // its shared quota just to move the average slightly (see RatingSchema).
     const rating =
-      combineRatings(
-        hc?.rating && hc.ratingsCount ? { average: hc.rating, count: hc.ratingsCount, source: "hardcover" } : null,
-        olRatings ? { ...olRatings, source: "openLibrary" } : null
-      ) ?? (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks"] } : null);
+      blendHardcoverAndOpenLibraryRating(hc, olRatings) ??
+      (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks" as const] } : null);
 
     const result: Book = {
       isbn,

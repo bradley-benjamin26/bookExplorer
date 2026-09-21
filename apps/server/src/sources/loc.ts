@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "../httpClient.js";
+import { tryEachIsbn } from "../isbnFallback.js";
 import { USER_AGENT } from "./openLibrary.js";
 
 // The SRU gateway onto the Library of Congress's own bibliographic database
@@ -40,7 +41,7 @@ const SUBJECT_PART_RE = /<(?:topic|geographic|temporal|genre)>([\s\S]*?)<\/(?:to
 // fiction/drama/poetry, so nonfiction books typically won't have one — that's
 // expected, not a bug, and is exactly why Wikidata's P136 is used alongside
 // it as a second, nonfiction-inclusive source.
-const GSAFD_GENRE_RE = /<genre authority="gsafd"[^>]*>([\s\S]*?)<\/genre>/g;
+const GSAFD_GENRE_RE = /<genre\b([^>]*)>([\s\S]*?)<\/genre>/g;
 
 /**
  * Parses the handful of MODS fields this needs out of an SRU response with
@@ -67,8 +68,14 @@ function parseModsRecord(xml: string, isbn: string): LocMetadata {
   }
 
   // GSAFD terms are conventionally catalogued with a trailing period
-  // ("Mystery fiction.") that reads oddly as a standalone UI label.
-  const genres = [...xml.matchAll(GSAFD_GENRE_RE)].map((m) => decodeXmlEntities(m[1]).trim().replace(/\.$/, ""));
+  // ("Mystery fiction.") that reads oddly as a standalone UI label. Attributes
+  // are captured and tested separately (rather than baked into the regex's
+  // literal text, as this used to do) so a record that orders/spaces a
+  // <genre> element's attributes differently than usual still matches — the
+  // same reasoning as the "lcsh" check on SUBJECT_BLOCK_RE above.
+  const genres = [...xml.matchAll(GSAFD_GENRE_RE)]
+    .filter(([, attrs]) => /authority="gsafd"/.test(attrs))
+    .map(([, , body]) => decodeXmlEntities(body).trim().replace(/\.$/, ""));
 
   return { subjects, genres: [...new Set(genres)] };
 }
@@ -106,15 +113,13 @@ export async function fetchMetadataByIsbn(isbn: string): Promise<LocMetadata> {
  * with no catalogued edition at all doesn't cost more than a handful of
  * requests finding that out.
  */
-export async function fetchMetadataByAnyIsbn(isbns: string[], maxAttempts = 5): Promise<LocMetadata> {
-  for (const isbn of isbns.slice(0, maxAttempts)) {
-    const metadata = await fetchMetadataByIsbn(isbn).catch((err) => {
-      console.warn(`[loc] Failed to fetch metadata for ISBN ${isbn}:`, err);
-      return EMPTY_METADATA;
-    });
-    if (metadata.subjects.length > 0 || metadata.genres.length > 0) return metadata;
-  }
-  return EMPTY_METADATA;
+export function fetchMetadataByAnyIsbn(isbns: string[], maxAttempts = 5): Promise<LocMetadata> {
+  return tryEachIsbn(isbns, fetchMetadataByIsbn, {
+    sourceName: "loc",
+    isEmpty: (metadata) => metadata.subjects.length === 0 && metadata.genres.length === 0,
+    fallback: EMPTY_METADATA,
+    maxAttempts,
+  });
 }
 
 /** Combines label lists from multiple sources, case-insensitively deduplicated, keeping the first-seen spelling and preferring earlier lists' ordering. */

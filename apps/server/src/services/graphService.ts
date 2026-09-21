@@ -171,20 +171,31 @@ export async function buildAuthorGraph(openLibraryId: string): Promise<Graph | n
   // record on a best-effort basis, same as this app's existing Wikidata
   // name-search heuristics. A failure to match or fetch one pseudonym's
   // works is non-fatal to the rest of an otherwise-successful graph.
-  for (const pseudonym of author.pseudonyms) {
-    try {
-      const match = await pseudonymAuthorCache.wrap(pseudonym, () => openLibrary.searchAuthorByName(pseudonym));
-      if (!match) continue;
-      const pseudonymWorks = await authorWorksCache.wrap(match.openLibraryId, () =>
-        openLibrary.getAuthorWorks(match.openLibraryId, MAX_PSEUDONYM_WORKS)
-      );
-      for (const w of pseudonymWorks) {
-        const nodeId = `work:${w.workId}`;
-        nodes.push({ id: nodeId, type: "work", label: w.title, navigable: true });
-        edges.push({ source: centerId, target: nodeId, relation: "wroteAs" });
+  //
+  // Each pseudonym's lookup is fully independent of every other's, so
+  // they're run concurrently rather than one at a time in a loop — an
+  // author with N pseudonyms (this app has seen up to 5) otherwise paid 2N
+  // sequential network round trips (search + works-fetch per name) for no
+  // reason.
+  const pseudonymWorkLists = await Promise.all(
+    author.pseudonyms.map(async (pseudonym) => {
+      try {
+        const match = await pseudonymAuthorCache.wrap(pseudonym, () => openLibrary.searchAuthorByName(pseudonym));
+        if (!match) return [];
+        return await authorWorksCache.wrap(match.openLibraryId, () =>
+          openLibrary.getAuthorWorks(match.openLibraryId, MAX_PSEUDONYM_WORKS)
+        );
+      } catch (err) {
+        console.warn(`[graphService] Failed to look up pseudonym "${pseudonym}" for ${author.openLibraryId}:`, err);
+        return [];
       }
-    } catch (err) {
-      console.warn(`[graphService] Failed to look up pseudonym "${pseudonym}" for ${author.openLibraryId}:`, err);
+    })
+  );
+  for (const pseudonymWorks of pseudonymWorkLists) {
+    for (const w of pseudonymWorks) {
+      const nodeId = `work:${w.workId}`;
+      nodes.push({ id: nodeId, type: "work", label: w.title, navigable: true });
+      edges.push({ source: centerId, target: nodeId, relation: "wroteAs" });
     }
   }
 

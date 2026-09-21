@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "../httpClient.js";
+import { tryEachIsbn } from "../isbnFallback.js";
 
 const ENDPOINT = "https://api.hardcover.app/v1/graphql";
 
@@ -138,13 +139,6 @@ export async function lookupByIsbn(isbn: string): Promise<HardcoverBookData | nu
  * ISBN of its own, only its editions do, and any one edition's Hardcover
  * data is as usable as another's since Hardcover ratings/reviews are
  * recorded per book, not per edition. */
-export async function lookupByAnyIsbn(isbns: string[]): Promise<HardcoverBookData | null> {
-  for (const isbn of isbns) {
-    const result = await lookupByIsbn(isbn).catch((err) => {
-      console.warn(`[hardcover] Lookup failed for ISBN ${isbn}:`, err);
-      return null;
-    });
-    if (result) return result;
-  }
-  return null;
+export function lookupByAnyIsbn(isbns: string[]): Promise<HardcoverBookData | null> {
+  return tryEachIsbn(isbns, lookupByIsbn, { sourceName: "hardcover", isEmpty: (result) => !result, fallback: null });
 }

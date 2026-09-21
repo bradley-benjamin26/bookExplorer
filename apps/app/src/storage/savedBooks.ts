@@ -1,7 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Book } from "@book-explorer/shared";
 
-const SAVED_BOOKS_KEY = "book-explorer:saved-books";
+// Each saved book gets its own AsyncStorage key, rather than all of them
+// sharing one JSON blob under a single key — reading or writing one book's
+// record (e.g. adding a single tag) then only touches that one key instead
+// of reading, re-serializing, and rewriting every other saved book's data
+// too. Nothing in this app currently needs to list every saved book at once
+// (the Saved screen's list comes from the separate, lightweight
+// `savedItems` index instead), so there's no listing operation to give up
+// by splitting the storage this way.
+function storageKey(isbn: string): string {
+  return `book-explorer:saved-book:${isbn}`;
+}
 
 /**
  * A saved book's editable record, keyed by ISBN (the same per-edition key
@@ -26,29 +36,19 @@ export interface SavedBookRecord {
   savedAt: number;
 }
 
-async function getAllSavedBooks(): Promise<Record<string, SavedBookRecord>> {
-  const raw = await AsyncStorage.getItem(SAVED_BOOKS_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as Record<string, SavedBookRecord>;
-  } catch {
-    return {};
-  }
-}
-
-async function setAllSavedBooks(records: Record<string, SavedBookRecord>): Promise<void> {
-  await AsyncStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify(records));
-}
-
 export async function getSavedBook(isbn: string): Promise<SavedBookRecord | null> {
-  const all = await getAllSavedBooks();
-  return all[isbn] ?? null;
+  const raw = await AsyncStorage.getItem(storageKey(isbn));
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SavedBookRecord;
+  } catch {
+    return null;
+  }
 }
 
 /** Creates the record on first save, from the currently-fetched external data. */
 export async function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
-  const all = await getAllSavedBooks();
-  const existing = all[book.isbn];
+  const existing = await getSavedBook(book.isbn);
   if (existing) return existing;
 
   const record: SavedBookRecord = {
@@ -64,8 +64,7 @@ export async function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
     notes: "",
     savedAt: Date.now(),
   };
-  all[book.isbn] = record;
-  await setAllSavedBooks(all);
+  await AsyncStorage.setItem(storageKey(book.isbn), JSON.stringify(record));
   return record;
 }
 
@@ -73,17 +72,13 @@ export async function updateSavedBook(
   isbn: string,
   changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>
 ): Promise<SavedBookRecord | null> {
-  const all = await getAllSavedBooks();
-  const existing = all[isbn];
+  const existing = await getSavedBook(isbn);
   if (!existing) return null;
   const next = { ...existing, ...changes };
-  all[isbn] = next;
-  await setAllSavedBooks(all);
+  await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
   return next;
 }
 
 export async function removeSavedBook(isbn: string): Promise<void> {
-  const all = await getAllSavedBooks();
-  delete all[isbn];
-  await setAllSavedBooks(all);
+  await AsyncStorage.removeItem(storageKey(isbn));
 }

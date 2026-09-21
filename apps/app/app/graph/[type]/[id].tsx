@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Fragment, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
-import { fetchGraph } from "../../../src/api/client";
+import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
@@ -217,7 +217,12 @@ export default function GraphExplorer() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["graph", center?.type, center?.id],
-    queryFn: () => fetchGraph(center!.type, center!.id),
+    // Never actually "genre" here — routes.graph() (the only way center gets
+    // set from outside) and handleNodePress below (the only way it gets set
+    // from within) both only ever produce author/work/subject centers, but
+    // Center's own `type` stays the full GraphNode type since it's also used
+    // for genre *nodes* passing through parseNodeId before that check runs.
+    queryFn: () => fetchGraph(center!.type as GraphCenterType, center!.id),
     enabled: !!center,
   });
 
@@ -275,6 +280,20 @@ export default function GraphExplorer() {
   // visual graph is hidden from them entirely and each node instead gets a
   // real accessible button, absolutely positioned over its circle, in the
   // same reading order sighted users would explore outward from the center.
+  // A graph with nothing but its own center node happens for a genuinely
+  // thin record — an author with no Wikidata relations and no catalogued
+  // Open Library works, say — rather than a fetch failure, so it's shown as
+  // its own explicit "nothing here" state rather than an empty canvas with
+  // a lone floating circle and no explanation.
+  if (layout.nodes.length <= 1) {
+    const centerLabel = layout.nodes[0]?.label ?? "this";
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyGraphText}>No linked connections found for {centerLabel} yet.</Text>
+      </View>
+    );
+  }
+
   const orderedNodes = [...layout.nodes].sort((a, b) =>
     a.id === data.centerId ? -1 : b.id === data.centerId ? 1 : 0
   );
@@ -446,6 +465,7 @@ function createStyles({ colors }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+    emptyGraphText: { fontSize: 15, color: colors.textMuted, textAlign: "center" },
     hint: { textAlign: "center", fontSize: 13, color: colors.textMuted, paddingVertical: 10, paddingHorizontal: 20 },
     legend: {
       flexDirection: "row",

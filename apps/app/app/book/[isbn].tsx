@@ -14,7 +14,7 @@ import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { routes } from "../../src/navigation";
 import { addRecentIsbn } from "../../src/storage/history";
 import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
-import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
+import { toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
@@ -32,21 +32,20 @@ export default function BookDetail() {
     enabled: !!isbn,
   });
 
-  const [saved, setSaved] = useState(false);
+  // A book's "saved" state is exactly whether it has a saved record — the
+  // two are set together everywhere below, so there's no need for a second,
+  // separately-tracked boolean that could drift out of sync with this one.
   const [savedRecord, setSavedRecord] = useState<SavedBookRecord | null>(null);
+  const saved = savedRecord !== null;
 
   useEffect(() => {
     if (data) addRecentIsbn(data.isbn);
-    if (isbn) {
-      isItemSaved("book", isbn).then(setSaved);
-      getSavedBook(isbn).then(setSavedRecord);
-    }
+    if (isbn) getSavedBook(isbn).then(setSavedRecord);
   }, [data, isbn]);
 
   const handleToggleSaved = async () => {
     if (!data) return;
     const nowSaved = await toggleSaved({ type: "book", id: data.isbn, title: data.title });
-    setSaved(nowSaved);
     if (nowSaved) {
       setSavedRecord(await saveBookFromApi(data));
     } else {

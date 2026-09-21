@@ -85,6 +85,15 @@ export function fetchWork(workId: string): Promise<Work> {
   return getJson(`/api/works/${encodeURIComponent(workId)}`, WorkSchema);
 }
 
-export function fetchGraph(type: GraphNode["type"], id: string): Promise<Graph> {
+// A "genre" is a GraphNode type (so it can be colored/labeled like any other
+// node), but not a valid graph *center* — the server only knows how to build
+// a graph rooted at an author, subject, or work (see routes/graph.ts's
+// BUILDERS map), and the graph screen itself never centers on a genre node
+// either (tapping one jumps straight to the Subject browse screen instead).
+// Excluding it here means a future caller passing a genre type to fetchGraph
+// is a compile error instead of a 400 discovered at runtime.
+export type GraphCenterType = Exclude<GraphNode["type"], "genre">;
+
+export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
   return getJson(`/api/graph/${type}/${encodeURIComponent(id)}`, GraphSchema);
 }

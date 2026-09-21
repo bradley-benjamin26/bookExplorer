@@ -93,6 +93,17 @@ interface WbEntity {
   labels?: Record<string, { value: string }>;
 }
 
+// Keyed on the same (ids, props, languages) triple wbGetEntities is called
+// with, holding each request's promise only while it's in flight. Several of
+// this module's exported functions (fetchAuthorRelations, fetchPseudonyms,
+// ...) independently fetch the same qid's claims, and authorService calls a
+// couple of them together for the same author — without this, that's two
+// identical outbound HTTP requests to Wikidata for the exact same data.
+// Cleared as soon as each request settles, so this only coalesces truly
+// concurrent callers within one request rather than acting as a cache (the
+// services calling in are already cached at the TtlCache layer for that).
+const inFlightEntityRequests = new Map<string, Promise<Record<string, WbEntity>>>();
+
 /**
  * Batched entity fetch via the MediaWiki Action API (`wbgetentities`) —
  * chunked into groups of 50, the API's per-request cap. This and
@@ -102,25 +113,38 @@ interface WbEntity {
  * a ~25x difference for the same, correct result.
  */
 async function wbGetEntities(ids: string[], props: string, languages?: string): Promise<Record<string, WbEntity>> {
-  const unique = [...new Set(ids)];
+  const unique = [...new Set(ids)].sort();
   if (unique.length === 0) return {};
 
-  const chunks: string[][] = [];
-  for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50));
+  const key = `${unique.join(",")}|${props}|${languages ?? ""}`;
+  const existing = inFlightEntityRequests.get(key);
+  if (existing) return existing;
 
-  const chunkResults = await Promise.all(
-    chunks.map(async (chunk) => {
-      const params = new URLSearchParams({ action: "wbgetentities", ids: chunk.join("|"), props, format: "json" });
-      if (languages) params.set("languages", languages);
-      const res = await fetchWithTimeout(`https://www.wikidata.org/w/api.php?${params}`, {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (!res.ok) throw new Error(`Wikidata entity lookup failed: ${res.status}`);
-      const body = (await res.json()) as { entities?: Record<string, WbEntity> };
-      return body.entities ?? {};
-    })
-  );
-  return Object.assign({}, ...chunkResults);
+  const request = (async () => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < unique.length; i += 50) chunks.push(unique.slice(i, i + 50));
+
+    const chunkResults = await Promise.all(
+      chunks.map(async (chunk) => {
+        const params = new URLSearchParams({ action: "wbgetentities", ids: chunk.join("|"), props, format: "json" });
+        if (languages) params.set("languages", languages);
+        const res = await fetchWithTimeout(`https://www.wikidata.org/w/api.php?${params}`, {
+          headers: { "User-Agent": USER_AGENT },
+        });
+        if (!res.ok) throw new Error(`Wikidata entity lookup failed: ${res.status}`);
+        const body = (await res.json()) as { entities?: Record<string, WbEntity> };
+        return body.entities ?? {};
+      })
+    );
+    return Object.assign({}, ...chunkResults);
+  })();
+
+  inFlightEntityRequests.set(key, request);
+  try {
+    return await request;
+  } finally {
+    inFlightEntityRequests.delete(key);
+  }
 }
 
 // Excludes "deprecated"-rank statements, matching what SPARQL's `wdt:`
@@ -153,8 +177,16 @@ function claimStrings(entity: WbEntity | undefined, property: string): string[] 
  * what stands in for SPARQL's reverse-triple pattern (`?item wdt:P123
  * wd:Q456`), letting "who was influenced by this author" or "what's
  * narrower than this concept" be found without a graph query at all.
+ *
+ * `limit` defaults to 500 — the search API's own maximum page size for a
+ * standard (non-bot) request — rather than pagination, since this replaced
+ * an unlimited SPARQL query and a lower default (50 was tried initially)
+ * silently truncated well-connected entities with no indication anything
+ * was missing. 500 covers essentially every real author/concept this app
+ * encounters in one request; an entity with more than 500 reverse
+ * statements is not a case worth paginating for.
  */
-async function searchReverseStatementQids(property: string, qid: string, limit = 50): Promise<string[]> {
+async function searchReverseStatementQids(property: string, qid: string, limit = 500): Promise<string[]> {
   const url = `https://www.wikidata.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(
     `haswbstatement:${property}=${qid}`
   )}&srlimit=${limit}&format=json`;
