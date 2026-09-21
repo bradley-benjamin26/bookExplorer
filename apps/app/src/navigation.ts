@@ -13,4 +13,5 @@ export const routes = {
   subject: (slug: string): Href => ({ pathname: "/subject/[slug]", params: { slug } }),
   work: (id: string): Href => ({ pathname: "/work/[id]", params: { id } }),
   graph: (type: GraphNode["type"], id: string): Href => ({ pathname: "/graph/[type]/[id]", params: { type, id } }),
+  saved: (): Href => "/saved",
 };

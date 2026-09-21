@@ -16,6 +16,15 @@ import {
 } from "@book-explorer/shared";
 
 function resolveApiBaseUrl(): string {
+  // Escape hatch for whenever the LAN-guessing below doesn't apply — Expo
+  // tunnel mode (`expo start --tunnel`) replaces Metro's host with a tunnel
+  // domain that has nothing listening on port 3001, and some networks block
+  // device-to-device LAN traffic outright (school/corporate Wi-Fi, some
+  // routers' client isolation). Set this to a reachable backend URL (e.g. an
+  // `ngrok http 3001` URL) to bypass LAN detection entirely. EXPO_PUBLIC_
+  // env vars are inlined at build time by Expo — no extra config needed.
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) return process.env.EXPO_PUBLIC_API_BASE_URL;
+
   if (Platform.OS === "web") return "http://localhost:3001";
 
   // On a physical device / simulator, reuse the LAN host that Metro is already
@@ -43,7 +52,14 @@ async function getJson<T>(path: string, schema: ZodType<T>): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new ApiError(body.error ?? `Request failed: ${path}`, res.status);
+    // Routes that deliberately return 404 set `error` to a specific message
+    // ("No author found for id ..."). An unhandled exception instead gets
+    // Fastify's default shape, where `error` is just the generic HTTP status
+    // text ("Internal Server Error") and `message` holds the actual reason
+    // — preferring `message` when present surfaces that real reason instead
+    // of a message that reads the same whether Wikidata timed out or the
+    // author genuinely doesn't exist.
+    throw new ApiError(body.message ?? body.error ?? `Request failed: ${path}`, res.status);
   }
   const json = await res.json();
   const result = schema.safeParse(json);

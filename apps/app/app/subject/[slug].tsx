@@ -11,11 +11,16 @@ import {
   View,
 } from "react-native";
 import { fetchSubject } from "../../src/api/client";
+import { Button } from "../../src/components/Button";
+import { ErrorState } from "../../src/components/ErrorState";
 import { routes } from "../../src/navigation";
+import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["subject", slug],
     queryFn: () => fetchSubject(slug),
@@ -25,19 +30,13 @@ export default function SubjectDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.colors.link} />
       </View>
     );
   }
 
   if (isError || !data) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>
-          {error instanceof Error ? error.message : `No subject found for ${slug}`}
-        </Text>
-      </View>
-    );
+    return <ErrorState message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
@@ -58,9 +57,13 @@ export default function SubjectDetail() {
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>
           )}
 
-          <Pressable style={styles.graphButton} onPress={() => router.push(routes.graph("subject", data.slug))}>
-            <Text style={styles.graphButtonText}>View as Graph</Text>
-          </Pressable>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.graph("subject", data.slug))}
+            style={styles.graphButton}
+          >
+            View as Graph
+          </Button>
 
           {[
             { title: "Broader topics", items: broader },
@@ -74,7 +77,7 @@ export default function SubjectDetail() {
                     {items.map((concept) => (
                       <Pressable
                         key={concept.wikidataId}
-                        style={styles.conceptTag}
+                        style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
                       >
                         <Text style={styles.conceptTagText}>{concept.label}</Text>
@@ -89,42 +92,65 @@ export default function SubjectDetail() {
         </View>
       }
       renderItem={({ item }) => (
-        <Pressable style={styles.bookRow} onPress={() => router.push(routes.work(item.openLibraryWorkId))}>
-          {item.coverUrl && <Image source={{ uri: item.coverUrl }} style={styles.bookCover} resizeMode="contain" />}
+        <Pressable
+          style={({ pressed }) => [styles.bookRow, pressed && styles.pressed]}
+          onPress={() => router.push(routes.work(item.openLibraryWorkId))}
+        >
+          {item.coverUrl ? (
+            <Image source={{ uri: item.coverUrl }} style={styles.bookCover} resizeMode="contain" />
+          ) : (
+            <View style={styles.bookCoverPlaceholder} />
+          )}
           <View style={styles.bookInfo}>
-            <Text style={styles.bookTitle}>{item.title}</Text>
-            <Text style={styles.bookAuthors}>{item.authors.map((a) => a.name).join(", ")}</Text>
+            <Text style={styles.bookTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={styles.bookAuthors} numberOfLines={1}>
+              {item.authors.map((a) => a.name).join(", ")}
+            </Text>
           </View>
+          <Text style={styles.bookChevron}>›</Text>
         </Pressable>
       )}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  errorText: { textAlign: "center", fontSize: 16, color: "#a33" },
-  name: { fontSize: 26, fontWeight: "700", textTransform: "capitalize" },
-  workCount: { fontSize: 15, color: "#888", marginTop: 4 },
-  noMatch: { fontSize: 13, color: "#a80", marginTop: 12, fontStyle: "italic" },
-  graphButton: {
-    backgroundColor: "#1a1a2e",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 16,
-  },
-  graphButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-  conceptSection: { marginTop: 20 },
-  sectionTitle: { fontSize: 15, fontWeight: "600", color: "#888", marginTop: 8, marginBottom: 10 },
-  conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  conceptTag: { backgroundColor: "#eef2ff", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
-  conceptTagText: { fontSize: 13, color: "#3346a8" },
-  bookRow: { flexDirection: "row", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
-  bookCover: { width: 44, height: 64 },
-  bookInfo: { flex: 1, justifyContent: "center" },
-  bookTitle: { fontSize: 16, fontWeight: "600" },
-  bookAuthors: { fontSize: 14, color: "#666", marginTop: 2 },
-});
+function createStyles({ colors, kicker }: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    content: { padding: 20 },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+    name: { fontSize: 27, fontWeight: "700", textTransform: "capitalize", letterSpacing: -0.3, color: colors.text },
+    workCount: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
+    noMatch: { fontSize: 13, color: colors.warning, marginTop: 12, fontStyle: "italic" },
+    graphButton: { marginTop: 16 },
+    pressed: { opacity: 0.6 },
+    conceptSection: { marginTop: 24 },
+    sectionTitle: { ...kicker, marginTop: 8, marginBottom: 12 },
+    conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    conceptTag: {
+      backgroundColor: colors.chipBackgroundAccent,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipBorderAccent,
+    },
+    conceptTagText: { fontSize: 13, color: colors.chipTextAccent },
+    bookRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    bookCover: { width: 44, height: 64, borderRadius: 4 },
+    bookCoverPlaceholder: { width: 44, height: 64, borderRadius: 4, backgroundColor: colors.chipBackground },
+    bookInfo: { flex: 1, justifyContent: "center" },
+    bookTitle: { fontSize: 16, fontWeight: "600", color: colors.text },
+    bookAuthors: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
+    bookChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
+  });
+}
