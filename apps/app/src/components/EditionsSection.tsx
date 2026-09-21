@@ -47,13 +47,13 @@ function EditionCard({ edition }: { edition: Edition }) {
   );
 }
 
-export function EditionsSection({ editions }: { editions: Edition[] }) {
+export function EditionsSection({ editions, highlighted }: { editions: Edition[]; highlighted?: boolean }) {
   const styles = useThemedStyles(createStyles);
   if (editions.length === 0) return null;
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Editions ({editions.length})</Text>
+    <View style={[styles.section, highlighted && styles.sectionHighlighted]}>
+      <Text style={styles.sectionTitle}>Find Your Edition ({editions.length})</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
         {editions.map((edition, i) => (
           <EditionCard key={`${edition.openLibraryEditionId || edition.isbn}-${i}`} edition={edition} />
@@ -66,6 +66,18 @@ export function EditionsSection({ editions }: { editions: Edition[] }) {
 function createStyles({ colors, kicker, cardStyle }: Theme) {
   return StyleSheet.create({
     section: { marginTop: 28, width: "100%" },
+    // Landed on from the "Editions" graph node (see the graph screen's
+    // handleNodePress) — reuses the same yellow the app already uses for a
+    // toggled-on pill button, rather than introducing a new highlight color
+    // just for this one case.
+    sectionHighlighted: {
+      backgroundColor: colors.pillActiveBackground,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      borderRadius: 12,
+      padding: 12,
+      marginHorizontal: -12,
+    },
     sectionTitle: { ...kicker, marginBottom: 12 },
     pressed: { opacity: 0.6 },
     carousel: { gap: 12, paddingRight: 4 },

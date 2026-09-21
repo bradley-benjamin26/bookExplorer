@@ -11,7 +11,11 @@ export const routes = {
   book: (isbn: string): Href => ({ pathname: "/book/[isbn]", params: { isbn } }),
   author: (id: string): Href => ({ pathname: "/author/[id]", params: { id } }),
   subject: (slug: string): Href => ({ pathname: "/subject/[slug]", params: { slug } }),
-  work: (id: string): Href => ({ pathname: "/work/[id]", params: { id } }),
+  work: (id: string, options?: { highlight?: string }): Href => ({
+    pathname: "/work/[id]",
+    params: options?.highlight ? { id, highlight: options.highlight } : { id },
+  }),
   graph: (type: GraphNode["type"], id: string): Href => ({ pathname: "/graph/[type]/[id]", params: { type, id } }),
   saved: (): Href => "/saved",
+  search: (query?: string): Href => ({ pathname: "/search", params: query ? { q: query } : {} }),
 };

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Book Explorer",
+    "slug": "book-explorer",
     "scheme": "bookexplorer",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,11 +12,13 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.bbradle1.bookexplorer",
       "infoPlist": {
         "NSCameraUsageDescription": "Book Explorer uses the camera to scan book barcodes."
       }
     },
     "android": {
+      "package": "com.bbradle1.bookexplorer",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -39,6 +41,12 @@
           "cameraPermission": "Book Explorer uses the camera to scan book barcodes."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "90a4fb20-31a2-43e3-b63a-2afa3224cbc8"
+      }
+    },
+    "owner": "engomia"
   }
 }

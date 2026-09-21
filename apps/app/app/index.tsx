@@ -38,7 +38,7 @@ export default function Home() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Book Explorer</Text>
-          <Text style={styles.subtitle}>Scan a barcode or enter an ISBN to start exploring.</Text>
+          <Text style={styles.subtitle}>Scan a barcode, search by title or author, or enter an ISBN to start exploring.</Text>
         </View>
         <Pressable
           style={({ pressed }) => pressed && styles.pressed}
@@ -58,6 +58,12 @@ export default function Home() {
         <Text style={styles.dividerText}>or</Text>
         <View style={styles.dividerLine} />
       </View>
+
+      <Button variant="primary" onPress={() => router.push(routes.search())} style={styles.searchButton}>
+        Search by Title or Author
+      </Button>
+
+      <Text style={styles.orIsbnText}>or enter an exact ISBN</Text>
 
       <View style={styles.manualEntry}>
         <TextInput
@@ -117,7 +123,14 @@ function createStyles({ colors, kicker }: Theme) {
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
-    manualEntry: { flexDirection: "row", gap: 10, marginTop: 20 },
+    searchButton: { marginTop: 20 },
+    orIsbnText: {
+      fontSize: 13,
+      color: colors.textFaint,
+      textAlign: "center",
+      marginTop: 18,
+    },
+    manualEntry: { flexDirection: "row", gap: 10, marginTop: 10 },
     input: {
       flex: 1,
       borderWidth: 1,

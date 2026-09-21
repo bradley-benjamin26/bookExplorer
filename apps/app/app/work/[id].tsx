@@ -15,7 +15,7 @@ import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 export default function WorkDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -67,17 +67,22 @@ export default function WorkDetail() {
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
 
+      <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
+
       {data.genres.length > 0 && (
-        <View style={styles.genreTags}>
-          {data.genres.map((genre) => (
-            <Pressable
-              key={genre}
-              style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
-              onPress={() => router.push(routes.subject(slugifySubject(genre)))}
-            >
-              <Text style={styles.genreTagText}>{genre}</Text>
-            </Pressable>
-          ))}
+        <View style={styles.genresSection}>
+          <Text style={styles.sectionTitle}>Genre</Text>
+          <View style={styles.genreTags}>
+            {data.genres.map((genre) => (
+              <Pressable
+                key={genre}
+                style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
+                onPress={() => router.push(routes.subject(slugifySubject(genre)))}
+              >
+                <Text style={styles.genreTagText}>{genre}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       )}
 
@@ -106,8 +111,6 @@ export default function WorkDetail() {
         View as Graph
       </Button>
 
-      <EditionsSection editions={data.editions} />
-
       {data.description && (
         <View style={styles.aboutSection}>
           <Text style={styles.sectionTitle}>About</Text>
@@ -129,7 +132,8 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
     title: { fontSize: 25, fontWeight: "700", textAlign: "center", letterSpacing: -0.3, color: colors.text },
     author: { fontSize: 17, color: colors.link, marginTop: 4, textDecorationLine: "underline" },
     saveButton: { marginTop: 14 },
-    genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 14 },
+    genresSection: { marginTop: 28, width: "100%" },
+    genreTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: 16, paddingHorizontal: 13, paddingVertical: 7 },
     genreTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextGenre },
     aboutSection: { marginTop: 28, width: "100%" },

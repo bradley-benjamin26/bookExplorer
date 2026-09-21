@@ -166,7 +166,12 @@ export function slugifySubject(name: string): string {
 
 export const GraphNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(["author", "work", "subject", "genre"]),
+  // "editions" is a single summary node per work (not one node per
+  // edition — see graphService.buildWorkGraph) whose only purpose is
+  // pointing a viewer at the Editions section on that work's own page,
+  // rather than being a browsable concept in its own right the way every
+  // other node type is.
+  type: z.enum(["author", "work", "subject", "genre", "editions"]),
   label: z.string(),
   // Most nodes link straight to their detail screen. The exception is an
   // author known only by Wikidata QID (no Open Library id) — the author

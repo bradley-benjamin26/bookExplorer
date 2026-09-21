@@ -18,6 +18,10 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
     // Matches the Genres chip color on the book/work detail pages, so a
     // genre reads as the same kind of thing whether it's a chip or a node.
     genre: colors.graphGenre,
+    // The same color this node's destination — the Editions section's own
+    // highlight — uses on the work page, so the two visibly read as the
+    // same thing rather than an arbitrary extra graph color.
+    editions: colors.warning,
   };
 }
 
@@ -26,6 +30,7 @@ const NODE_LABELS: Record<GraphNode["type"], string> = {
   work: "Book",
   subject: "Subject",
   genre: "Genre",
+  editions: "Editions",
 };
 
 // Each edge already reads correctly as "source <label> target" — direction
@@ -43,6 +48,7 @@ const RELATION_LABELS: Record<string, string> = {
   genre: "is",
   hasBook: "includes",
   broader: "broader topic",
+  editions: "has",
 };
 
 const NODE_RADIUS = 26;
@@ -255,6 +261,15 @@ export default function GraphExplorer() {
     // non-center node gets.
     if (next.type === "genre") {
       router.push(routes.subject(next.id));
+      return;
+    }
+
+    // Likewise has no graph of its own — it's a signpost pointing at the
+    // Editions section on its own work's page (see buildWorkGraph), not a
+    // real browsable node, so tapping it jumps straight there instead of
+    // recentering.
+    if (next.type === "editions") {
+      router.push(routes.work(next.id, { highlight: "editions" }));
       return;
     }
 

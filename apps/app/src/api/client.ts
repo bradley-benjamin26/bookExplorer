@@ -1,11 +1,12 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 import {
   AuthorSchema,
   BookSchema,
   GraphSchema,
   SubjectSchema,
+  WorkRefSchema,
   WorkSchema,
   type Author,
   type Book,
@@ -13,6 +14,7 @@ import {
   type GraphNode,
   type Subject,
   type Work,
+  type WorkRef,
 } from "@book-explorer/shared";
 
 function resolveApiBaseUrl(): string {
@@ -36,6 +38,16 @@ function resolveApiBaseUrl(): string {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 
+// Sent as X-App-Key on every request once the server is deployed somewhere
+// public (see apps/server's APP_SHARED_SECRET) — a shared secret between
+// this app build and that server, not real per-user auth, meant only to
+// filter out traffic that isn't coming from a real copy of the app.
+// EXPO_PUBLIC_ vars are inlined at build time, so a production build sets
+// this to match whatever the deployed server expects; left unset (as in
+// local dev against a LAN server with no secret configured), no header is
+// sent at all, matching the server's own "unset means skip the check".
+const APP_SHARED_SECRET = process.env.EXPO_PUBLIC_APP_SHARED_SECRET;
+
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
@@ -49,7 +61,9 @@ export class ApiError extends Error {
 // silently and surface later as a confusing render-time bug (or not at all,
 // if the missing field just happened to render as blank).
 async function getJson<T>(path: string, schema: ZodType<T>): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`);
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: APP_SHARED_SECRET ? { "X-App-Key": APP_SHARED_SECRET } : undefined,
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     // Routes that deliberately return 404 set `error` to a specific message
@@ -85,14 +99,19 @@ export function fetchWork(workId: string): Promise<Work> {
   return getJson(`/api/works/${encodeURIComponent(workId)}`, WorkSchema);
 }
 
-// A "genre" is a GraphNode type (so it can be colored/labeled like any other
-// node), but not a valid graph *center* — the server only knows how to build
-// a graph rooted at an author, subject, or work (see routes/graph.ts's
-// BUILDERS map), and the graph screen itself never centers on a genre node
-// either (tapping one jumps straight to the Subject browse screen instead).
-// Excluding it here means a future caller passing a genre type to fetchGraph
-// is a compile error instead of a 400 discovered at runtime.
-export type GraphCenterType = Exclude<GraphNode["type"], "genre">;
+export function searchBooks(query: string): Promise<WorkRef[]> {
+  return getJson(`/api/search?q=${encodeURIComponent(query)}`, z.array(WorkRefSchema));
+}
+
+// "genre" and "editions" are both GraphNode types (so they can be
+// colored/labeled like any other node), but neither is a valid graph
+// *center* — the server only knows how to build a graph rooted at an
+// author, subject, or work (see routes/graph.ts's BUILDERS map), and the
+// graph screen itself never centers on either (tapping one jumps straight
+// to the Subject browse screen, or the work page's Editions section,
+// instead). Excluding them here means a future caller passing one to
+// fetchGraph is a compile error instead of a 400 discovered at runtime.
+export type GraphCenterType = Exclude<GraphNode["type"], "genre" | "editions">;
 
 export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
   return getJson(`/api/graph/${type}/${encodeURIComponent(id)}`, GraphSchema);

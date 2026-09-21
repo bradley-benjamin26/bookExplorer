@@ -50,7 +50,7 @@ const GSAFD_GENRE_RE = /<genre\b([^>]*)>([\s\S]*?)<\/genre>/g;
  * that a DOM parse would be more machinery than the one thing being
  * extracted calls for.
  */
-function parseModsRecord(xml: string, isbn: string): LocMetadata {
+export function parseModsRecord(xml: string, isbn: string): LocMetadata {
   // The SRU index isn't a strict ISBN-equality match (confirmed live: a
   // clearly-invalid ISBN like "0000000000000" still returned an unrelated
   // record, apparently one with that same placeholder value stuck in a

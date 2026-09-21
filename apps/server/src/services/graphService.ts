@@ -35,7 +35,7 @@ const pseudonymAuthorCache = new TtlCache<{ openLibraryId: string; name: string 
 // no text to normalize toward, so any title-based heuristic that caught
 // those would also risk merging genuinely different books that happen to
 // share common words.
-function normalizeTitle(title: string): string {
+export function normalizeTitle(title: string): string {
   const base = title
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -59,7 +59,7 @@ function normalizeTitle(title: string): string {
 // endpoint didn't end up with a matching node at all, so a malformed graph
 // degrades to "missing a connection" instead of crashing the client's
 // force-layout renderer on a dangling reference.
-function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
+export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const byId = new Map<string, GraphNode>();
   for (const node of nodes) {
     if (!byId.has(node.id)) byId.set(node.id, node);
@@ -280,6 +280,19 @@ export async function buildWorkGraph(workId: string): Promise<Graph | null> {
     const nodeId = `genre:${slugifySubject(genre)}`;
     nodes.push({ id: nodeId, type: "genre", label: genre, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "genre" });
+  }
+
+  // A single summary node, not one per edition (that's a much bigger graph
+  // than this app's other nodes — a popular work can have dozens) — its
+  // purpose is teaching the work/edition distinction itself (many people
+  // outside library work don't have a name for it) by pointing at the
+  // dedicated Editions section on this work's own page, which already lists
+  // and lets you pick a specific edition, rather than duplicating that
+  // picker as a second graph layer here.
+  if (work.editions.length > 0) {
+    const editionsNodeId = `editions:${work.openLibraryWorkId}`;
+    nodes.push({ id: editionsNodeId, type: "editions", label: "Editions", navigable: true });
+    edges.push({ source: centerId, target: editionsNodeId, relation: "editions" });
   }
 
   return { centerId, ...cleanGraph(nodes, edges) };

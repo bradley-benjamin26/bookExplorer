@@ -305,6 +305,59 @@ export interface OpenLibrarySubject {
   works: OpenLibrarySubjectWork[];
 }
 
+export interface OpenLibrarySearchResult {
+  workId: string;
+  title: string;
+  authors: AuthorRef[];
+  coverUrl: string | null;
+}
+
+/**
+ * Free-text title/author search, used as the entry point into the rest of
+ * this app for someone who doesn't already have an ISBN in hand (browsing a
+ * shelf, a friend's recommendation, ...) — Open Library's own search index
+ * is used rather than fanning this out to Hardcover/Google Books too,
+ * since those sources have no equivalent "resolve a fuzzy query to a
+ * canonical work" search of their own, and this app already treats an Open
+ * Library work id as the identity everything else (ratings, editions,
+ * genres) gets hung off of once a specific book is chosen — the same
+ * `getWorkDetail` pipeline a search result feeds into already does that
+ * enrichment, so search itself only needs to resolve "what work is this."
+ */
+export async function searchWorks(query: string, limit = 20): Promise<OpenLibrarySearchResult[]> {
+  const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(
+    query
+  )}&fields=key,title,author_name,author_key,cover_i&limit=${limit}`;
+  const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
+  if (!res.ok) throw new Error(`Open Library search request failed: ${res.status}`);
+
+  const data = (await res.json()) as {
+    docs?: { key?: string; title?: string; author_name?: string[]; author_key?: string[]; cover_i?: number }[];
+  };
+
+  // Skips a result entirely if it has no work key rather than throwing —
+  // same reasoning as extractAuthorId above.
+  return (data.docs ?? []).flatMap((doc) => {
+    if (!doc.key || !doc.title) return [];
+    const authorNames = doc.author_name ?? [];
+    const authorKeys = doc.author_key ?? [];
+    return [
+      {
+        workId: doc.key.replace("/works/", ""),
+        title: doc.title,
+        // author_name/author_key are parallel arrays, but Open Library
+        // doesn't guarantee they're always the same length — zipping only
+        // as far as both extend, rather than assuming it, avoids pairing a
+        // name with the wrong id if one is ever short.
+        authors: authorNames
+          .slice(0, authorKeys.length)
+          .map((name, i) => ({ openLibraryId: authorKeys[i], name })),
+        coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
+      },
+    ];
+  });
+}
+
 export async function getSubject(slug: string, limit = 20): Promise<OpenLibrarySubject | null> {
   const url = `https://openlibrary.org/subjects/${encodeURIComponent(slug)}.json?limit=${limit}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });

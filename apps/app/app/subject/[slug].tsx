@@ -1,18 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { fetchSubject } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { WorkListRow } from "../../src/components/WorkListRow";
 import { routes } from "../../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -92,25 +85,7 @@ export default function SubjectDetail() {
         </View>
       }
       renderItem={({ item }) => (
-        <Pressable
-          style={({ pressed }) => [styles.bookRow, pressed && styles.pressed]}
-          onPress={() => router.push(routes.work(item.openLibraryWorkId))}
-        >
-          {item.coverUrl ? (
-            <Image source={{ uri: item.coverUrl }} style={styles.bookCover} resizeMode="contain" />
-          ) : (
-            <View style={styles.bookCoverPlaceholder} />
-          )}
-          <View style={styles.bookInfo}>
-            <Text style={styles.bookTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
-            <Text style={styles.bookAuthors} numberOfLines={1}>
-              {item.authors.map((a) => a.name).join(", ")}
-            </Text>
-          </View>
-          <Text style={styles.bookChevron}>›</Text>
-        </Pressable>
+        <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
     />
   );
@@ -138,19 +113,5 @@ function createStyles({ colors, kicker }: Theme) {
       borderColor: colors.chipBorderAccent,
     },
     conceptTagText: { fontSize: 13, color: colors.chipTextAccent },
-    bookRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    bookCover: { width: 44, height: 64, borderRadius: 4 },
-    bookCoverPlaceholder: { width: 44, height: 64, borderRadius: 4, backgroundColor: colors.chipBackground },
-    bookInfo: { flex: 1, justifyContent: "center" },
-    bookTitle: { fontSize: 16, fontWeight: "600", color: colors.text },
-    bookAuthors: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
-    bookChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
   });
 }

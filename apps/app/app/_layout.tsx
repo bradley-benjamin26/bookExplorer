@@ -56,6 +56,7 @@ function ThemedShell() {
               options={{ title: "Subject", headerRight: () => <HeaderActions /> }}
             />
             <Stack.Screen name="work/[id]" options={{ title: "Work", headerRight: () => <HeaderActions /> }} />
+            <Stack.Screen name="search" options={{ title: "Search", headerRight: () => <HeaderActions /> }} />
             <Stack.Screen
               name="graph/[type]/[id]"
               options={{ title: "Explore Graph", headerRight: () => <HeaderActions /> }}
