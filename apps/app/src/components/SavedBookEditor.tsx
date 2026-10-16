@@ -78,14 +78,37 @@ export function SavedBookEditor({
   const [genres, setGenres] = useState(record.genres);
   const [notes, setNotes] = useState(record.notes);
 
-  const persist = async (changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>) => {
-    const next = await updateSavedBook(record.isbn, changes);
-    if (next) onChange(next);
-  };
-
   // The latest unsaved notes, if any — a ref so the unmount flush below sees
   // the current value rather than the one from its first render.
   const pendingNotes = useRef<string | null>(null);
+
+  // Writes this editor has started that haven't finished yet. While any are
+  // pending, the local state above is ahead of `record` and wins; once
+  // they've all landed, `record` is caught up and is synced back in below.
+  const inFlightWrites = useRef(0);
+
+  const persist = async (changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>) => {
+    inFlightWrites.current += 1;
+    try {
+      const next = await updateSavedBook(record.isbn, changes);
+      if (next) onChange(next);
+    } finally {
+      inFlightWrites.current -= 1;
+    }
+  };
+
+  // This editor can mount while a write started by an earlier instance of it
+  // (e.g. the Saved screen's row collapsed with Done, then reopened) is still
+  // landing, so its initial state can predate that write. Picking up `record`
+  // whenever it changes and nothing of this instance's own is pending keeps
+  // it from showing — and then building the next edit on — stale tags.
+  useEffect(() => {
+    if (inFlightWrites.current > 0) return;
+    setSubjects(record.subjects);
+    setGenres(record.genres);
+    if (pendingNotes.current === null) setNotes(record.notes);
+  }, [record]);
+
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persistRef = useRef(persist);
   persistRef.current = persist;
