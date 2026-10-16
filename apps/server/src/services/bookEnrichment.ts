@@ -6,6 +6,27 @@ import { combineRatings } from "../ratings.js";
 import type { HardcoverBookData } from "../sources/hardcover.js";
 import type { OpenLibraryRatings } from "../sources/openLibrary.js";
 import type { Rating } from "@book-explorer/shared";
+import type { CacheEntryOptions } from "../cache.js";
+
+// How long a book/work assembled while one of its optional sources was
+// failing stays cached — long enough to absorb a burst of repeat views, short
+// enough that a brief outage isn't remembered as "this book has no
+// ratings/reviews/genres" for the cache's full hour.
+export const DEGRADED_TTL_MS = 1000 * 60 * 5;
+
+/**
+ * A `.catch` handler for an optional source: logs the failure, falls back to
+ * `fallback` so the rest of the response is still served, and shortens this
+ * cache entry's TTL (see DEGRADED_TTL_MS) so the gap is retried soon instead
+ * of being cached as if the source genuinely had nothing.
+ */
+export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, fallback: T) {
+  return (err: unknown): T => {
+    console.warn(`[${sourceName}] Optional lookup failed:`, err);
+    entry.ttlMs = Math.min(entry.ttlMs, DEGRADED_TTL_MS);
+    return fallback;
+  };
+}
 
 /**
  * The enrichment pipeline a scanned book (one ISBN) and a work page
@@ -17,14 +38,15 @@ import type { Rating } from "@book-explorer/shared";
  * lookups, like the Wikidata work match below, have had a chance to run
  * too).
  */
-export function startCommonEnrichment(isbnCandidates: string[], workId: string | null) {
-  const locMetadataPromise = fetchMetadataByAnyIsbn(isbnCandidates);
-  const hardcoverPromise = hardcover.lookupByAnyIsbn(isbnCandidates);
+export function startCommonEnrichment(isbnCandidates: string[], workId: string | null, entry: CacheEntryOptions) {
+  const locMetadataPromise = fetchMetadataByAnyIsbn(isbnCandidates).catch(
+    optionalSource(entry, "loc", { subjects: [] as string[], genres: [] as string[] })
+  );
+  const hardcoverPromise = hardcover
+    .lookupByAnyIsbn(isbnCandidates)
+    .catch(optionalSource<HardcoverBookData | null>(entry, "hardcover", null));
   const olRatingsPromise: Promise<OpenLibraryRatings | null> = workId
-    ? openLibrary.getRatings(workId).catch((err) => {
-        console.warn(`[openLibrary] Failed to fetch ratings for work ${workId}:`, err);
-        return null;
-      })
+    ? openLibrary.getRatings(workId).catch(optionalSource<OpenLibraryRatings | null>(entry, "openLibrary ratings", null))
     : Promise.resolve(null);
   return { locMetadataPromise, hardcoverPromise, olRatingsPromise };
 }
@@ -51,9 +73,14 @@ export function blendHardcoverAndOpenLibraryRating(
  * scanned book to source its Wikipedia "about" text and by both a book and a
  * work page to source Wikidata's genre property (P136), which — unlike
  * LOC's fiction-focused GSAFD terms — covers nonfiction too. Failure here is
- * always caught: this is supplementary data on top of a lookup that's
- * already fully usable without it.
+ * always caught (shortening the cache entry's TTL): this is supplementary
+ * data on top of a lookup that's already fully usable without it.
  */
-export async function findWorkQid(title: string, firstAuthorName: string | null): Promise<string | null> {
-  return firstAuthorName ? await wikidata.searchWorkQid(title, firstAuthorName).catch(() => null) : null;
+export async function findWorkQid(
+  title: string,
+  firstAuthorName: string | null,
+  entry: CacheEntryOptions
+): Promise<string | null> {
+  if (!firstAuthorName) return null;
+  return wikidata.searchWorkQid(title, firstAuthorName).catch(optionalSource<string | null>(entry, "wikidata work search", null));
 }

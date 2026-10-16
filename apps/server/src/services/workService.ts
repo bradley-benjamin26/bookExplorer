@@ -3,13 +3,13 @@ import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { mergeLabelLists } from "../sources/loc.js";
-import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid } from "./bookEnrichment.js";
+import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60);
 
 /** Shared by the /api/works and /api/graph/work routes so both hit the same cache. */
 export function getWorkDetail(workId: string): Promise<Work | null> {
-  return workCache.wrap(workId, async () => {
+  return workCache.wrap(workId, async (entry) => {
     const olResult = await openLibrary.getWork(workId);
     if (!olResult) return null;
     const { isbnCandidates, ...ol } = olResult;
@@ -21,15 +21,15 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     // is as usable as another's. No Google Books fallback here: this
     // service never otherwise touches Google Books, and a cover/rating
     // alone isn't worth adding a new call against its shared quota for.
-    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment(isbnCandidates, workId);
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment(isbnCandidates, workId, entry);
 
     // Same best-effort Wikidata work match as a scanned book, used here only
     // for its genre (P136) — a "work" page doesn't otherwise touch Wikidata
     // at all, so this is the one extra lookup that unlocks genre coverage
     // for nonfiction works, which LOC's fiction-focused GSAFD terms miss.
     const firstAuthorName = ol.authors[0]?.name ?? null;
-    const workQid = await findWorkQid(ol.title, firstAuthorName);
-    const wikidataGenres = workQid ? await wikidata.fetchGenres(workQid).catch(() => [] as string[]) : [];
+    const workQid = await findWorkQid(ol.title, firstAuthorName, entry);
+    const wikidataGenres = workQid ? await wikidata.fetchGenres(workQid).catch(optionalSource(entry, "wikidata genres", [] as string[])) : [];
 
     const [locMetadata, hc, olRatings] = await Promise.all([locMetadataPromise, hardcoverPromise, olRatingsPromise]);
 
