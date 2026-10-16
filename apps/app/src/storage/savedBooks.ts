@@ -68,15 +68,27 @@ export async function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
   return record;
 }
 
-export async function updateSavedBook(
+// Each update is a read-modify-write of the whole record, so two updates
+// in flight at once (a tag removed while a notes save is still pending)
+// would each read the same old record and the second write would silently
+// drop the first's change. Chaining every update onto the previous one
+// makes each read see the last write.
+let updateQueue: Promise<unknown> = Promise.resolve();
+
+export function updateSavedBook(
   isbn: string,
   changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>
 ): Promise<SavedBookRecord | null> {
-  const existing = await getSavedBook(isbn);
-  if (!existing) return null;
-  const next = { ...existing, ...changes };
-  await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
-  return next;
+  const run = async () => {
+    const existing = await getSavedBook(isbn);
+    if (!existing) return null;
+    const next = { ...existing, ...changes };
+    await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
+    return next;
+  };
+  const result = updateQueue.then(run, run);
+  updateQueue = result.catch(() => undefined);
+  return result;
 }
 
 export async function removeSavedBook(isbn: string): Promise<void> {

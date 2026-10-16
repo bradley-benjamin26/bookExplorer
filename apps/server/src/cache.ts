@@ -10,7 +10,15 @@ export class TtlCache<T> {
   // view, the exact same request.
   private pending = new Map<string, Promise<T>>();
 
-  constructor(private ttlMs: number) {}
+  // Expired entries are only dropped when their own key is read again, so
+  // without a cap the store grows with every distinct key ever requested —
+  // free-text search queries especially, but any id from a public caller.
+  // Once full, the oldest-inserted entry is evicted (a Map iterates in
+  // insertion order, so that's just its first key).
+  constructor(
+    private ttlMs: number,
+    private maxEntries = 1000
+  ) {}
 
   get(key: string): T | undefined {
     const entry = this.store.get(key);
@@ -23,6 +31,12 @@ export class TtlCache<T> {
   }
 
   set(key: string, value: T): void {
+    // Re-inserting moves the key to the back of the eviction order.
+    this.store.delete(key);
+    if (this.store.size >= this.maxEntries) {
+      const oldest = this.store.keys().next().value;
+      if (oldest !== undefined) this.store.delete(oldest);
+    }
     this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
   }
 

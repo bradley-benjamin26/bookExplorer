@@ -9,7 +9,13 @@ import { worksRoutes } from "./routes/works.js";
 import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
 
-const app = Fastify({ logger: true });
+// Behind a load balancer or reverse proxy (most hosting platforms), every
+// request arrives from the proxy's own IP — without trusting its
+// X-Forwarded-For header, the per-IP rate limit below would treat all users
+// as one client and throttle them together. It's opt-in rather than always
+// on because, with no proxy in front, trusting that header would let any
+// caller spoof their IP and dodge the limit entirely.
+const app = Fastify({ logger: true, trustProxy: process.env.TRUST_PROXY === "true" });
 
 await app.register(cors, { origin: true });
 

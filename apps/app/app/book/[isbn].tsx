@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { slugifySubject } from "@book-explorer/shared";
+import { normalizeIsbn, slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -22,7 +22,13 @@ const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
 const OPEN_LIBRARY_URL = "https://openlibrary.org/isbn/";
 
 export default function BookDetail() {
-  const { isbn } = useLocalSearchParams<{ isbn: string }>();
+  const { isbn: rawIsbn } = useLocalSearchParams<{ isbn: string }>();
+  // A typed or pasted ISBN may be hyphenated, but the server returns (and a
+  // saved record is keyed by) the bare-digit form — normalizing the route
+  // param keeps the saved-record lookup below, and the query cache key, on
+  // that same form. Junk with no digits at all is passed through untouched
+  // so the server's own 400 surfaces as an error instead of an empty page.
+  const isbn = rawIsbn ? normalizeIsbn(rawIsbn) || rawIsbn : rawIsbn;
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
