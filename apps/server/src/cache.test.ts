@@ -42,4 +42,17 @@ describe("TtlCache", () => {
     expect(b).toBe(42);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+
+  it("lets a fetcher shorten its own entry's TTL", async () => {
+    vi.useFakeTimers();
+    const cache = new TtlCache<number>(60_000);
+    await cache.wrap("k", async (entry) => {
+      entry.ttlMs = 1_000;
+      return 1;
+    });
+    vi.advanceTimersByTime(999);
+    expect(cache.get("k")).toBe(1);
+    vi.advanceTimersByTime(2);
+    expect(cache.get("k")).toBeUndefined();
+  });
 });

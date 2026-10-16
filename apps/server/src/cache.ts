@@ -1,5 +1,9 @@
 type Entry<T> = { value: T; expiresAt: number };
 
+export interface CacheEntryOptions {
+  ttlMs: number;
+}
+
 export class TtlCache<T> {
   private store = new Map<string, Entry<T>>();
   // Tracks fetches already in flight so concurrent requests for the same
@@ -30,26 +34,33 @@ export class TtlCache<T> {
     return entry.value;
   }
 
-  set(key: string, value: T): void {
+  set(key: string, value: T, ttlMs = this.ttlMs): void {
     // Re-inserting moves the key to the back of the eviction order.
     this.store.delete(key);
     if (this.store.size >= this.maxEntries) {
       const oldest = this.store.keys().next().value;
       if (oldest !== undefined) this.store.delete(oldest);
     }
-    this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
+    this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
   }
 
-  async wrap(key: string, fetcher: () => Promise<T>): Promise<T> {
+  /**
+   * `fetcher` receives this entry's options and may lower `ttlMs` before
+   * resolving — e.g. a result assembled while an optional source was down is
+   * still worth returning, but shouldn't be remembered for the full TTL as
+   * if that source genuinely had nothing.
+   */
+  async wrap(key: string, fetcher: (entry: CacheEntryOptions) => Promise<T>): Promise<T> {
     const cached = this.get(key);
     if (cached !== undefined) return cached;
 
     const inFlight = this.pending.get(key);
     if (inFlight) return inFlight;
 
-    const promise = fetcher()
+    const entry: CacheEntryOptions = { ttlMs: this.ttlMs };
+    const promise = fetcher(entry)
       .then((value) => {
-        this.set(key, value);
+        this.set(key, value, entry.ttlMs);
         return value;
       })
       .finally(() => {

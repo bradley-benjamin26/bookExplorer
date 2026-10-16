@@ -19,14 +19,6 @@ const app = Fastify({ logger: true, trustProxy: process.env.TRUST_PROXY === "tru
 
 await app.register(cors, { origin: true });
 
-// Caps how many requests one IP can make per minute — the main defense
-// against this server's own quota-limited upstream keys (Hardcover, Google
-// Books) getting burned through by a scraper or bot hitting the API
-// directly, now that it's reachable from the public internet rather than
-// just a LAN. Generous enough that normal use of the app (browsing a few
-// books, a graph, an author) never comes close to it.
-await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
-
 // A shared secret the app itself sends on every request (see .env.example),
 // checked in constant time so a timing side-channel can't leak it a byte at
 // a time. This is not real per-user authentication — it's baked into every
@@ -39,12 +31,22 @@ const appSharedSecret = process.env.APP_SHARED_SECRET;
 
 if (appSharedSecret) {
   app.addHook("onRequest", async (request, reply) => {
-    if (request.url === "/health") return;
+    if (request.url.split("?")[0] === "/health") return;
     if (!isValidAppKey(request.headers["x-app-key"], appSharedSecret)) {
       return reply.code(401).send({ error: "Missing or invalid X-App-Key header" });
     }
   });
 }
+
+// Caps how many requests one IP can make per minute — the main defense
+// against this server's own quota-limited upstream keys (Hardcover, Google
+// Books) getting burned through by a scraper or bot hitting the API
+// directly, now that it's reachable from the public internet rather than
+// just a LAN. Generous enough that normal use of the app (browsing a few
+// books, a graph, an author) never comes close to it. Registered after the
+// app-key check above so requests rejected there (hooks run in the order
+// they're added) don't count against a real client's allowance.
+await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 
 app.get("/health", { config: { rateLimit: false } }, async () => ({ status: "ok" }));
 

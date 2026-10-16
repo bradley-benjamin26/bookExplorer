@@ -6,7 +6,7 @@ import * as googleBooks from "../sources/googleBooks.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 import { mergeLabelLists } from "../sources/loc.js";
-import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid } from "./bookEnrichment.js";
+import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
 
@@ -19,7 +19,7 @@ const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
 /** Shared by the /api/books route (a future /api/graph/book route would reuse this too). */
 export function getBookDetail(rawIsbn: string): Promise<Book | null> {
   const isbn = normalizeIsbn(rawIsbn);
-  return bookCache.wrap(isbn, async () => {
+  return bookCache.wrap(isbn, async (entry) => {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
 
@@ -27,7 +27,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // — same shared pipeline a work page uses (see bookEnrichment.ts),
     // started here, alongside everything else below, since none of it
     // depends on any of it.
-    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId);
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId, entry);
 
     // Best-effort match of the work itself (not a specific edition or film
     // adaptation) to a Wikidata item, so its Wikipedia lead can be used as
@@ -39,11 +39,11 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // case, a failure here is caught rather than left to fail the whole
     // request — scanning a barcode shouldn't break over a title search).
     const firstAuthorName = ol.authors[0]?.name ?? null;
-    const workQid = await findWorkQid(ol.title, firstAuthorName);
+    const workQid = await findWorkQid(ol.title, firstAuthorName, entry);
     const [wikipedia, wikidataGenres] = workQid
       ? await Promise.all([
-          fetchWikipediaExtract(workQid).catch(() => null),
-          wikidata.fetchGenres(workQid).catch(() => [] as string[]),
+          fetchWikipediaExtract(workQid).catch(optionalSource(entry, "wikipedia", null)),
+          wikidata.fetchGenres(workQid).catch(optionalSource(entry, "wikidata genres", [] as string[])),
         ])
       : [null, [] as string[]];
 
@@ -67,7 +67,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // Books' rating instead of silently showing none.
     const hasRating = Boolean(hc?.rating && hc.ratingsCount) || Boolean(olRatings);
     const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !(wikipedia?.text ?? ol.description) || !hasRating;
-    const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(() => null) : null;
+    const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(optionalSource(entry, "googleBooks", null)) : null;
     const locMetadata = await locMetadataPromise;
 
     const coverUrl = ol.coverUrl ?? hc?.coverUrl ?? gb?.coverUrl ?? null;

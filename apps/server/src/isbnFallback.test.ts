@@ -41,6 +41,19 @@ describe("tryEachIsbn", () => {
     warn.mockRestore();
   });
 
+  it("throws instead of returning the fallback when nothing was found and an attempt failed", async () => {
+    const lookup = vi.fn(async (isbn: string) => {
+      if (isbn === "bad") throw new Error("boom");
+      return "";
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(
+      tryEachIsbn(["bad", "empty"], lookup, { sourceName: "test", isEmpty: (r) => r === "", fallback: "" })
+    ).rejects.toThrow("boom");
+    expect(lookup).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
   it("stops after maxAttempts even if untried candidates remain", async () => {
     const lookup = vi.fn(async () => "");
     await tryEachIsbn(["1", "2", "3", "4"], lookup, {
