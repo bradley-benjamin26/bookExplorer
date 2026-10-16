@@ -52,6 +52,18 @@ describe("savedBooks", () => {
     expect(await getSavedBook(book.isbn)).toBeNull();
   });
 
+  it("doesn't let an update that started before a removal recreate the record", async () => {
+    await saveBookFromApi(book);
+    const update = updateSavedBook(book.isbn, { notes: "late write" });
+    // Let the update's read get underway, so the removal lands between that
+    // read and its write — the window where an unqueued removal used to be
+    // undone by the write that followed it.
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    const removal = removeSavedBook(book.isbn);
+    await Promise.all([update, removal]);
+    expect(await getSavedBook(book.isbn)).toBeNull();
+  });
+
   it("starts fresh after the record is removed", async () => {
     await saveBookFromApi(book);
     await updateSavedBook(book.isbn, { notes: "old" });

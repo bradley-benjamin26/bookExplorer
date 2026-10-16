@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { isValidAppKey } from "./appAuth.js";
+import { parseTrustProxy } from "./trustProxy.js";
 import { booksRoutes } from "./routes/books.js";
 import { authorsRoutes } from "./routes/authors.js";
 import { subjectsRoutes } from "./routes/subjects.js";
@@ -12,10 +13,12 @@ import { searchRoutes } from "./routes/search.js";
 // Behind a load balancer or reverse proxy (most hosting platforms), every
 // request arrives from the proxy's own IP — without trusting its
 // X-Forwarded-For header, the per-IP rate limit below would treat all users
-// as one client and throttle them together. It's opt-in rather than always
-// on because, with no proxy in front, trusting that header would let any
-// caller spoof their IP and dodge the limit entirely.
-const app = Fastify({ logger: true, trustProxy: process.env.TRUST_PROXY === "true" });
+// as one client and throttle them together. Only the proxy's own hop is
+// trusted, never the whole header: a client can send its own
+// X-Forwarded-For, which the proxy appends to rather than replaces, so
+// trusting every address in it would let any caller pick their own IP and
+// dodge the limit. Off unless TRUST_PROXY is set (see trustProxy.ts).
+const app = Fastify({ logger: true, trustProxy: parseTrustProxy(process.env.TRUST_PROXY) });
 
 await app.register(cors, { origin: true });
 

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { normalizeIsbn, slugifySubject } from "@book-explorer/shared";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchBookByIsbn } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
@@ -46,8 +46,17 @@ export default function BookDetail() {
 
   useEffect(() => {
     if (data) addRecentIsbn(data.isbn);
-    if (isbn) getSavedBook(isbn).then(setSavedRecord);
-  }, [data, isbn]);
+  }, [data]);
+
+  // Re-read on every focus, not just on first load — this screen stays
+  // mounted underneath others in the stack, so a book removed (or edited)
+  // from the Saved screen would otherwise still show its old saved state
+  // when navigating back here.
+  useFocusEffect(
+    useCallback(() => {
+      if (isbn) getSavedBook(isbn).then(setSavedRecord);
+    }, [isbn])
+  );
 
   const handleToggleSaved = async () => {
     if (!data) return;
