@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
@@ -49,11 +49,18 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
   );
 }
 
+// Notes are written once typing pauses this long, so a write doesn't happen
+// on every keystroke. Saving only on blur (as this used to) lost notes when
+// someone navigated away mid-edit, since that doesn't reliably blur the
+// input first — any still-pending save is also flushed on unmount.
+const NOTES_SAVE_DELAY_MS = 600;
+
 /** Shown on a book's detail page once it's saved, in place of the read-only
  * subject/genre tags — lets the user add to or remove from this saved
- * record's own subjects/genres and keep freeform notes. Each change is
- * persisted immediately (tags) or on blur (notes) rather than needing an
- * explicit save step, matching how the rest of this screen behaves. */
+ * record's own subjects/genres and keep freeform notes. Tag changes are
+ * persisted immediately and notes shortly after typing pauses, rather than
+ * needing an explicit save step, matching how the rest of this screen
+ * behaves. */
 export function SavedBookEditor({
   record,
   onChange,
@@ -63,6 +70,12 @@ export function SavedBookEditor({
 }) {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
+  // Tags are tracked locally (updated synchronously on each tap) rather than
+  // read back from `record`, which only updates once the async write
+  // finishes — otherwise two quick taps would both build on the same old
+  // list, and the second would undo the first.
+  const [subjects, setSubjects] = useState(record.subjects);
+  const [genres, setGenres] = useState(record.genres);
   const [notes, setNotes] = useState(record.notes);
 
   const persist = async (changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>) => {
@@ -70,10 +83,49 @@ export function SavedBookEditor({
     if (next) onChange(next);
   };
 
+  // The latest unsaved notes, if any — a ref so the unmount flush below sees
+  // the current value rather than the one from its first render.
+  const pendingNotes = useRef<string | null>(null);
+  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+
+  const flushNotes = () => {
+    if (notesTimer.current) clearTimeout(notesTimer.current);
+    notesTimer.current = null;
+    if (pendingNotes.current === null) return;
+    const value = pendingNotes.current;
+    pendingNotes.current = null;
+    persistRef.current({ notes: value });
+  };
+
+  useEffect(() => flushNotes, []);
+
+  const handleNotesChange = (value: string) => {
+    setNotes(value);
+    pendingNotes.current = value;
+    if (notesTimer.current) clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(flushNotes, NOTES_SAVE_DELAY_MS);
+  };
+
   return (
     <View style={styles.container}>
-      <TagEditor label="Subjects" tags={record.subjects} onChange={(subjects) => persist({ subjects })} />
-      <TagEditor label="Genres" tags={record.genres} onChange={(genres) => persist({ genres })} />
+      <TagEditor
+        label="Subjects"
+        tags={subjects}
+        onChange={(next) => {
+          setSubjects(next);
+          persist({ subjects: next });
+        }}
+      />
+      <TagEditor
+        label="Genres"
+        tags={genres}
+        onChange={(next) => {
+          setGenres(next);
+          persist({ genres: next });
+        }}
+      />
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notes</Text>
         <TextInput
@@ -81,8 +133,8 @@ export function SavedBookEditor({
           placeholder="Your notes about this book..."
           placeholderTextColor={theme.colors.textFaint}
           value={notes}
-          onChangeText={setNotes}
-          onBlur={() => persist({ notes })}
+          onChangeText={handleNotesChange}
+          onBlur={flushNotes}
           multiline
         />
       </View>

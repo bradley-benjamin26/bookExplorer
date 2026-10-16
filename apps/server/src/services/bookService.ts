@@ -1,4 +1,5 @@
 import type { Book } from "@book-explorer/shared";
+import { normalizeIsbn } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
@@ -9,17 +10,11 @@ import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid 
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
 
-// ISBNs are sometimes hyphenated for display (e.g. "978-0-06-325085-7", or a
-// URL typed/pasted with dashes, as opposed to a barcode scan which yields
-// bare digits) — Open Library's own API tolerates and normalizes these
-// itself, but Hardcover's lookup is an exact match against a dash-free
-// column, so a hyphenated ISBN silently fails to match there even though the
-// book is in fact in Hardcover's catalog. Stripping once here, before any
-// source is queried, keeps every downstream lookup (and the cache key) on
-// the same normalized form.
-function normalizeIsbn(isbn: string): string {
-  return isbn.replace(/[^0-9Xx]/g, "");
-}
+// ISBNs are sometimes hyphenated for display (e.g. "978-0-06-325085-7") —
+// Open Library tolerates this, but Hardcover's lookup is an exact match
+// against a dash-free column, so a hyphenated ISBN silently fails to match
+// there. Normalizing once here, before any source is queried, keeps every
+// downstream lookup (and the cache key) on the same form.
 
 /** Shared by the /api/books route (a future /api/graph/book route would reuse this too). */
 export function getBookDetail(rawIsbn: string): Promise<Book | null> {

@@ -193,3 +193,15 @@ export const GraphSchema = z.object({
   edges: z.array(GraphEdgeSchema),
 });
 export type Graph = z.infer<typeof GraphSchema>;
+
+/**
+ * Strips everything but digits and a check-digit "X" from an ISBN — barcode
+ * scans yield bare digits, but typed or pasted ISBNs are often hyphenated
+ * ("978-0-06-325085-7"). Used by the server (so every source lookup and the
+ * cache key share one form) and by the app (so a saved book's record, keyed
+ * by the server's normalized ISBN, is found again however the ISBN was
+ * entered).
+ */
+export function normalizeIsbn(isbn: string): string {
+  return isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
+}

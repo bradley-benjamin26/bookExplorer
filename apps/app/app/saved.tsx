@@ -11,7 +11,7 @@ import {
   upsertLibrary,
   type Library,
 } from "../src/storage/librarySettings";
-import { getSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
@@ -199,6 +199,10 @@ export default function Saved() {
 
   const handleRemove = async (item: SavedItem) => {
     await removeSaved(item.type, item.id);
+    // A book's editable record (tags, notes) lives under its own key — left
+    // behind, the book page would still show it as saved, and saving it
+    // again would resurrect the old notes instead of starting fresh.
+    if (item.type === "book") await removeSavedBook(item.id);
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
   };
 
