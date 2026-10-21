@@ -85,6 +85,7 @@ export default function WorkDetail() {
                 key={genre.label}
                 style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
+                accessibilityLabel={genre.label}
               >
                 <Text style={styles.genreTagText}>
                   {genre.label}
@@ -105,6 +106,7 @@ export default function WorkDetail() {
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
+                accessibilityLabel={subject.label}
               >
                 <Text style={styles.subjectTagText}>
                   {subject.label}
