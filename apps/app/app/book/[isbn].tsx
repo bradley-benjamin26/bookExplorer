@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { normalizeIsbn, slugifySubject } from "@book-explorer/shared";
+import { normalizeIsbn, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -11,6 +11,7 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
+import { SourceBadge } from "../../src/components/SourceBadge";
 import { routes } from "../../src/navigation";
 import { addRecentIsbn } from "../../src/storage/history";
 import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
@@ -73,8 +74,12 @@ export default function BookDetail() {
   // edited, on top of the snapshot taken at save time) is what's shown and
   // edited from here on, rather than whatever the external sources return
   // on this fetch — that's the whole point of saving a book's data locally.
-  const displaySubjects = savedRecord?.subjects ?? data?.subjects ?? [];
-  const displayGenres = savedRecord?.genres ?? data?.genres ?? [];
+  const displaySubjects: TaggedTerm[] = savedRecord
+    ? savedRecord.subjects.map((label) => ({ label, sources: [] }))
+    : (data?.subjects ?? []);
+  const displayGenres: TaggedTerm[] = savedRecord
+    ? savedRecord.genres.map((label) => ({ label, sources: [] }))
+    : (data?.genres ?? []);
 
   if (isLoading) {
     return (
@@ -140,11 +145,15 @@ export default function BookDetail() {
               <View style={styles.genreTags}>
                 {displayGenres.map((genre) => (
                   <Pressable
-                    key={genre}
+                    key={genre.label}
                     style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
-                    onPress={() => router.push(routes.subject(slugifySubject(genre)))}
+                    onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
+                    accessibilityLabel={genre.label}
                   >
-                    <Text style={styles.genreTagText}>{genre}</Text>
+                    <Text style={styles.genreTagText}>
+                      {genre.label}
+                      <SourceBadge sources={genre.sources} />
+                    </Text>
                   </Pressable>
                 ))}
               </View>
@@ -159,11 +168,15 @@ export default function BookDetail() {
           <View style={styles.subjectTags}>
             {displaySubjects.slice(0, 12).map((subject) => (
               <Pressable
-                key={subject}
+                key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(subject)))}
+                onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
+                accessibilityLabel={subject.label}
               >
-                <Text style={styles.subjectTagText}>{subject}</Text>
+                <Text style={styles.subjectTagText}>
+                  {subject.label}
+                  <SourceBadge sources={subject.sources} />
+                </Text>
               </Pressable>
             ))}
           </View>

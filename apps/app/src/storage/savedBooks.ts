@@ -61,8 +61,8 @@ export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
       title: book.title,
       authorNames: book.authors.map((a) => a.name),
       format: book.format,
-      subjects: book.subjects,
-      genres: book.genres,
+      subjects: book.subjects.map((t) => t.label),
+      genres: book.genres.map((t) => t.label),
       notes: "",
       savedAt: Date.now(),
     };

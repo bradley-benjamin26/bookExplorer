@@ -1,3 +1,4 @@
+import type { TaggedTerm } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { tryEachIsbn } from "../isbnFallback.js";
 import { USER_AGENT } from "./openLibrary.js";
@@ -122,15 +123,20 @@ export function fetchMetadataByAnyIsbn(isbns: string[], maxAttempts = 5): Promis
   });
 }
 
-/** Combines label lists from multiple sources, case-insensitively deduplicated, keeping the first-seen spelling and preferring earlier lists' ordering. */
-export function mergeLabelLists(...lists: string[][]): string[] {
-  const seen = new Set<string>();
-  const merged: string[] = [];
-  for (const label of lists.flat()) {
-    const key = label.trim().toLowerCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    merged.push(label);
+/** Merges label lists from different sources into source-tagged terms, deduplicated case-insensitively (first-seen spelling wins, sources accumulate on that first-seen entry in the order their list was passed). */
+export function mergeTaggedTerms(...lists: { source: TaggedTerm["sources"][number]; labels: string[] }[]): TaggedTerm[] {
+  const merged = new Map<string, TaggedTerm>();
+  for (const { source, labels } of lists) {
+    for (const label of labels) {
+      const key = label.trim().toLowerCase();
+      if (!key) continue;
+      const existing = merged.get(key);
+      if (existing) {
+        if (!existing.sources.includes(source)) existing.sources.push(source);
+      } else {
+        merged.set(key, { label, sources: [source] });
+      }
+    }
   }
-  return merged;
+  return [...merged.values()];
 }

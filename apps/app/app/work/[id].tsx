@@ -10,6 +10,7 @@ import { EditionsSection } from "../../src/components/EditionsSection";
 import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
+import { SourceBadge } from "../../src/components/SourceBadge";
 import { routes } from "../../src/navigation";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -81,11 +82,15 @@ export default function WorkDetail() {
           <View style={styles.genreTags}>
             {data.genres.map((genre) => (
               <Pressable
-                key={genre}
+                key={genre.label}
                 style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(genre)))}
+                onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
+                accessibilityLabel={genre.label}
               >
-                <Text style={styles.genreTagText}>{genre}</Text>
+                <Text style={styles.genreTagText}>
+                  {genre.label}
+                  <SourceBadge sources={genre.sources} />
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -98,11 +103,15 @@ export default function WorkDetail() {
           <View style={styles.subjectTags}>
             {data.subjects.slice(0, 12).map((subject) => (
               <Pressable
-                key={subject}
+                key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(subject)))}
+                onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
+                accessibilityLabel={subject.label}
               >
-                <Text style={styles.subjectTagText}>{subject}</Text>
+                <Text style={styles.subjectTagText}>
+                  {subject.label}
+                  <SourceBadge sources={subject.sources} />
+                </Text>
               </Pressable>
             ))}
           </View>

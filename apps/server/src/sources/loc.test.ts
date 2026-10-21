@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeLabelLists, parseModsRecord } from "./loc.js";
+import { mergeTaggedTerms, parseModsRecord } from "./loc.js";
 
 describe("parseModsRecord", () => {
   const isbn = "9780061120084";
@@ -58,25 +58,40 @@ describe("parseModsRecord", () => {
   });
 });
 
-describe("mergeLabelLists", () => {
-  it("deduplicates case-insensitively, keeping the first-seen spelling", () => {
-    expect(mergeLabelLists(["Fiction", "Mystery"], ["fiction", "Science Fiction"])).toEqual([
-      "Fiction",
-      "Mystery",
-      "Science Fiction",
+describe("mergeTaggedTerms", () => {
+  it("tags each list's labels with that list's source", () => {
+    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["Mystery"] })).toEqual([
+      { label: "Fiction", sources: ["lcsh"] },
+      { label: "Mystery", sources: ["openLibrary"] },
     ]);
   });
 
-  it("drops blank/whitespace-only labels", () => {
-    expect(mergeLabelLists(["Fiction", "  ", ""], ["Mystery"])).toEqual(["Fiction", "Mystery"]);
+  it("merges a label appearing in more than one list, case-insensitively, recording both sources", () => {
+    expect(
+      mergeTaggedTerms({ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["fiction", "Science Fiction"] })
+    ).toEqual([
+      { label: "Fiction", sources: ["lcsh", "openLibrary"] },
+      { label: "Science Fiction", sources: ["openLibrary"] },
+    ]);
   });
 
-  it("preserves earlier lists' ordering ahead of later lists' new entries", () => {
-    expect(mergeLabelLists(["B", "A"], ["C", "A"])).toEqual(["B", "A", "C"]);
+  it("keeps first-seen spelling when the same label recurs with different casing", () => {
+    expect(mergeTaggedTerms({ source: "lcsh", labels: ["B", "A"] }, { source: "openLibrary", labels: ["C", "a"] })).toEqual([
+      { label: "B", sources: ["lcsh"] },
+      { label: "A", sources: ["lcsh", "openLibrary"] },
+      { label: "C", sources: ["openLibrary"] },
+    ]);
+  });
+
+  it("skips blank/whitespace-only labels", () => {
+    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Fiction", "  ", ""] }, { source: "openLibrary", labels: ["Mystery"] })).toEqual([
+      { label: "Fiction", sources: ["lcsh"] },
+      { label: "Mystery", sources: ["openLibrary"] },
+    ]);
   });
 
   it("returns an empty array when given no lists or only empty lists", () => {
-    expect(mergeLabelLists()).toEqual([]);
-    expect(mergeLabelLists([], [])).toEqual([]);
+    expect(mergeTaggedTerms()).toEqual([]);
+    expect(mergeTaggedTerms({ source: "lcsh", labels: [] }, { source: "openLibrary", labels: [] })).toEqual([]);
   });
 });

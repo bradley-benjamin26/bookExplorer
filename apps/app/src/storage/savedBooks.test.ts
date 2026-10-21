@@ -9,8 +9,8 @@ const book: Book = {
   isbn: "9780141439518",
   title: "Pride and Prejudice",
   authors: [{ openLibraryId: "OL21594A", name: "Jane Austen" }],
-  subjects: ["Courtship"],
-  genres: ["Romance"],
+  subjects: [{ label: "Courtship", sources: ["openLibrary"] }],
+  genres: [{ label: "Romance", sources: ["openLibrary"] }],
   description: null,
   descriptionSource: null,
   descriptionSourceUrl: null,
@@ -31,7 +31,7 @@ describe("savedBooks", () => {
     const first = await saveBookFromApi(book);
     expect(first.subjects).toEqual(["Courtship"]);
     await updateSavedBook(book.isbn, { notes: "loved it" });
-    const second = await saveBookFromApi({ ...book, subjects: ["Something else"] });
+    const second = await saveBookFromApi({ ...book, subjects: [{ label: "Something else", sources: ["lcsh"] }] });
     expect(second.notes).toBe("loved it");
     expect(second.subjects).toEqual(["Courtship"]);
   });
