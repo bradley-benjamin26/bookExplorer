@@ -66,7 +66,9 @@ async function resolveLabels(uris: string[]): Promise<string[]> {
 
 /**
  * Fetches the broader/narrower SKOS relations for an LCSH authority URI and
- * resolves each related URI to its own prefLabel. Resolutions run in
+ * resolves each related URI to its own prefLabel. Each list is capped to 20
+ * URIs before resolution (some headings, e.g. "Fiction", have 80+ narrower
+ * terms) to bound the number of outgoing requests. Resolutions run in
  * parallel and a failed one is dropped rather than failing the whole call —
  * one bad broader/narrower lookup shouldn't erase the rest. Never throws:
  * any failure (top-level request, absent keys) degrades to empty arrays.
@@ -77,8 +79,8 @@ export async function fetchBroaderNarrower(uri: string): Promise<{ broader: stri
     if (!res.ok) return { broader: [], narrower: [] };
     const entries = (await res.json()) as SkosEntry[];
     const entry = entries.find((e) => e["@id"] === uri);
-    const broaderUris = (entry?.[SKOS_BROADER] ?? []).map((r) => r["@id"]);
-    const narrowerUris = (entry?.[SKOS_NARROWER] ?? []).map((r) => r["@id"]);
+    const broaderUris = (entry?.[SKOS_BROADER] ?? []).map((r) => r["@id"]).slice(0, 20);
+    const narrowerUris = (entry?.[SKOS_NARROWER] ?? []).map((r) => r["@id"]).slice(0, 20);
 
     const [broader, narrower] = await Promise.all([resolveLabels(broaderUris), resolveLabels(narrowerUris)]);
     return { broader, narrower };

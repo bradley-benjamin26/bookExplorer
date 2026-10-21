@@ -131,6 +131,42 @@ describe("fetchBroaderNarrower", () => {
     expect(result.broader.length).toBe(1);
   });
 
+  it("caps broader and narrower lookups to 20 each, even when SKOS lists more", async () => {
+    const broaderUris = Array.from(
+      { length: 25 },
+      (_, i) => `http://id.loc.gov/authorities/subjects/sh1000${String(i).padStart(4, "0")}`
+    );
+    const narrowerUris = Array.from(
+      { length: 25 },
+      (_, i) => `http://id.loc.gov/authorities/subjects/sh2000${String(i).padStart(4, "0")}`
+    );
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === `${TOP_URI}.skos.json`) {
+          return {
+            ok: true,
+            json: async () => [
+              {
+                "@id": TOP_URI,
+                "http://www.w3.org/2004/02/skos/core#broader": broaderUris.map((id) => ({ "@id": id })),
+                "http://www.w3.org/2004/02/skos/core#narrower": narrowerUris.map((id) => ({ "@id": id })),
+              },
+            ],
+          };
+        }
+        const match = [...broaderUris, ...narrowerUris].find((id) => url === `${id}.skos.json`);
+        if (match) return { ok: true, json: async () => prefLabelEntry(match, "Label") };
+        return { ok: false, json: async () => ({}) };
+      })
+    );
+
+    const result = await fetchBroaderNarrower(TOP_URI);
+    expect(result.broader.length).toBe(20);
+    expect(result.narrower.length).toBe(20);
+  });
+
   it("returns empty arrays when the uri has neither broader nor narrower terms", async () => {
     const uri = "http://id.loc.gov/authorities/subjects/sh00000000";
     vi.stubGlobal(
