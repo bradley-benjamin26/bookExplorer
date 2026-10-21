@@ -289,7 +289,7 @@ function toConceptRelations(
 ): SubjectConcept[] {
   return qids.flatMap((qid) => {
     const item = resolved.get(qid);
-    return item ? [{ relation, wikidataId: qid, label: item.label }] : [];
+    return item ? [{ relation, wikidataId: qid, label: item.label, sources: ["wikidata" as const] }] : [];
   });
 }
 
