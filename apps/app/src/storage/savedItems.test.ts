@@ -32,4 +32,12 @@ describe("savedItems", () => {
     await AsyncStorage.setItem("book-explorer:saved-items", "{not json");
     expect(await getSavedItems()).toEqual([]);
   });
+
+  it("keeps both saves when two toggles overlap", async () => {
+    await Promise.all([
+      toggleSaved({ type: "book", id: "A", title: "A" }),
+      toggleSaved({ type: "book", id: "B", title: "B" }),
+    ]);
+    expect((await getSavedItems()).map((i) => i.id).sort()).toEqual(["A", "B"]);
+  });
 });

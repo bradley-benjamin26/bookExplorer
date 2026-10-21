@@ -31,6 +31,14 @@ describe("librarySettings", () => {
     expect((await removeLibrary("a")).map((l) => l.id)).toEqual(["b"]);
   });
 
+  it("keeps both libraries when two upserts overlap", async () => {
+    await Promise.all([
+      upsertLibrary({ id: "a", name: "A", isbnUrl: "https://a/", titleUrl: "" }),
+      upsertLibrary({ id: "b", name: "B", isbnUrl: "https://b/", titleUrl: "" }),
+    ]);
+    expect((await getLibraries()).map((l) => l.id).sort()).toEqual(["a", "b"]);
+  });
+
   it("substitutes placeholders or appends to a prefix URL", () => {
     expect(buildLibraryIsbnSearchUrl("https://lib/search?q={isbn}&x=1", "123")).toBe("https://lib/search?q=123&x=1");
     expect(buildLibraryIsbnSearchUrl("https://lib/isbn/", "123")).toBe("https://lib/isbn/123");
