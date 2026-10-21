@@ -20,7 +20,7 @@ function mergeSubjectConcepts(
 
   for (const concept of wikidataConcepts) {
     const key = `${concept.relation}:${concept.label.trim().toLowerCase()}`;
-    merged.set(key, concept);
+    merged.set(key, { ...concept, sources: [...concept.sources] });
   }
 
   for (const relation of ["broader", "narrower"] as const) {
