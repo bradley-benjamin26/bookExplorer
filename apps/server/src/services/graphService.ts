@@ -256,7 +256,7 @@ export async function buildWorkGraph(workId: string): Promise<Graph | null> {
   const GENRE_SUBJECT_PREFIX = /^genre:\s*/i;
   const plainSubjects: string[] = [];
   const genresFromSubjects: string[] = [];
-  for (const subject of work.subjects) {
+  for (const { label: subject } of work.subjects) {
     if (GENRE_SUBJECT_PREFIX.test(subject)) {
       genresFromSubjects.push(subject.replace(GENRE_SUBJECT_PREFIX, "").trim());
     } else {
@@ -276,7 +276,7 @@ export async function buildWorkGraph(workId: string): Promise<Graph | null> {
   // "Fiction", and giving them distinct ids keeps that from colliding into
   // one node that's wrongly colored/labeled as whichever type happened to be
   // added first).
-  for (const genre of [...work.genres, ...genresFromSubjects].slice(0, MAX_WORK_GENRES)) {
+  for (const genre of [...work.genres.map((g) => g.label), ...genresFromSubjects].slice(0, MAX_WORK_GENRES)) {
     const nodeId = `genre:${slugifySubject(genre)}`;
     nodes.push({ id: nodeId, type: "genre", label: genre, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "genre" });

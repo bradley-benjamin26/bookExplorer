@@ -2,7 +2,7 @@ import type { Work } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
-import { mergeLabelLists } from "../sources/loc.js";
+import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60);
@@ -41,8 +41,8 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
       // Library has no cover recorded for just has none instead of falling
       // any further.
       coverUrl: ol.coverUrl ?? hc?.coverUrl ?? null,
-      subjects: mergeLabelLists(locMetadata.subjects, ol.subjects),
-      genres: mergeLabelLists(locMetadata.genres, wikidataGenres),
+      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: ol.subjects }),
+      genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
       rating: blendHardcoverAndOpenLibraryRating(hc, olRatings),
       reviews: hc?.reviews ?? [],
     };
