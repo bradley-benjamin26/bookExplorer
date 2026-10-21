@@ -54,13 +54,19 @@ export default function AuthorDetail() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.name}>{data.name}</Text>
+      <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
       {(data.birthDate || data.deathDate) && (
         <Text style={styles.dates}>
           {data.birthDate ?? "?"} – {data.deathDate ?? "present"}
         </Text>
       )}
-      <Button variant="pill" active={saved} onPress={handleToggleSaved} style={styles.saveButton}>
+      <Button
+        variant="pill"
+        active={saved}
+        onPress={handleToggleSaved}
+        style={styles.saveButton}
+        accessibilityLabel={saved ? "Saved" : "Save"}
+      >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
@@ -109,7 +115,11 @@ export default function AuthorDetail() {
               const content = (
                 <View style={styles.relationRow}>
                   <Text style={styles.relationLabel}>{item.label}</Text>
-                  {isNavigable && <Text style={styles.relationChevron}>›</Text>}
+                  {isNavigable && (
+                    <Text style={styles.relationChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                      ›
+                    </Text>
+                  )}
                 </View>
               );
               return isNavigable ? (
@@ -117,6 +127,8 @@ export default function AuthorDetail() {
                   key={item.wikidataId}
                   style={({ pressed }) => pressed && styles.pressed}
                   onPress={() => router.push(routes.author(item.openLibraryId!))}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
                 >
                   {content}
                 </Pressable>

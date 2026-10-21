@@ -25,7 +25,14 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
       {tags.length > 0 && (
         <View style={styles.tagRow}>
           {tags.map((tag) => (
-            <Pressable key={tag} style={styles.tag} onPress={() => onChange(tags.filter((t) => t !== tag))}>
+            <Pressable
+              key={tag}
+              style={styles.tag}
+              onPress={() => onChange(tags.filter((t) => t !== tag))}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${tag}`}
+            >
               <Text style={styles.tagText}>{tag} ×</Text>
             </Pressable>
           ))}

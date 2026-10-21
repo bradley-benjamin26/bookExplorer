@@ -14,6 +14,7 @@ export function Button({
   variant = "primary",
   active = false,
   style,
+  accessibilityLabel,
 }: {
   children: ReactNode;
   onPress: () => void;
@@ -21,15 +22,20 @@ export function Button({
   /** Pill variant only: toggled visual state, e.g. an item that's already saved. */
   active?: boolean;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
 }) {
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={variant === "pill" ? { selected: active } : undefined}
+      style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         variant === "primary" ? styles.primary : styles.pill,
         active && styles.pillActive,
         pressed && styles.pressed,
+        focused && styles.focused,
         style,
       ]}
     >
@@ -58,5 +64,9 @@ function createStyles({ colors, radii, spacing }: Theme) {
     pillActive: { backgroundColor: colors.pillActiveBackground },
     pillText: { fontSize: 14, fontWeight: "600", color: colors.text },
     pressed: { opacity: 0.6 },
+    // Keyboard/external-switch focus ring (RN Web passes `focused` as a third
+    // Pressable style-callback arg; native platforms ignore this since
+    // `focused` stays false there).
+    focused: { outlineWidth: 2, outlineColor: colors.link, outlineStyle: "solid" },
   });
 }

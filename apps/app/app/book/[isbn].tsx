@@ -95,7 +95,7 @@ export default function BookDetail() {
       {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
         <GoogleBooksAttribution label="Cover image" />
       )}
-      <Text style={styles.title}>{data.title}</Text>
+      <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
       {data.authors.map((author) => (
         <Pressable
           key={author.openLibraryId}
@@ -106,7 +106,13 @@ export default function BookDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <Button variant="pill" active={saved} onPress={handleToggleSaved} style={styles.saveButton}>
+      <Button
+        variant="pill"
+        active={saved}
+        onPress={handleToggleSaved}
+        style={styles.saveButton}
+        accessibilityLabel={saved ? "Saved" : "Save"}
+      >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
       {savedRecord && (
@@ -186,23 +192,35 @@ export default function BookDetail() {
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
+          accessibilityRole="button"
+          accessibilityLabel="View on Open Library"
         >
           <Text style={styles.findRowText}>View on Open Library</Text>
-          <Text style={styles.findRowChevron}>›</Text>
+          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            ›
+          </Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${BOOKSHOP_URL}${data.isbn}`)}
+          accessibilityRole="button"
+          accessibilityLabel="Search on Bookshop.org"
         >
           <Text style={styles.findRowText}>Search on Bookshop.org</Text>
-          <Text style={styles.findRowChevron}>›</Text>
+          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            ›
+          </Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${WORLDCAT_URL}${data.isbn}`)}
+          accessibilityRole="button"
+          accessibilityLabel="Search on WorldCat"
         >
           <Text style={styles.findRowText}>Search on WorldCat</Text>
-          <Text style={styles.findRowChevron}>›</Text>
+          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            ›
+          </Text>
         </Pressable>
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>

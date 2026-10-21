@@ -34,9 +34,18 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
 
   return (
     <View style={styles.section}>
-      <Pressable style={({ pressed }) => [styles.header, pressed && styles.pressed]} onPress={() => setOpen((v) => !v)}>
+      <Pressable
+        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
+        onPress={() => setOpen((v) => !v)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Reviews (${reviews.length})`}
+        accessibilityState={{ expanded: open }}
+      >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
-        <Text style={styles.chevron}>{open ? "︿" : "﹀"}</Text>
+        <Text style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {open ? "︿" : "﹀"}
+        </Text>
       </Pressable>
       {open && (
         <>

@@ -33,6 +33,8 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       <Pressable
         style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
         onPress={() => router.push(routes.saved())}
+        accessibilityRole="button"
+        accessibilityLabel="Add your library's search URL in My Library to see it here."
       >
         <Text style={styles.findRowHint}>Add your library's search URL in My Library to see it here.</Text>
       </Pressable>
@@ -44,9 +46,13 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       key={key}
       style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
       onPress={() => Linking.openURL(url)}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <Text style={styles.findRowChevron}>›</Text>
+      <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        ›
+      </Text>
     </Pressable>
   );
 
@@ -79,10 +85,13 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
               style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
               onPress={() => toggleExpanded(library.id)}
               accessibilityRole="button"
+              accessibilityLabel={`Find at ${library.name}`}
               accessibilityState={{ expanded }}
             >
               <Text style={styles.findRowText}>Find at {library.name}</Text>
-              <Text style={styles.findRowChevron}>{expanded ? "⌄" : "›"}</Text>
+              <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {expanded ? "⌄" : "›"}
+              </Text>
             </Pressable>
             {expanded && (
               <View style={styles.subRows}>

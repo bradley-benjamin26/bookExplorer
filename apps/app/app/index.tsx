@@ -93,9 +93,13 @@ export default function Home() {
               <Pressable
                 style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
                 onPress={() => goToBook(item)}
+                accessibilityRole="button"
+                accessibilityLabel={item}
               >
                 <Text style={styles.recentItemText}>{item}</Text>
-                <Text style={styles.recentItemChevron}>›</Text>
+                <Text style={styles.recentItemChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  ›
+                </Text>
               </Pressable>
             )}
           />
@@ -108,7 +112,7 @@ export default function Home() {
 function createStyles({ colors, kicker }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: colors.background },
-    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 12 },
+    header: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", marginTop: 12 },
     title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.4, color: colors.text },
     subtitle: { fontSize: 15, color: colors.textMuted, marginTop: 6, marginBottom: 24, maxWidth: 260, lineHeight: 20 },
     libraryLink: { fontSize: 15, color: colors.link, fontWeight: "600", marginTop: 6 },

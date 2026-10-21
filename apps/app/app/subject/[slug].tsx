@@ -43,7 +43,7 @@ export default function SubjectDetail() {
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
-          <Text style={styles.name}>{data.name}</Text>
+          <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
 
           {!data.wikidataId && (
@@ -72,6 +72,8 @@ export default function SubjectDetail() {
                         key={concept.wikidataId}
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
+                        accessibilityRole="button"
+                        accessibilityLabel={concept.label}
                       >
                         <Text style={styles.conceptTagText}>{concept.label}</Text>
                       </Pressable>

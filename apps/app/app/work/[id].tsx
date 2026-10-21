@@ -52,7 +52,7 @@ export default function WorkDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
-      <Text style={styles.title}>{data.title}</Text>
+      <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
       {data.authors.map((author) => (
         <Pressable
           key={author.openLibraryId}
@@ -63,7 +63,13 @@ export default function WorkDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <Button variant="pill" active={saved} onPress={handleToggleSaved} style={styles.saveButton}>
+      <Button
+        variant="pill"
+        active={saved}
+        onPress={handleToggleSaved}
+        style={styles.saveButton}
+        accessibilityLabel={saved ? "Saved" : "Save"}
+      >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
 
