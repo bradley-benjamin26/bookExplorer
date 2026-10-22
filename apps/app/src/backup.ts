@@ -3,7 +3,7 @@ import { fetchBookWithAlternate } from "./api/bookLookup";
 import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
 import { getSavedBook, saveBookFromApi } from "./storage/savedBooks";
-import { isItemSaved, toggleSaved } from "./storage/savedItems";
+import { ensureSaved } from "./storage/savedItems";
 import { SCHEMA_VERSION } from "./storage/schema";
 import { applySnapshot, getSnapshot, type Snapshot } from "./storage/snapshot";
 
@@ -96,7 +96,7 @@ export async function runCsvImport(
       try {
         const book = await fetchBookWithAlternate(isbn);
         await saveBookFromApi(book);
-        if (!(await isItemSaved("book", book.isbn))) await toggleSaved({ type: "book", id: book.isbn, title: book.title });
+        await ensureSaved({ type: "book", id: book.isbn, title: book.title });
         p.saved++;
       } catch {
         p.failed.push(title || isbn);

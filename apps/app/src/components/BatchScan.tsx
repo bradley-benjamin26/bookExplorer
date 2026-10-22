@@ -109,6 +109,7 @@ export function BatchScan({ onExit }: { onExit: () => void }) {
   const unsaved = rows.filter((r) => r.save !== "saved");
   const saveable = unsaved.filter((r) => r.book);
   const skipped = unsaved.length - saveable.length;
+  const lookupFailed = unsaved.some((r) => r.lookup === "error");
   const rowStatus = (r: Row) =>
     r.save === "saved" ? "Saved" : r.save === "failed" ? "Save failed" : r.lookup === "loading" ? "Looking up" : r.lookup === "error" ? "Not found" : "Ready";
 
@@ -150,7 +151,7 @@ export function BatchScan({ onExit }: { onExit: () => void }) {
         {list}
         {skipped > 0 && (
           <Text style={styles.muted} accessibilityLiveRegion="polite">
-            {skipped} {skipped === 1 ? "book" : "books"} not found yet and will be skipped. Retry the lookup or close to discard.
+            {skipped} {skipped === 1 ? "book" : "books"} without details will be skipped{lookupFailed ? ". Retry failed lookups or close to discard." : " until their lookup finishes."}
           </Text>
         )}
         <Button
