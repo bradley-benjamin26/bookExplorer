@@ -44,6 +44,27 @@ describe("pruneClient", () => {
     expect(keys(pruned).sort()).toEqual(["author:saved", "book:u2", "book:u3", "book:u4", "graph:author:saved"]);
   });
 
+  it("over the size budget, evicts unsaved details then saved graphs, oldest first, and never saved details", () => {
+    const all = [
+      query(["book", "saved"], 1),
+      query(["graph", "book", "saved"], 2),
+      query(["graph", "author", "savedNew"], 5),
+      query(["author", "savedNew"], 6),
+      query(["work", "old"], 3),
+      query(["work", "new"], 4),
+    ];
+    const saved = new Set(["book:saved", "author:savedNew"]);
+    const size = (qs: typeof all) => qs.reduce((n, q) => n + JSON.stringify(q).length, 0);
+    const prune = (keep: typeof all) => keys(pruneClient(client(all), saved, 50, size(keep))).sort();
+
+    // Room for all but one: the oldest unsaved detail goes first.
+    expect(prune(all.filter((q) => q.queryKey[1] !== "old"))).toEqual(["author:savedNew", "book:saved", "graph:author:savedNew", "graph:book:saved", "work:new"]);
+    // Room for saved details plus one graph: every unsaved detail, then the older saved graph.
+    expect(prune([all[0], all[2], all[3]])).toEqual(["author:savedNew", "book:saved", "graph:author:savedNew"]);
+    // No room at all: saved details still stay.
+    expect(keys(pruneClient(client(all), saved, 50, 0)).sort()).toEqual(["author:savedNew", "book:saved"]);
+  });
+
   it("stores data kept through a failed refetch as success", () => {
     const pruned = pruneClient(client([query(["book", "1"], 1, "error")]), new Set());
     expect(pruned.clientState.queries[0].state.status).toBe("success");
