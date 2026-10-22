@@ -39,3 +39,16 @@ export const openLibraryUrl = {
 export function shareMessage(title: string, href: Href, publicUrl: string): string {
   return `${title}\n${schemeUrl(href)}\n${publicUrl}`;
 }
+
+/**
+ * What to announce after a share attempt: "Link copied" when `share` resolved true (it copied to the
+ * clipboard rather than opening a share sheet), nothing for a share sheet or one the user dismissed
+ * (AbortError), and "Couldn't share" for any other failure.
+ */
+export async function shareFeedback(share: () => Promise<boolean>): Promise<string> {
+  try {
+    return (await share()) ? "Link copied" : "";
+  } catch (err) {
+    return err instanceof Error && err.name === "AbortError" ? "" : "Couldn't share";
+  }
+}
