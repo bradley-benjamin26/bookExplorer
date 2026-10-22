@@ -221,3 +221,62 @@ export function normalizeIsbn(isbn: string): string {
 export function isValidIsbn(raw: string): boolean {
   return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
 }
+
+// Caps on an imported backup/CSV file, which is untrusted input: big enough
+// for any real library, small enough that parsing it can't hang the app.
+export const MAX_IMPORT_BYTES = 5_000_000;
+export const MAX_IMPORT_RECORDS = 10_000;
+
+// Imported records must carry their own updatedAt (no "now" fallback), so a
+// merge of the same file always gives the same result.
+const VersionedFields = {
+  schemaVersion: z.number().int().positive(),
+  updatedAt: z.number().int().nonnegative(),
+};
+const text = z.string().max(10_000);
+const tagList = z.array(z.string().max(500)).max(1_000);
+// Library URLs are opened as links, so an imported file mustn't be able to
+// plant a javascript: or other non-web URL.
+const webUrl = z.string().max(2_000).regex(/^(https?:\/\/.*)?$/i);
+
+export const SavedItemExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  type: z.enum(["book", "work", "author"]),
+  id: z.string().min(1).max(200),
+  title: text,
+});
+
+export const SavedBookExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  // Becomes part of a storage key, so only the server's normalized form.
+  isbn: z.string().regex(/^(\d{9}[\dX]|\d{13})$/),
+  wikidataId: z.string().max(200).nullable(),
+  openLibraryEditionId: z.string().max(200).nullable(),
+  openLibraryWorkId: z.string().max(200).nullable(),
+  title: text,
+  authorNames: tagList,
+  format: z.string().max(200).nullable(),
+  subjects: tagList,
+  genres: tagList,
+  notes: text,
+  savedAt: z.number().int().nonnegative(),
+});
+
+export const LibraryExportSchema = z.object({
+  ...VersionedFields,
+  id: z.string().min(1).max(200),
+  name: z.string().max(500),
+  isbnUrl: webUrl,
+  titleUrl: webUrl,
+});
+
+/** A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts). */
+export const SnapshotExportSchema = z.object({
+  schemaVersion: z.number().int().positive(),
+  items: z.array(SavedItemExportSchema).max(MAX_IMPORT_RECORDS),
+  books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
+  libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
+});
+export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;

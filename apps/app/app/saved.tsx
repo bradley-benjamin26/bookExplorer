@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
 import { SavedBookEditor } from "../src/components/SavedBookEditor";
 import { routes } from "../src/navigation";
@@ -205,12 +206,11 @@ export default function Saved() {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      getSavedItems().then(setItems);
-      getLibraries().then(setLibraries);
-    }, [])
-  );
+  const load = useCallback(() => {
+    getSavedItems().then(setItems);
+    getLibraries().then(setLibraries);
+  }, []);
+  useFocusEffect(load);
 
   const books = items.filter((i) => i.type === "book" || i.type === "work");
   const authors = items.filter((i) => i.type === "author");
@@ -300,6 +300,8 @@ export default function Saved() {
         </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
+
+      <BackupSection onImported={load} />
     </ScrollView>
   );
 }
