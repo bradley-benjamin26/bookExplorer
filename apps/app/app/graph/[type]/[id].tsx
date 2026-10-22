@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
+import { Check, ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -15,8 +15,12 @@ import Animated, {
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
+import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
+import { ShareButton } from "../../../src/components/ShareButton";
+import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
+import { openLibraryUrl } from "../../../src/share";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { titleCase } from "../../../src/titleCase";
 
@@ -436,7 +440,12 @@ function parseNodeId(id: string): Center {
 }
 
 export default function GraphExplorer() {
-  const { type, id } = useLocalSearchParams<{ type: string; id: string }>();
+  const { type, id, hideTypes, hideRelations } = useLocalSearchParams<{
+    type: string;
+    id: string;
+    hideTypes?: string;
+    hideRelations?: string;
+  }>();
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -476,10 +485,21 @@ export default function GraphExplorer() {
     enabled: !!center,
   });
 
+  // Filters live in the route query (so shared links restore them) and are mirrored in state for instant updates.
+  const [filter, setFilter] = useState<GraphFilter>(() => filterFromParams({ hideTypes, hideRelations }));
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [showList, setShowList] = useState(false);
+  const updateFilter = (next: GraphFilter) => {
+    setFilter(next);
+    const p = filterToParams(next);
+    router.setParams({ hideTypes: p.hideTypes, hideRelations: p.hideRelations });
+  };
+  const visible = useMemo(() => (data ? applyGraphFilter(data, filter) : null), [data, filter]);
+
   const layout = useMemo(() => {
-    if (!data) return null;
-    return layoutGraph(data, width, canvasHeight);
-  }, [data, width, canvasHeight]);
+    if (!visible) return null;
+    return layoutGraph(visible, width, canvasHeight);
+  }, [visible, width, canvasHeight]);
 
   // Shared transform for the whole canvas: both the SVG rendering layer and
   // the accessible Pressable overlay are children of one Animated.View (see
@@ -693,7 +713,7 @@ export default function GraphExplorer() {
   // Open Library works, say — rather than a fetch failure, so it's shown as
   // its own explicit "nothing here" state rather than an empty canvas with
   // a lone floating circle and no explanation.
-  if (layout.nodes.length <= 1) {
+  if (layout.nodes.length <= 1 && !isFiltered(filter)) {
     const centerLabel = layout.nodes[0]?.label ?? "this";
     return (
       <View style={styles.center}>
@@ -726,6 +746,51 @@ export default function GraphExplorer() {
           <Text style={styles.legendLabel}>Not yet linked</Text>
         </View>
       </View>
+      <View style={styles.toolbar}>
+        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph">
+          Filter
+        </Button>
+        <Button
+          variant="pill"
+          onPress={() => setShowList((v) => !v)}
+          accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
+        >
+          {showList ? "Graph" : "List"}
+        </Button>
+        <ShareButton
+          title={`${NODE_LABELS[center.type]} graph`}
+          href={routes.graph(center.type, center.id, filterToParams(filter))}
+          publicUrl={center.type === "work" ? openLibraryUrl.work(center.id) : center.type === "author" ? openLibraryUrl.author(center.id) : openLibraryUrl.subject(center.id)}
+        />
+      </View>
+      <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
+        <View style={styles.sheetBackdrop}>
+          <ScrollView style={styles.sheet} accessibilityViewIsModal>
+            <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
+            <Text style={styles.sheetHeading}>Node types</Text>
+            {[...new Set(data.nodes.map((n) => n.type))].map((t) => (
+              <FilterRow
+                key={t}
+                label={NODE_LABELS[t]}
+                checked={!filter.hiddenTypes.includes(t)}
+                onPress={() => updateFilter({ ...filter, hiddenTypes: toggle(filter.hiddenTypes, t) })}
+              />
+            ))}
+            <Text style={styles.sheetHeading}>Connections</Text>
+            {[...new Set(data.edges.map((e) => e.relation))].map((r) => (
+              <FilterRow
+                key={r}
+                label={RELATION_LABELS[r] ?? r}
+                checked={!filter.hiddenRelations.includes(r)}
+                onPress={() => updateFilter({ ...filter, hiddenRelations: toggle(filter.hiddenRelations, r) })}
+              />
+            ))}
+            <Button variant="pill" onPress={() => setFilterOpen(false)} style={{ marginVertical: 16 }}>
+              Done
+            </Button>
+          </ScrollView>
+        </View>
+      </Modal>
       {history.length > 0 && (
         <Pressable
           onPress={handleBack}
@@ -736,6 +801,31 @@ export default function GraphExplorer() {
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
       )}
+      {showList ? (
+        <ScrollView style={styles.list}>
+          {orderedNodes.map((node) => {
+            const isCenter = node.id === data.centerId;
+            return (
+              <Pressable
+                key={node.id}
+                onPress={() => handleNodePress(node)}
+                disabled={!node.navigable}
+                accessibilityRole="button"
+                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked"]
+                  .filter(Boolean)
+                  .join(". ")}
+                accessibilityHint={node.navigable ? (isCenter ? "Opens full details for this item" : "Re-centers the graph on this item") : undefined}
+                accessibilityState={{ disabled: !node.navigable, selected: isCenter }}
+                style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
+              >
+                <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
+                <Text style={styles.listLabel}>{node.label}</Text>
+                <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : (
       <GestureDetector gesture={composedGesture}>
         <View
           style={[styles.viewport, { width }]}
@@ -945,7 +1035,24 @@ export default function GraphExplorer() {
           </View>
         </View>
       </GestureDetector>
+      )}
     </View>
+  );
+}
+
+function FilterRow({ label, checked, onPress }: { label: string; checked: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityLabel={label}
+      accessibilityState={{ checked }}
+      style={styles.filterRow}
+    >
+      <View style={[styles.checkbox, checked && styles.checkboxOn]}>{checked && <Check size={14} color="#fff" strokeWidth={3} />}</View>
+      <Text style={styles.listLabel}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -1000,6 +1107,31 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.cardBorder,
     },
     pressed: { opacity: 0.6 },
+    toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+    sheet: {
+      maxHeight: "70%",
+      backgroundColor: colors.paper,
+      padding: spacing.lg,
+      borderTopLeftRadius: radii.sm,
+      borderTopRightRadius: radii.sm,
+    },
+    sheetTitle: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
+    sheetHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md },
+    filterRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 44 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.cover,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxOn: { backgroundColor: colors.cover },
+    list: { flex: 1, paddingHorizontal: spacing.lg },
+    listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    listLabel: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
     backButtonText: { fontFamily: fonts.bodySemiBold, color: colors.cover, fontSize: 14 },
   });
 }

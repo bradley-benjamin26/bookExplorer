@@ -15,7 +15,10 @@ export const routes = {
     pathname: "/work/[id]",
     params: options?.highlight ? { id, highlight: options.highlight } : { id },
   }),
-  graph: (type: GraphNode["type"], id: string): Href => ({ pathname: "/graph/[type]/[id]", params: { type, id } }),
+  graph: (type: GraphNode["type"], id: string, filter: { hideTypes?: string; hideRelations?: string } = {}): Href => ({
+    pathname: "/graph/[type]/[id]",
+    params: { type, id, ...filter },
+  }),
   saved: (): Href => "/saved",
   search: (query?: string): Href => ({ pathname: "/search", params: query ? { q: query } : {} }),
 };

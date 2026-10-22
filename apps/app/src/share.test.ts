@@ -10,6 +10,12 @@ describe("schemeUrl / parseSchemeUrl round-trip", () => {
     ["work", routes.work("OL1W"), ["work", "OL1W"], {}],
     ["work highlight", routes.work("OL1W", { highlight: "editions" }), ["work", "OL1W"], { highlight: "editions" }],
     ["graph", routes.graph("subject", "science fiction"), ["graph", "subject", "science fiction"], {}],
+    [
+      "graph filtered",
+      routes.graph("author", "OL1A", { hideTypes: "work,genre", hideRelations: "influencedBy" }),
+      ["graph", "author", "OL1A"],
+      { hideTypes: "work,genre", hideRelations: "influencedBy" },
+    ],
     ["saved", routes.saved(), ["saved"], {}],
     ["search", routes.search("dune & co"), ["search"], { q: "dune & co" }],
     ["search empty", routes.search(), ["search"], {}],
