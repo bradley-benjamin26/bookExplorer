@@ -26,7 +26,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["CAMERA"]
+      "permissions": [
+        "CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -40,7 +42,8 @@
         {
           "cameraPermission": "Book Explorer uses the camera to scan book barcodes."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

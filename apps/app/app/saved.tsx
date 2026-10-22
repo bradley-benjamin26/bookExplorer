@@ -38,7 +38,12 @@ function LibraryCard({
     <View style={styles.libraryCard}>
       <View style={styles.libraryCardHeader}>
         <Text style={styles.fieldLabel}>Library Name</Text>
-        <Pressable onPress={() => onRemove(library.id)} hitSlop={8}>
+        <Pressable
+          onPress={() => onRemove(library.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={library.name ? `Remove ${library.name}` : "Remove library"}
+        >
           <Text style={styles.removeText}>Remove</Text>
         </Pressable>
       </View>
@@ -158,13 +163,21 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
         <Pressable
           style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}
           onPress={() => router.push(item.type === "work" ? routes.work(item.id) : routes.book(item.id))}
+          accessibilityRole="button"
+          accessibilityLabel={item.title}
         >
           <Text style={styles.rowText} numberOfLines={2}>
             {item.title}
           </Text>
         </Pressable>
         {editable && (
-          <Pressable style={({ pressed }) => [styles.editButton, pressed && styles.pressed]} onPress={handleToggleExpand} hitSlop={8}>
+          <Pressable
+            style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}
+            onPress={handleToggleExpand}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={expanded ? `Done editing ${item.title}` : `Edit ${item.title}`}
+          >
             <Text style={styles.editText}>{expanded ? "Done" : "Edit"}</Text>
           </Pressable>
         )}
@@ -172,6 +185,8 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
           style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
           onPress={() => onRemove(item)}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${item.title}`}
         >
           <Text style={styles.removeText}>Remove</Text>
         </Pressable>
@@ -238,6 +253,8 @@ export default function Saved() {
             <Pressable
               style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}
               onPress={() => router.push(routes.author(item.id))}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
             >
               <Text style={styles.rowText} numberOfLines={2}>
                 {item.title}
@@ -247,6 +264,8 @@ export default function Saved() {
               style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
               onPress={() => handleRemove(item)}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove ${item.title}`}
             >
               <Text style={styles.removeText}>Remove</Text>
             </Pressable>
@@ -270,8 +289,12 @@ export default function Saved() {
       <Pressable
         style={({ pressed }) => [styles.addLibraryRow, pressed && styles.pressed]}
         onPress={handleAddLibrary}
+        accessibilityRole="button"
+        accessibilityLabel="Add new library"
       >
-        <Text style={styles.addLibraryPlus}>+</Text>
+        <Text style={styles.addLibraryPlus} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          +
+        </Text>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
     </ScrollView>

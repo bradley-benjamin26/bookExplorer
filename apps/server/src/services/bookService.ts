@@ -5,7 +5,7 @@ import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
-import { mergeLabelLists } from "../sources/loc.js";
+import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
@@ -86,8 +86,8 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       isbn,
       title: ol.title,
       authors: ol.authors,
-      subjects: mergeLabelLists(locMetadata.subjects, ol.subjects),
-      genres: mergeLabelLists(locMetadata.genres, wikidataGenres),
+      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: ol.subjects }),
+      genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
       description,
       descriptionSource,
       descriptionSourceUrl: wikipedia?.url ?? null,

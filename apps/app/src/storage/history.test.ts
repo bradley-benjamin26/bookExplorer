@@ -20,4 +20,9 @@ describe("history", () => {
     expect(recent).toHaveLength(20);
     expect(recent[0]).toBe("24");
   });
+
+  it("keeps both entries when two adds overlap", async () => {
+    await Promise.all([addRecentIsbn("1"), addRecentIsbn("2")]);
+    expect(await getRecentIsbns()).toEqual(expect.arrayContaining(["1", "2"]));
+  });
 });

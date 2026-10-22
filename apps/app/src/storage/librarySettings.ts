@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { enqueueWrite } from "./writeQueue";
 
 const LIBRARIES_KEY = "book-explorer:libraries";
 
@@ -19,6 +20,14 @@ function isConfigured(library: Library): boolean {
   return library.isbnUrl.trim().length > 0 || library.titleUrl.trim().length > 0;
 }
 
+// Not queued on LIBRARIES_KEY: it only runs from getLibraries() when that key
+// is still empty, including from inside an already-queued upsert/remove, so
+// queuing here would make a write wait on itself. This leaves a narrow,
+// first-launch-only race for legacy installs: two concurrent first calls to
+// getLibraries() can both migrate and each produce a library with a
+// different generated id, with only the second one actually persisted. Same
+// underlying isbnUrl/titleUrl either way, so no data loss — judged an
+// acceptable tradeoff at this app's scale rather than worth the deadlock.
 async function migrateLegacyLibrary(): Promise<Library[]> {
   const [isbnUrl, titleUrl] = await Promise.all([
     AsyncStorage.getItem(LEGACY_ISBN_URL_KEY),
@@ -29,7 +38,7 @@ async function migrateLegacyLibrary(): Promise<Library[]> {
   const migrated: Library[] = [
     { id: generateLibraryId(), name: "My Library", isbnUrl: isbnUrl ?? "", titleUrl: titleUrl ?? "" },
   ];
-  await saveLibraries(migrated);
+  await AsyncStorage.setItem(LIBRARIES_KEY, JSON.stringify(migrated));
   await Promise.all([AsyncStorage.removeItem(LEGACY_ISBN_URL_KEY), AsyncStorage.removeItem(LEGACY_TITLE_URL_KEY)]);
   return migrated;
 }
@@ -62,19 +71,23 @@ export async function saveLibraries(libraries: Library[]): Promise<void> {
   await AsyncStorage.setItem(LIBRARIES_KEY, JSON.stringify(libraries));
 }
 
-export async function upsertLibrary(library: Library): Promise<Library[]> {
-  const libraries = await getLibraries();
-  const index = libraries.findIndex((l) => l.id === library.id);
-  const next = index === -1 ? [...libraries, library] : libraries.map((l, i) => (i === index ? library : l));
-  await saveLibraries(next);
-  return next;
+export function upsertLibrary(library: Library): Promise<Library[]> {
+  return enqueueWrite(LIBRARIES_KEY, async () => {
+    const libraries = await getLibraries();
+    const index = libraries.findIndex((l) => l.id === library.id);
+    const next = index === -1 ? [...libraries, library] : libraries.map((l, i) => (i === index ? library : l));
+    await saveLibraries(next);
+    return next;
+  });
 }
 
-export async function removeLibrary(id: string): Promise<Library[]> {
-  const libraries = await getLibraries();
-  const next = libraries.filter((l) => l.id !== id);
-  await saveLibraries(next);
-  return next;
+export function removeLibrary(id: string): Promise<Library[]> {
+  return enqueueWrite(LIBRARIES_KEY, async () => {
+    const libraries = await getLibraries();
+    const next = libraries.filter((l) => l.id !== id);
+    await saveLibraries(next);
+    return next;
+  });
 }
 
 /**

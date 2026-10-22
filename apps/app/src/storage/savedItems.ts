@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { enqueueWrite } from "./writeQueue";
 
 const SAVED_KEY = "book-explorer:saved-items";
 
@@ -28,17 +29,21 @@ export async function isItemSaved(type: SavedItem["type"], id: string): Promise<
 }
 
 /** Adds or removes the item and returns whether it ended up saved. */
-export async function toggleSaved(item: SavedItem): Promise<boolean> {
-  const items = await getSavedItems();
-  const key = itemKey(item.type, item.id);
-  const alreadySaved = items.some((i) => itemKey(i.type, i.id) === key);
-  const next = alreadySaved ? items.filter((i) => itemKey(i.type, i.id) !== key) : [item, ...items];
-  await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(next));
-  return !alreadySaved;
+export function toggleSaved(item: SavedItem): Promise<boolean> {
+  return enqueueWrite(SAVED_KEY, async () => {
+    const items = await getSavedItems();
+    const key = itemKey(item.type, item.id);
+    const alreadySaved = items.some((i) => itemKey(i.type, i.id) === key);
+    const next = alreadySaved ? items.filter((i) => itemKey(i.type, i.id) !== key) : [item, ...items];
+    await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(next));
+    return !alreadySaved;
+  });
 }
 
-export async function removeSaved(type: SavedItem["type"], id: string): Promise<void> {
-  const items = await getSavedItems();
-  const next = items.filter((i) => itemKey(i.type, i.id) !== itemKey(type, id));
-  await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(next));
+export function removeSaved(type: SavedItem["type"], id: string): Promise<void> {
+  return enqueueWrite(SAVED_KEY, async () => {
+    const items = await getSavedItems();
+    const next = items.filter((i) => itemKey(i.type, i.id) !== itemKey(type, id));
+    await AsyncStorage.setItem(SAVED_KEY, JSON.stringify(next));
+  });
 }

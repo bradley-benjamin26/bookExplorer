@@ -6,8 +6,14 @@ import { useThemedStyles, type Theme } from "../theme";
  * lists works from Open Library (a subject's book list, search results). */
 export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => void }) {
   const styles = useThemedStyles(createStyles);
+  const authorNames = work.authors.map((a) => a.name).join(", ") || "Unknown author";
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && styles.pressed]} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${work.title}, ${authorNames}`}
+    >
       {work.coverUrl ? (
         <Image source={{ uri: work.coverUrl }} style={styles.cover} resizeMode="contain" />
       ) : (
@@ -18,10 +24,12 @@ export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => v
           {work.title}
         </Text>
         <Text style={styles.authors} numberOfLines={1}>
-          {work.authors.map((a) => a.name).join(", ") || "Unknown author"}
+          {authorNames}
         </Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Text style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        ›
+      </Text>
     </Pressable>
   );
 }

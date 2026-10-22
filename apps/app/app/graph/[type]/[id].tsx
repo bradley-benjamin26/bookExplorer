@@ -2,9 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Fragment, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  useAnimatedStyle,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { routes } from "../../../src/navigation";
@@ -58,6 +65,22 @@ const LABEL_MAX_CHARS_PER_LINE = 16;
 const LABEL_MAX_LINES = 3;
 const LABEL_LINE_HEIGHT = 12;
 
+// How far the user can zoom in/out, and the scale window over which relation
+// labels fade in — below MIN they're fully transparent (too crowded to read,
+// and the loosened layout below hasn't given them room yet), fully opaque by
+// LABEL_FADE_IN_SCALE so a quick pinch past that point doesn't feel laggy.
+const MIN_SCALE = 0.4;
+const MAX_SCALE = 3;
+const LABEL_FADE_OUT_SCALE = 1.0;
+const LABEL_FADE_IN_SCALE = 1.3;
+// Plain scroll-to-zoom (no modifier key) matches common map/canvas
+// conventions on web, where there's no pinch gesture from a trackpad/mouse.
+const WHEEL_ZOOM_SPEED = 0.0015;
+const DOUBLE_TAP_ZOOM_STEP = 1.5;
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
+
 // SvgText has no built-in wrapping, so a long node label (an author's full
 // name, a multi-word subject) is greedily broken into lines here instead of
 // being cut short with a mid-word ellipsis. Capped at LABEL_MAX_LINES so a
@@ -83,6 +106,64 @@ function wrapLabel(label: string): string[] {
   const truncated = lines.slice(0, LABEL_MAX_LINES);
   truncated[LABEL_MAX_LINES - 1] = `${truncated[LABEL_MAX_LINES - 1]}…`;
   return truncated;
+}
+
+// A straight connector drawn all the way to a node's own boundary reads as a
+// clip-art arrow touching a shape; pulling each end back by a small gap lets
+// the node's ring show as a clean break instead, which is most of the
+// difference between a hand-built diagram and a slide-deck connector line.
+const EDGE_GAP = 6;
+
+function shortenEdge(source: PositionedNode, target: PositionedNode, sourceRadius: number, targetRadius: number) {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  return {
+    x1: source.x + ux * (sourceRadius + EDGE_GAP),
+    y1: source.y + uy * (sourceRadius + EDGE_GAP),
+    x2: target.x - ux * (targetRadius + EDGE_GAP),
+    y2: target.y - uy * (targetRadius + EDGE_GAP),
+  };
+}
+
+// A relation label is normally placed at its edge's exact midpoint, but in a
+// dense star layout (many edges fanning out from one center) that midpoint
+// can land right on top of an unrelated third node the force simulation
+// happened to settle nearby — not just crossing its line, but sitting over
+// the node and hiding its own label. This slides the label back and forth
+// along the edge, in increasing steps, until it's clear of every node's
+// radius (plus a little breathing room), and gives up and uses the plain
+// midpoint if no nearby offset is actually clear.
+function findClearLabelPoint(
+  source: PositionedNode,
+  target: PositionedNode,
+  nodes: PositionedNode[],
+  centerId: string
+): { x: number; y: number } {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+
+  const isClear = (x: number, y: number) =>
+    nodes.every((node) => {
+      if (node.id === source.id || node.id === target.id) return true;
+      const radius = (node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS) + 14;
+      return Math.hypot(x - node.x, y - node.y) > radius;
+    });
+
+  const midT = 0.5;
+  const candidateOffsets = [0, -0.12, 0.12, -0.22, 0.22, -0.32, 0.32];
+  for (const offset of candidateOffsets) {
+    const t = Math.min(0.85, Math.max(0.15, midT + offset));
+    const x = source.x + ux * length * t;
+    const y = source.y + uy * length * t;
+    if (isClear(x, y)) return { x, y };
+  }
+  return { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 };
 }
 
 interface PositionedNode extends GraphNode {
@@ -122,14 +203,17 @@ function layoutGraph(graph: Graph, width: number, height: number) {
   const simulation = forceSimulation(nodes as never[])
     // Pushed apart harder, and linked further apart, than the tighter
     // defaults this started with — worth it for legibility even on the
-    // busiest graphs (an author's full bibliography can be 20+ nodes),
-    // at the cost of needing more scrolling/panning to see it all at once.
-    .force("charge", forceManyBody().strength(-420))
+    // busiest graphs (an author's full bibliography can be 20+ nodes), now
+    // that pinch/pan (not a fitted canvas) is how the user sees it all.
+    // Tuned against a dense "travel"-style subject graph (15+ related
+    // concepts) so adjacent node labels never visually touch at the
+    // fully-zoomed-out scale.
+    .force("charge", forceManyBody().strength(-620))
     .force(
       "link",
       forceLink(links as never[])
         .id((d) => (d as GraphNode).id)
-        .distance(170)
+        .distance(260)
     )
     .force("center", forceCenter(width / 2, height / 2))
     // Padded enough to clear a full 3-line wrapped label below a node (see
@@ -237,6 +321,115 @@ export default function GraphExplorer() {
     return layoutGraph(data, width, canvasHeight);
   }, [data, width, canvasHeight]);
 
+  // Shared transform for the whole canvas: both the SVG rendering layer and
+  // the accessible Pressable overlay are children of one Animated.View (see
+  // the render below) carrying this single scale/translate, so a tap lands
+  // on the right node at any zoom/pan state without keeping two layers'
+  // math independently in sync.
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  // Gesture worklets run off the JS thread and can't close over fresh
+  // `layout`/`width`/`canvasHeight` values directly — mirrored into shared
+  // values so the pan-clamping math below always reads the current content
+  // size without the gesture handlers needing to be torn down and rebuilt
+  // every time the graph data (and thus content size) changes.
+  const contentWidth = useSharedValue(width);
+  const contentHeight = useSharedValue(height);
+  const viewportWidth = useSharedValue(width);
+  const viewportHeight = useSharedValue(canvasHeight);
+
+  const centerNode = layout?.nodes.find((n) => n.id === data?.centerId);
+  useEffect(() => {
+    if (!layout || !centerNode) return;
+    contentWidth.value = layout.contentWidth;
+    contentHeight.value = layout.contentHeight;
+    viewportWidth.value = width;
+    viewportHeight.value = canvasHeight;
+    // Re-centering on a new node (tap-to-recenter) or arriving fresh should
+    // bring that center node into view rather than leaving the transform
+    // wherever the previous graph's pan/zoom left it — the content size and
+    // node positions are entirely different after a recenter re-layout.
+    scale.value = 1;
+    translateX.value = width / 2 - centerNode.x;
+    translateY.value = canvasHeight / 2 - centerNode.y;
+  }, [data?.centerId, layout?.contentWidth, layout?.contentHeight]);
+
+  const clampTranslation = (s: number) => {
+    "worklet";
+    // At least half the content stays on-screen in each axis, so a pan/zoom
+    // can never fully lose the canvas off the edge of the viewport.
+    const maxX = Math.max(0, (contentWidth.value * s - viewportWidth.value) / 2);
+    const maxY = Math.max(0, (contentHeight.value * s - viewportHeight.value) / 2);
+    translateX.value = Math.min(maxX, Math.max(-maxX, translateX.value));
+    translateY.value = Math.min(maxY, Math.max(-maxY, translateY.value));
+  };
+
+  const pinchStartScale = useSharedValue(1);
+  const panStartX = useSharedValue(0);
+  const panStartY = useSharedValue(0);
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      pinchStartScale.value = scale.value;
+    })
+    .onUpdate((e) => {
+      scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale.value * e.scale));
+      clampTranslation(scale.value);
+    });
+
+  const panGesture = Gesture.Pan()
+    // Node taps go through a plain RN Pressable (the accessible overlay),
+    // which has no built-in movement tolerance of its own — without a
+    // minimum distance here, Pan would steal every tap's initial pixel of
+    // movement before the Pressable ever sees a press, so taps would stop
+    // working under this gesture detector.
+    .minDistance(10)
+    .onStart(() => {
+      panStartX.value = translateX.value;
+      panStartY.value = translateY.value;
+    })
+    .onUpdate((e) => {
+      translateX.value = panStartX.value + e.translationX;
+      translateY.value = panStartY.value + e.translationY;
+      clampTranslation(scale.value);
+    });
+
+  // Trackpad/mouse equivalent for pinch, since Gesture.Pinch() only fires
+  // from an actual two-finger touch gesture and react-native-gesture-handler's
+  // web Pan handler doesn't surface plain mouse-wheel deltas at all — so this
+  // reads the native wheel event directly (ctrl/cmd+scroll or a plain scroll
+  // both zoom, matching common web map/canvas conventions). Native platforms
+  // have no wheel device and never fire this.
+  const handleWheel = (e: { deltaY: number }) => {
+    const next = scale.value * (1 - e.deltaY * WHEEL_ZOOM_SPEED);
+    scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+    clampTranslation(scale.value);
+  };
+
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      const next = scale.value >= MAX_SCALE ? MIN_SCALE : scale.value * DOUBLE_TAP_ZOOM_STEP;
+      scale.value = withTiming(Math.min(MAX_SCALE, Math.max(MIN_SCALE, next)));
+      clampTranslation(scale.value);
+    });
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
+
+  const canvasAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }, { translateY: translateY.value }, { scale: scale.value }],
+  }));
+
+  const labelAnimatedProps = useAnimatedProps(() => ({
+    opacity:
+      scale.value <= LABEL_FADE_OUT_SCALE
+        ? 0
+        : scale.value >= LABEL_FADE_IN_SCALE
+          ? 1
+          : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
+  }));
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -340,59 +533,67 @@ export default function GraphExplorer() {
           <Text style={styles.backButtonText}>‹ Back</Text>
         </Pressable>
       )}
-      <ScrollView
-        horizontal
-        style={{ width }}
-        contentContainerStyle={{ width: layout.contentWidth }}
-        showsHorizontalScrollIndicator={layout.contentWidth > width}
+      <View
+        style={[styles.viewport, { width, height: canvasHeight }]}
+        {...(Platform.OS === "web" ? { onWheel: handleWheel } : null)}
       >
-        <ScrollView
-          style={{ height: canvasHeight, width: layout.contentWidth }}
-          contentContainerStyle={{ height: layout.contentHeight }}
-          showsVerticalScrollIndicator={layout.contentHeight > canvasHeight}
-        >
-          <View style={[styles.graphArea, { width: layout.contentWidth, height: layout.contentHeight }]}>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View
+            style={[
+              styles.graphArea,
+              { width: layout.contentWidth, height: layout.contentHeight },
+              canvasAnimatedStyle,
+            ]}
+          >
             <View
               pointerEvents="none"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
             >
               <Svg width={layout.contentWidth} height={layout.contentHeight}>
-            {layout.edges.map((edge, i) => (
-              <Line
-                key={i}
-                x1={edge.source.x}
-                y1={edge.source.y}
-                x2={edge.target.x}
-                y2={edge.target.y}
-                stroke={theme.colors.border}
-                strokeWidth={1.5}
-              />
-            ))}
+            {layout.edges.map((edge, i) => {
+              const isSourceCenter = edge.source.id === data.centerId;
+              const isTargetCenter = edge.target.id === data.centerId;
+              const { x1, y1, x2, y2 } = shortenEdge(
+                edge.source,
+                edge.target,
+                isSourceCenter ? CENTER_NODE_RADIUS : NODE_RADIUS,
+                isTargetCenter ? CENTER_NODE_RADIUS : NODE_RADIUS
+              );
+              return (
+                <Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={theme.colors.border} strokeWidth={1.25} />
+              );
+            })}
             {layout.edges.map((edge, i) => {
               const label = RELATION_LABELS[edge.relation] ?? edge.relation;
-              const midX = (edge.source.x + edge.target.x) / 2;
-              const midY = (edge.source.y + edge.target.y) / 2;
+              const { x: midX, y: midY } = findClearLabelPoint(edge.source, edge.target, layout.nodes, data.centerId);
+              // A label on a straight line only needs a plain background
+              // pill to stay legible — the hand-measured width keeps the
+              // pill snug instead of guessing a fixed size for every label.
+              const pillWidth = label.length * 5.2 + 12;
               return (
-                // Rendered twice at the same spot: a thick "stroke" pass
-                // (matching the page background) first so the text stays
-                // legible where it crosses other lines or sits close to a
-                // node, then the actual text on top of it.
                 <Fragment key={i}>
-                  <SvgText
+                  <AnimatedRect
+                    animatedProps={labelAnimatedProps}
+                    x={midX - pillWidth / 2}
+                    y={midY - 8}
+                    width={pillWidth}
+                    height={16}
+                    rx={8}
+                    fill={theme.colors.background}
+                    stroke={theme.colors.border}
+                    strokeWidth={1}
+                  />
+                  <AnimatedSvgText
+                    animatedProps={labelAnimatedProps}
                     x={midX}
-                    y={midY}
+                    y={midY + 3}
                     fontSize={9.5}
                     fill={theme.colors.textMuted}
-                    stroke={theme.colors.background}
-                    strokeWidth={3}
                     textAnchor="middle"
                   >
                     {label}
-                  </SvgText>
-                  <SvgText x={midX} y={midY} fontSize={9.5} fill={theme.colors.textMuted} textAnchor="middle">
-                    {label}
-                  </SvgText>
+                  </AnimatedSvgText>
                 </Fragment>
               );
             })}
@@ -401,16 +602,33 @@ export default function GraphExplorer() {
               const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
               const lines = wrapLabel(node.label);
               const firstLineY = node.y + radius + 14;
+              const opacity = node.navigable ? 1 : 0.4;
               return (
                 <Fragment key={node.id}>
+                  {/* A soft, slightly-larger dark circle offset downward
+                      stands in for a drop shadow — react-native-svg's cross-
+                      platform blur support is unreliable, so this fakes the
+                      same "resting on the page" depth without it. */}
+                  <Circle cx={node.x} cy={node.y + 2} r={radius} fill={theme.colors.text} opacity={opacity * 0.08} />
+                  {isCenter && (
+                    <Circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={radius + 5}
+                      fill="none"
+                      stroke={NODE_COLORS[node.type]}
+                      strokeWidth={1}
+                      opacity={opacity * 0.3}
+                    />
+                  )}
                   <Circle
                     cx={node.x}
                     cy={node.y}
                     r={radius}
                     fill={NODE_COLORS[node.type]}
-                    opacity={node.navigable ? 1 : 0.4}
-                    stroke={isCenter ? theme.colors.text : "none"}
-                    strokeWidth={isCenter ? 2 : 0}
+                    opacity={opacity}
+                    stroke={theme.colors.background}
+                    strokeWidth={isCenter ? 2.5 : 1.5}
                   />
                   {lines.map((line, i) => (
                     <SvgText
@@ -469,9 +687,9 @@ export default function GraphExplorer() {
               />
           );
         })}
-          </View>
-        </ScrollView>
-      </ScrollView>
+          </Animated.View>
+        </GestureDetector>
+      </View>
     </View>
   );
 }
@@ -495,6 +713,10 @@ function createStyles({ colors }: Theme) {
     legendSwatchFaded: { backgroundColor: colors.graphSubject, opacity: 0.4 },
     legendLabel: { fontSize: 12, color: colors.textMuted },
     backButton: { alignSelf: "center", paddingVertical: 4, paddingHorizontal: 12, marginBottom: 8 },
+    // overflow: hidden clips the canvas to the visible viewport — now that
+    // the canvas is panned/zoomed rather than fitted to the screen, it's
+    // routinely larger than this box at 100% scale.
+    viewport: { overflow: "hidden" },
     graphArea: { position: "relative" },
     pressed: { opacity: 0.6 },
     backButtonText: { color: colors.link, fontSize: 14, fontWeight: "600" },

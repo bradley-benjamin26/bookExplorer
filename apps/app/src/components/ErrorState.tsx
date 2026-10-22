@@ -6,7 +6,9 @@ export function ErrorState({ message }: { message: string }) {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>⚠</Text>
+      <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        ⚠
+      </Text>
       <Text style={styles.message}>{message}</Text>
     </View>
   );

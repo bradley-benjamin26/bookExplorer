@@ -32,17 +32,26 @@ export const ReviewSchema = z.object({
 });
 export type Review = z.infer<typeof ReviewSchema>;
 
+// A subject or genre term and every source that asserted it, so the client can
+// badge where each one came from. Declared above BookSchema/WorkSchema, which
+// reference it at module load.
+export const TaggedTermSchema = z.object({
+  label: z.string(),
+  sources: z.array(z.enum(["openLibrary", "lcsh", "wikidata"])),
+});
+export type TaggedTerm = z.infer<typeof TaggedTermSchema>;
+
 export const BookSchema = z.object({
   isbn: z.string(),
   title: z.string(),
   authors: z.array(AuthorRefSchema),
-  subjects: z.array(z.string()),
+  subjects: z.array(TaggedTermSchema),
   // Distinct from `subjects` (topical — what the book is *about*): a genre
   // is what section of a bookstore or library it'd sit in — "Mystery",
   // "Science fiction", "Memoir". Sourced from LOC's genre/form headings and
   // Wikidata's genre property, both best-effort — many books, especially
   // outside fiction, simply won't have one from either source.
-  genres: z.array(z.string()),
+  genres: z.array(TaggedTermSchema),
   description: z.string().nullable(),
   // Wikipedia and Google Books content require attribution on reuse — the
   // client shows a source credit (linking to descriptionSourceUrl, when
@@ -129,8 +138,8 @@ export type Edition = z.infer<typeof EditionSchema>;
 
 export const WorkSchema = WorkRefSchema.extend({
   description: z.string().nullable(),
-  subjects: z.array(z.string()),
-  genres: z.array(z.string()),
+  subjects: z.array(TaggedTermSchema),
+  genres: z.array(TaggedTermSchema),
   // A "work" has no ISBN of its own (that's an edition-level concept) — this
   // is the first ISBN found among its editions, best-effort, so work pages
   // reached other than by scanning (a graph node, an author's notable-works
@@ -144,8 +153,9 @@ export type Work = z.infer<typeof WorkSchema>;
 
 export const SubjectConceptSchema = z.object({
   relation: z.enum(["broader", "narrower"]),
-  wikidataId: z.string(),
+  wikidataId: z.string().nullable(),
   label: z.string(),
+  sources: z.array(z.enum(["wikidata", "lcsh"])),
 });
 export type SubjectConcept = z.infer<typeof SubjectConceptSchema>;
 
@@ -204,4 +214,9 @@ export type Graph = z.infer<typeof GraphSchema>;
  */
 export function normalizeIsbn(isbn: string): string {
   return isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
+}
+
+/** An ISBN-10 or ISBN-13, hyphens/spaces allowed. */
+export function isValidIsbn(raw: string): boolean {
+  return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
 }

@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { fetchSubject } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { routes } from "../../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -43,7 +44,7 @@ export default function SubjectDetail() {
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
-          <Text style={styles.name}>{data.name}</Text>
+          <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
 
           {!data.wikidataId && (
@@ -69,11 +70,16 @@ export default function SubjectDetail() {
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
-                        key={concept.wikidataId}
+                        key={concept.label}
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
+                        accessibilityRole="button"
+                        accessibilityLabel={concept.label}
                       >
-                        <Text style={styles.conceptTagText}>{concept.label}</Text>
+                        <Text style={styles.conceptTagText}>
+                          {concept.label}
+                          <SourceBadge sources={concept.sources} />
+                        </Text>
                       </Pressable>
                     ))}
                   </View>

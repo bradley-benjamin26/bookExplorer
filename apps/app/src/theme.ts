@@ -40,17 +40,27 @@ export interface ThemeColors {
   graphWork: string;
   graphSubject: string;
   graphGenre: string;
+  // Design-plan tokens (docs/DESIGN_PLAN.md). `cover` carries primary action;
+  // `marginalia` is reserved for "this is yours" (saved) and graph highlights.
+  paper: string;
+  ink: string;
+  inkFaint: string;
+  cover: string;
+  coverLight: string;
+  marginalia: string;
+  thread: string;
 }
 
 const lightColors: ThemeColors = {
-  background: "#ffffff",
-  shellBackground: "#eef0f4",
-  text: "#1a1a2e",
-  textMuted: "#75758c",
-  textFaint: "#9a9aab",
+  background: "#FAF7F0",
+  shellBackground: "#EFEBE2",
+  text: "#1F2430",
+  // Darkened from #75758c/#767687 so muted text still clears WCAG AA 4.5:1 on the warmer paper background.
+  textMuted: "#6b6b80",
+  textFaint: "#6c6c7d",
   border: "#eef0f2",
   cardBorder: "#e6e6ea",
-  inputBorder: "#d8d8e0",
+  inputBorder: "#a8a8b8",
   chipBackground: "#f2f2f5",
   chipBackgroundAccent: "#eef2ff",
   chipBorderAccent: "#e0e6fb",
@@ -65,11 +75,19 @@ const lightColors: ThemeColors = {
   primaryText: "#ffffff",
   danger: "#aa3333",
   dangerBackground: "#fdf0f0",
-  warning: "#a87d00",
+  warning: "#8a6600",
   graphAuthor: "#3346a8",
   graphWork: "#1a7a4c",
   graphSubject: "#a8593c",
   graphGenre: "#9c3d82",
+  paper: "#FAF7F0",
+  ink: "#1F2430",
+  // The plan's #8B8A94 / #C0572E are 3.2:1 / 4.2:1 on paper; nudged darker to pass AA as text.
+  inkFaint: "#6E6D78",
+  cover: "#2B5951",
+  coverLight: "#E4ECE7",
+  marginalia: "#A85026",
+  thread: "#8A94A8",
 };
 
 // Not just an inverted light palette — brand colors tuned for dark
@@ -78,14 +96,14 @@ const lightColors: ThemeColors = {
 // are lightened/desaturated to hold the same contrast ratio instead of the
 // same hex value).
 const darkColors: ThemeColors = {
-  background: "#17171f",
+  background: "#191B20",
   shellBackground: "#0a0a0f",
-  text: "#f1f1f6",
+  text: "#EDEAE2",
   textMuted: "#9797a8",
   textFaint: "#75758a",
   border: "#2a2a35",
   cardBorder: "#2e2e3a",
-  inputBorder: "#3c3c48",
+  inputBorder: "#5c5c6c",
   chipBackground: "#232330",
   chipBackgroundAccent: "#212a4d",
   chipBorderAccent: "#2d3a66",
@@ -105,6 +123,13 @@ const darkColors: ThemeColors = {
   graphWork: "#57d99a",
   graphSubject: "#e8946e",
   graphGenre: "#e7a6da",
+  paper: "#191B20",
+  ink: "#EDEAE2",
+  inkFaint: "#9C9AA6",
+  cover: "#6FA897",
+  coverLight: "#23332F",
+  marginalia: "#E08662",
+  thread: "#8A94A8",
 };
 
 export const spacing = {
@@ -123,6 +148,25 @@ export const radii = {
   full: 999,
 } as const;
 
+// Custom fonts select weight by family name, not `fontWeight` — pairing the
+// two makes web browsers synthesize a faux-bold on top of the real weight.
+export const fonts = {
+  display: "Fraunces_600SemiBold",
+  displayMedium: "Fraunces_500Medium",
+  body: "Inter_400Regular",
+  bodyMedium: "Inter_500Medium",
+  bodySemiBold: "Inter_600SemiBold",
+} as const;
+
+export const typeScale = {
+  xs: 13,
+  sm: 16,
+  md: 20,
+  lg: 25,
+  xl: 31,
+  xxl: 39,
+} as const;
+
 // The width the app's content is capped at on a wide window — chosen as a
 // comfortable reading measure (similar to a paperback's line length), not
 // the widest content could theoretically go. Beyond this, `shellBackground`
@@ -135,6 +179,8 @@ export interface Theme {
   scheme: "light" | "dark";
   spacing: typeof spacing;
   radii: typeof radii;
+  fonts: typeof fonts;
+  typeScale: typeof typeScale;
   /** A "kicker" label style — small, spaced-out capitals — used above every content section (About, Find This Book, Subjects, ...) so section boundaries read clearly without a divider line. */
   kicker: { fontSize: number; fontWeight: "700"; color: string; letterSpacing: number; textTransform: "uppercase" };
   /** A soft card treatment (book covers, elevated rows): a hairline border in both themes, plus a drop shadow that only reads clearly in light mode — a dark shadow is close to invisible against a dark surface, so dark mode leans on the border alone for definition. */
@@ -156,6 +202,8 @@ function buildTheme(scheme: "light" | "dark"): Theme {
     scheme,
     spacing,
     radii,
+    fonts,
+    typeScale,
     kicker: {
       fontSize: 12,
       fontWeight: "700",

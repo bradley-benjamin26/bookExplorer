@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Book } from "@book-explorer/shared";
+import { enqueueWrite } from "./writeQueue";
 
 // Each saved book gets its own AsyncStorage key, rather than all of them
 // sharing one JSON blob under a single key — reading or writing one book's
@@ -46,25 +47,11 @@ async function readRecord(isbn: string): Promise<SavedBookRecord | null> {
   }
 }
 
-// Every write to a record goes through one queue. An update is a
-// read-modify-write of the whole record, so two in flight at once (a tag
-// removed while a notes save is still pending) would each read the same old
-// record and the second write would silently drop the first's change — and
-// an update that read the record just before a removal would write it back
-// afterwards, resurrecting a book the user just unsaved. Chaining every
-// write onto the previous one makes each read see the last write.
-let writeQueue: Promise<unknown> = Promise.resolve();
-
-function enqueue<T>(write: () => Promise<T>): Promise<T> {
-  const result = writeQueue.then(write, write);
-  writeQueue = result.catch(() => undefined);
-  return result;
-}
-
 /** Creates the record on first save, from the currently-fetched external data. */
 export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
-  return enqueue(async () => {
-    const existing = await readRecord(book.isbn);
+  return enqueueWrite(storageKey(book.isbn), async () => {
+    const existing = await getSavedBook(book.isbn);
+ main
     if (existing) return existing;
 
     const record: SavedBookRecord = {
@@ -75,8 +62,8 @@ export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
       title: book.title,
       authorNames: book.authors.map((a) => a.name),
       format: book.format,
-      subjects: book.subjects,
-      genres: book.genres,
+      subjects: book.subjects.map((t) => t.label),
+      genres: book.genres.map((t) => t.label),
       notes: "",
       savedAt: Date.now(),
     };
@@ -98,8 +85,10 @@ export function updateSavedBook(
   isbn: string,
   changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>
 ): Promise<SavedBookRecord | null> {
-  return enqueue(async () => {
-    const existing = await readRecord(isbn);
+
+  return enqueueWrite(storageKey(isbn), async () => {
+    const existing = await getSavedBook(isbn);
+main
     if (!existing) return null;
     const next = { ...existing, ...changes };
     await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
@@ -108,5 +97,5 @@ export function updateSavedBook(
 }
 
 export function removeSavedBook(isbn: string): Promise<void> {
-  return enqueue(() => AsyncStorage.removeItem(storageKey(isbn)));
+  return enqueueWrite(storageKey(isbn), () => AsyncStorage.removeItem(storageKey(isbn)));
 }
