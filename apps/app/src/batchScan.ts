@@ -1,4 +1,5 @@
 import { normalizeIsbn } from "@book-explorer/shared";
+import { toAlternateIsbn } from "./isbn";
 
 export const DEBOUNCE_MS = 2000;
 
@@ -22,10 +23,13 @@ export function acceptScan(lastSeen: Map<string, number>, data: string, now: num
   return prev !== undefined && now - prev < DEBOUNCE_MS ? null : data;
 }
 
-/** Typed entry for screen-reader users; accepts ISBN-13 only, same rule as the camera. */
+/** Typed entry for screen-reader users: a valid ISBN-13, or a valid ISBN-10 converted to its ISBN-13. */
 export function parseTypedIsbn(raw: string): string | null {
   const isbn = normalizeIsbn(raw);
-  return isIsbnBarcode(isbn) ? isbn : null;
+  if (isIsbnBarcode(isbn)) return isbn;
+  // toAlternateIsbn doesn't check the input's check digit, so a mistyped ISBN-10 is rejected only by recomputing it.
+  const thirteen = /^\d{9}[\dX]$/.test(isbn) ? toAlternateIsbn(isbn) : null;
+  return thirteen && toAlternateIsbn(thirteen) === isbn ? thirteen : null;
 }
 
 export type SaveOutcome = "saved" | "failed";

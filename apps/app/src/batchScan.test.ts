@@ -38,6 +38,11 @@ describe("parseTypedIsbn", () => {
     expect(parseTypedIsbn("978-0-306-40615-7")).toBe("9780306406157");
     expect(parseTypedIsbn("123")).toBeNull();
   });
+  it("converts a valid ISBN-10 to its ISBN-13 and rejects a bad check digit", () => {
+    expect(parseTypedIsbn("0-306-40615-2")).toBe("9780306406157");
+    expect(parseTypedIsbn("080442957X")).toBe("9780804429573");
+    expect(parseTypedIsbn("0306406153")).toBeNull();
+  });
 });
 
 describe("saveAll", () => {

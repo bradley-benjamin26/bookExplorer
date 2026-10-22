@@ -78,7 +78,7 @@ export function BatchScan({ onExit }: { onExit: () => void }) {
 
   const handleTyped = () => {
     const isbn = parseTypedIsbn(typed);
-    if (!isbn) return say("Not a valid ISBN-13");
+    if (!isbn) return say("Not a valid ISBN");
     setTyped("");
     add(isbn);
   };
