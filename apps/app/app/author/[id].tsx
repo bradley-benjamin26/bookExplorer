@@ -109,6 +109,14 @@ export default function AuthorDetail() {
       >
         View as Graph
       </Button>
+      <Button
+        variant="primary"
+        onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
+        style={styles.graphButton}
+        accessibilityLabel={`Find a connection from ${data.name}`}
+      >
+        Find Connection
+      </Button>
 
       <MoreByAuthor title="Works" works={data.moreByAuthor} />
 

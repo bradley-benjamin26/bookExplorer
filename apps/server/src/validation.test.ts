@@ -1,6 +1,6 @@
 import { isValidIsbn } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId, parseSearchFilters } from "./validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isPathEndpointId, parseSearchFilters } from "./validation.js";
 
 describe("isValidIsbn", () => {
   it("accepts bare and hyphenated ISBN-13s and ISBN-10s", () => {
@@ -52,5 +52,20 @@ describe("isWikidataQid", () => {
     const { isWikidataQid } = await import("./validation.js");
     expect(isWikidataQid("Q42")).toBe(true);
     for (const bad of ["", "42", "Q0", "Q01", "Qabc", "Q42/../x"]) expect(isWikidataQid(bad)).toBe(false);
+  });
+});
+
+describe("isPathEndpointId", () => {
+  it("accepts author, work and subject node ids", () => {
+    expect(isPathEndpointId("author:OL21594A")).toBe(true);
+    expect(isPathEndpointId("work:OL66554W")).toBe(true);
+    expect(isPathEndpointId("subject:science_fiction")).toBe(true);
+  });
+
+  it("rejects other types, mismatched ids and unslugified subjects", () => {
+    expect(isPathEndpointId("genre:fiction")).toBe(false);
+    expect(isPathEndpointId("author:OL1W")).toBe(false);
+    expect(isPathEndpointId("subject:Science Fiction")).toBe(false);
+    expect(isPathEndpointId("OL1W")).toBe(false);
   });
 });

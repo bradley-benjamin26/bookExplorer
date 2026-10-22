@@ -213,6 +213,16 @@ export const GraphSchema = z.object({
 export type Graph = z.infer<typeof GraphSchema>;
 
 /**
+ * /api/path: the chain of nodes from one end to the other, with edges[i]
+ * joining nodes[i] and nodes[i + 1] (in either direction), or why none was found.
+ */
+export const PathResultSchema = z.discriminatedUnion("found", [
+  z.object({ found: z.literal(true), nodes: z.array(GraphNodeSchema), edges: z.array(GraphEdgeSchema) }),
+  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout"]) }),
+]);
+export type PathResult = z.infer<typeof PathResultSchema>;
+
+/**
  * Strips everything but digits and a check-digit "X" from an ISBN — barcode
  * scans yield bare digits, but typed or pasted ISBNs are often hyphenated
  * ("978-0-06-325085-7"). Used by the server (so every source lookup and the

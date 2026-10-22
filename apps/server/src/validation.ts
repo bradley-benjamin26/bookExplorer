@@ -3,6 +3,8 @@
 // just to learn it can't match anything. (ISBN checking lives in
 // @book-explorer/shared, since the app's search bar needs it too.)
 
+import { slugifySubject } from "@book-explorer/shared";
+
 /** An Open Library author id, e.g. "OL21594A". */
 export function isOpenLibraryAuthorId(id: string): boolean {
   return /^OL\d+A$/.test(id);
@@ -16,6 +18,22 @@ export function isOpenLibraryWorkId(id: string): boolean {
 /** A Wikidata item id, e.g. "Q42". */
 export function isWikidataQid(id: string): boolean {
   return /^Q[1-9]\d*$/.test(id);
+}
+
+/** A subject slug as the graph builds it: already slugified, and short enough to be a real subject. */
+export function isSubjectSlug(slug: string): boolean {
+  return slug.length > 0 && slug.length <= 200 && slugifySubject(slug) === slug;
+}
+
+/** A graph node id the path finder can start or end at, e.g. "work:OL66554W". */
+export function isPathEndpointId(nodeId: string): boolean {
+  const sep = nodeId.indexOf(":");
+  const type = nodeId.slice(0, sep);
+  const id = nodeId.slice(sep + 1);
+  if (type === "author") return isOpenLibraryAuthorId(id);
+  if (type === "work") return isOpenLibraryWorkId(id);
+  if (type === "subject") return isSubjectSlug(id);
+  return false;
 }
 
 export const SEARCH_SORTS = ["relevance", "new", "old"] as const;

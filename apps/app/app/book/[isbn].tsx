@@ -214,14 +214,25 @@ export default function BookDetail() {
       ) : null}
 
       {data.openLibraryWorkId && (
-        <Button
-          variant="primary"
-          onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
-          style={styles.graphButton}
-          textStyle={styles.graphButtonText}
-        >
-          View as Graph
-        </Button>
+        <>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
+            style={styles.graphButton}
+            textStyle={styles.graphButtonText}
+          >
+            View as Graph
+          </Button>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+            style={styles.graphButton}
+            textStyle={styles.graphButtonText}
+            accessibilityLabel={`Find a connection from ${data.title}`}
+          >
+            Find Connection
+          </Button>
+        </>
       )}
 
       <View style={styles.findSection}>

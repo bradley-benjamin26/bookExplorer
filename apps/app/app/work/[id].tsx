@@ -92,6 +92,14 @@ export default function WorkDetail() {
       >
         View as Graph
       </Button>
+      <Button
+        variant="primary"
+        onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+        style={styles.graphButton}
+        accessibilityLabel={`Find a connection from ${data.title}`}
+      >
+        Find Connection
+      </Button>
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 

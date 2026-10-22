@@ -18,6 +18,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
+import { NODE_LABELS, RELATION_LABELS } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -38,32 +39,6 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
     editions: colors.warning,
   };
 }
-
-const NODE_LABELS: Record<GraphNode["type"], string> = {
-  author: "Author",
-  work: "Book",
-  subject: "Subject",
-  genre: "Genre",
-  editions: "Editions",
-};
-
-// Each edge already reads correctly as "source <label> target" — direction
-// is baked in when the server builds it (e.g. "influencedBy" always means
-// the source was influenced by the target, regardless of which way that
-// reads on Wikidata) — so the label just needs to name the relationship.
-const RELATION_LABELS: Record<string, string> = {
-  influencedBy: "influenced by",
-  notableWork: "wrote",
-  wrote: "wrote",
-  wroteAs: "wrote (pen name)",
-  author: "wrote",
-  movement: "movement",
-  subject: "about",
-  genre: "is",
-  hasBook: "includes",
-  broader: "broader topic",
-  editions: "has",
-};
 
 const NODE_RADIUS = 26;
 const CENTER_NODE_RADIUS = 34;

@@ -93,6 +93,7 @@ function ThemedShell() {
               name="graph/[type]/[id]"
               options={{ title: "Explore Graph", headerRight: inHeader(<HeaderActions />) }}
             />
+            <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton />) }} />
           </Stack>
         </View>

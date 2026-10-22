@@ -5,6 +5,7 @@ import {
   AuthorSchema,
   BookSchema,
   GraphSchema,
+  PathResultSchema,
   SeriesSchema,
   SubjectSchema,
   WorkRefSchema,
@@ -14,6 +15,7 @@ import {
   type Graph,
   type Series,
   type GraphNode,
+  type PathResult,
   type Subject,
   type Work,
   type WorkRef,
@@ -121,4 +123,9 @@ export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
 
 export function fetchSeries(qid: string): Promise<Series> {
   return getJson(`/api/series/${encodeURIComponent(qid)}`, SeriesSchema);
+}
+
+/** The shortest chain between two graph node ids ("work:OL1W", "author:OL2A", ...). */
+export function fetchPath(from: string, to: string): Promise<PathResult> {
+  return getJson(`/api/path?${new URLSearchParams({ from, to })}`, PathResultSchema);
 }
