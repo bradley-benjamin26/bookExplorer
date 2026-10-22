@@ -26,6 +26,32 @@ describe("findSubjectHeadingUri", () => {
     expect(uri).toBe("http://id.loc.gov/authorities/subjects/sh85046925");
   });
 
+  it("matches an LCSH heading that differs from the query only by a trailing s", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({
+        q: "Safari",
+        hits: [{ aLabel: "Safaris", uri: "http://id.loc.gov/authorities/subjects/sh85116725" }],
+      })
+    );
+
+    const uri = await findSubjectHeadingUri("Safari");
+    expect(uri).toBe("http://id.loc.gov/authorities/subjects/sh85116725");
+  });
+
+  it("matches a plural query against a singular LCSH heading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({
+        q: "Cats",
+        hits: [{ aLabel: "Cat", uri: "http://id.loc.gov/authorities/subjects/sh00000099" }],
+      })
+    );
+
+    const uri = await findSubjectHeadingUri("Cats");
+    expect(uri).toBe("http://id.loc.gov/authorities/subjects/sh00000099");
+  });
+
   it("rejects a left-anchored near-miss that isn't an exact label match", async () => {
     vi.stubGlobal(
       "fetch",

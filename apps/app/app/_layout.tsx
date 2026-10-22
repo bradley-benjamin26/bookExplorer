@@ -1,8 +1,12 @@
+import { Fraunces_500Medium, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Footer } from "../src/components/Footer";
 import { HeaderActions } from "../src/components/HeaderActions";
@@ -11,13 +15,25 @@ import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
+  const [fontsLoaded, fontError] = useFonts({
+    Fraunces_500Medium,
+    Fraunces_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
+  // A failed font load falls back to system fonts rather than blanking the app.
+  if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemedShell />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemedShell />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -71,6 +87,7 @@ function ThemedShell() {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   shell: { flex: 1, alignItems: "center" },
   content: { flex: 1, width: "100%", maxWidth: CONTENT_MAX_WIDTH },
   stackArea: { flex: 1 },
