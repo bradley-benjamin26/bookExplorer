@@ -52,7 +52,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       accessibilityLabel={label}
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
     </Pressable>
   );
 
@@ -90,9 +90,9 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
             >
               <Text style={styles.findRowText}>Find at {library.name}</Text>
               {expanded ? (
-                <ChevronDown size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronDown size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
               ) : (
-                <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
               )}
             </Pressable>
             {expanded && (

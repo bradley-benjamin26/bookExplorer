@@ -29,7 +29,7 @@ export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => v
           {authorNames}
         </Text>
       </View>
-      <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
     </Pressable>
   );
 }

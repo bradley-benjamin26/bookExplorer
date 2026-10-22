@@ -52,11 +52,11 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
       >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
         <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {open ? (
-          <ChevronUp size={16} color={theme.colors.inkFaint} strokeWidth={2} />
-        ) : (
-          <ChevronDown size={16} color={theme.colors.inkFaint} strokeWidth={2} />
-        )}
+          {open ? (
+            <ChevronUp size={16} color={theme.colors.inkFaint} strokeWidth={2} />
+          ) : (
+            <ChevronDown size={16} color={theme.colors.inkFaint} strokeWidth={2} />
+          )}
         </View>
       </Pressable>
       {open && (

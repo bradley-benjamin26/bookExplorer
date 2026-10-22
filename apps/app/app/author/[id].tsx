@@ -117,7 +117,7 @@ export default function AuthorDetail() {
               const content = (
                 <View style={styles.relationRow}>
                   <Text style={styles.relationLabel}>{item.label}</Text>
-                  {isNavigable && <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />}
+                  {isNavigable && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>}
                 </View>
               );
               return isNavigable ? (
