@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Footer } from "../src/components/Footer";
 import { HeaderActions } from "../src/components/HeaderActions";
@@ -13,11 +14,13 @@ export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemedShell />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemedShell />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -71,6 +74,7 @@ function ThemedShell() {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   shell: { flex: 1, alignItems: "center" },
   content: { flex: 1, width: "100%", maxWidth: CONTENT_MAX_WIDTH },
   stackArea: { flex: 1 },
