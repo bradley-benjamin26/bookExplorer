@@ -415,12 +415,13 @@ function parseNodeId(id: string): Center {
 }
 
 export default function GraphExplorer() {
-  const { type, id, hideTypes, hideRelations, pathTo } = useLocalSearchParams<{
+  const { type, id, hideTypes, hideRelations, pathTo, pathIndex } = useLocalSearchParams<{
     type: string;
     id: string;
     hideTypes?: string;
     hideRelations?: string;
     pathTo?: string;
+    pathIndex?: string;
   }>();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -457,7 +458,7 @@ export default function GraphExplorer() {
   const showPath = !!pathTo && history.length === 0 && center?.type === type && center?.id === id;
   const pathFrom = `${type}:${id}`;
   const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
-    queryKey: showPath ? ["pathGraph", pathFrom, pathTo] : ["graph", center?.type, center?.id],
+    queryKey: showPath ? ["pathGraph", pathFrom, pathTo, pathIndex] : ["graph", center?.type, center?.id],
     // Never actually "genre" here — routes.graph() (the only way center gets
     // set from outside) and handleNodePress below (the only way it gets set
     // from within) both only ever produce author/work/subject centers, but
@@ -466,8 +467,12 @@ export default function GraphExplorer() {
     queryFn: showPath
       ? () =>
           queryClient
-            .fetchQuery({ queryKey: ["path", pathFrom, pathTo], queryFn: () => fetchPath(pathFrom, pathTo!), staleTime: Infinity })
-            .then(pathAsGraph)
+            .fetchQuery({
+              queryKey: ["path", pathFrom, pathTo],
+              queryFn: ({ signal }) => fetchPath(pathFrom, pathTo!, signal),
+              staleTime: Infinity,
+            })
+            .then((result) => pathAsGraph(result, Number(pathIndex) || 0))
       : () => fetchGraph(center!.type as GraphCenterType, center!.id),
     retry: showPath ? false : 3,
     enabled: !!center,

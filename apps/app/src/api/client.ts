@@ -64,9 +64,11 @@ export class ApiError extends Error {
 // a malformed or unexpectedly-shaped response would previously pass through
 // silently and surface later as a confusing render-time bug (or not at all,
 // if the missing field just happened to render as blank).
-async function getJson<T>(path: string, schema: ZodType<T>): Promise<T> {
+// `signal` is React Query's, so leaving a screen cancels its in-flight request.
+async function getJson<T>(path: string, schema: ZodType<T>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: APP_SHARED_SECRET ? { "X-App-Key": APP_SHARED_SECRET } : undefined,
+    signal,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -125,7 +127,7 @@ export function fetchSeries(qid: string): Promise<Series> {
   return getJson(`/api/series/${encodeURIComponent(qid)}`, SeriesSchema);
 }
 
-/** The shortest chain between two graph node ids ("work:OL1W", "author:OL2A", ...). */
-export function fetchPath(from: string, to: string): Promise<PathResult> {
-  return getJson(`/api/path?${new URLSearchParams({ from, to })}`, PathResultSchema);
+/** Up to three chains, most specific first, between two graph node ids ("work:OL1W", "author:OL2A", ...). */
+export function fetchPath(from: string, to: string, signal?: AbortSignal): Promise<PathResult> {
+  return getJson(`/api/path?${new URLSearchParams({ from, to })}`, PathResultSchema, signal);
 }

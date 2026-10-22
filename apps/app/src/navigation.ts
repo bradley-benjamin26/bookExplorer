@@ -15,11 +15,11 @@ export const routes = {
     pathname: "/work/[id]",
     params: options?.highlight ? { id, highlight: options.highlight } : { id },
   }),
-  /** `pathTo` (a node id) shows only the path from this node to it, see /api/path. */
+  /** `pathTo` (a node id) shows only a path from this node to it, see /api/path; `pathIndex` picks which (default the best, "0"). */
   graph: (
     type: GraphNode["type"],
     id: string,
-    filter: { hideTypes?: string; hideRelations?: string; pathTo?: string } = {}
+    filter: { hideTypes?: string; hideRelations?: string; pathTo?: string; pathIndex?: string } = {}
   ): Href => ({
     pathname: "/graph/[type]/[id]",
     params: { type, id, ...filter },

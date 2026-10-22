@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as locLinkedData from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
-import { getSubjectDetail } from "./subjectService.js";
+import { getSubjectBooks, getSubjectDetail } from "./subjectService.js";
 
 vi.mock("../sources/openLibrary.js", () => ({
   getSubject: vi.fn(),
@@ -108,5 +108,24 @@ describe("getSubjectDetail", () => {
 
     const subject = await getSubjectDetail("ghosts_no_link");
     expect(subject?.wikidataId).toBe("Q777");
+  });
+});
+
+describe("getSubjectBooks", () => {
+  it("returns Open Library's books and work count without the LCSH or Wikidata concept lookups", async () => {
+    vi.mocked(wikidata.searchConceptQid).mockReset();
+    vi.mocked(wikidata.fetchRelatedConcepts).mockReset();
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockReset();
+    vi.mocked(openLibrary.getSubject).mockResolvedValue({
+      name: "Tudor England",
+      workCount: 321,
+      works: [{ workId: "OL1W", title: "Wolf Hall", authors: [], coverUrl: null }],
+    });
+
+    const subject = await getSubjectBooks("tudor_england");
+    expect(subject).toMatchObject({ workCount: 321, relatedConcepts: [], books: [{ openLibraryWorkId: "OL1W" }] });
+    expect(locLinkedData.findSubjectHeadingUri).not.toHaveBeenCalled();
+    expect(wikidata.searchConceptQid).not.toHaveBeenCalled();
+    expect(wikidata.fetchRelatedConcepts).not.toHaveBeenCalled();
   });
 });

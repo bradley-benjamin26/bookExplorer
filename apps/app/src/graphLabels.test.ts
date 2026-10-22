@@ -4,7 +4,7 @@ import { pathAsGraph, pathSteps } from "./graphLabels";
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
     const steps = pathSteps({
-      found: true,
+      summary: "Via Frank Herbert",
       nodes: [
         { id: "work:OL1W", type: "work", label: "Dune", navigable: true },
         { id: "author:OL2A", type: "author", label: "Frank Herbert", navigable: true },
@@ -32,7 +32,20 @@ describe("pathAsGraph", () => {
       { id: "author:OL2A", type: "author" as const, label: "Frank Herbert", navigable: true },
     ];
     const edges = [{ source: "author:OL2A", target: "work:OL1W", relation: "author" }];
-    expect(pathAsGraph({ found: true, nodes, edges })).toEqual({ centerId: "work:OL1W", nodes, edges });
+    expect(pathAsGraph({ found: true, paths: [{ nodes, edges, summary: "" }] })).toEqual({ centerId: "work:OL1W", nodes, edges });
+  });
+
+  it("picks the path the index names, falling back to the best", () => {
+    const node = (id: string) => ({ id, type: "work" as const, label: id, navigable: true });
+    const result = {
+      found: true as const,
+      paths: [
+        { nodes: [node("work:A"), node("work:B")], edges: [], summary: "" },
+        { nodes: [node("work:C"), node("work:B")], edges: [], summary: "" },
+      ],
+    };
+    expect(pathAsGraph(result, 1).centerId).toBe("work:C");
+    expect(pathAsGraph(result, 7).centerId).toBe("work:A");
   });
 
   it("throws the not-found reason", () => {

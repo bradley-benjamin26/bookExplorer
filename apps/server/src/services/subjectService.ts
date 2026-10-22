@@ -8,6 +8,30 @@ import * as wikidata from "../sources/wikidata.js";
 const NO_LCSH: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
 
 const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subject");
+const subjectBooksCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subjectBooks");
+
+function toSubject(
+  slug: string,
+  ol: openLibrary.OpenLibrarySubject,
+  qid: string | null,
+  description: string | null,
+  relatedConcepts: SubjectConcept[]
+): Subject {
+  return {
+    slug,
+    name: ol.name,
+    workCount: ol.workCount,
+    wikidataId: qid,
+    description,
+    relatedConcepts,
+    books: ol.works.map((w) => ({
+      openLibraryWorkId: w.workId,
+      title: w.title,
+      authors: w.authors,
+      coverUrl: w.coverUrl,
+    })),
+  };
+}
 
 /**
  * Merges Wikidata's own broader/narrower concepts with LCSH's broader/narrower
@@ -65,22 +89,18 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
       qid ? wikidata.fetchRelatedConcepts(qid) : Promise.resolve([]),
       qid ? wikidata.fetchDescription(qid).catch(() => null) : Promise.resolve(null),
     ]);
-    const relatedConcepts = mergeSubjectConcepts(wikidataConcepts, lcshConcepts);
+    return toSubject(slug, ol, qid, description, mergeSubjectConcepts(wikidataConcepts, lcshConcepts));
+  });
+}
 
-    const result: Subject = {
-      slug,
-      name: ol.name,
-      workCount: ol.workCount,
-      wikidataId: qid,
-      description,
-      relatedConcepts,
-      books: ol.works.map((w) => ({
-        openLibraryWorkId: w.workId,
-        title: w.title,
-        authors: w.authors,
-        coverUrl: w.coverUrl,
-      })),
-    };
-    return result;
+/**
+ * The path finder's cheap subject: Open Library's book list and work count
+ * only. The LCSH/Wikidata concept lookups above took up to ~10 s a subject
+ * on a cold cache, which no path search could afford.
+ */
+export function getSubjectBooks(slug: string): Promise<Subject | null> {
+  return subjectBooksCache.wrap(slug, async () => {
+    const ol = await openLibrary.getSubject(slug);
+    return ol && toSubject(slug, ol, null, null, []);
   });
 }

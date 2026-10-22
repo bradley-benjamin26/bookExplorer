@@ -1,15 +1,22 @@
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { describe, expect, it, vi } from "vitest";
-import { findPath, graphNeighbours, type Neighbours, type PathLimits } from "./graphQuery.js";
-import { buildWorkGraph } from "./graphService.js";
+import type { PathResult } from "@book-explorer/shared";
+import { findPath, graphNeighbours, summarise, type Neighbours, type PathLimits } from "./graphQuery.js";
+import { buildSubjectBooksGraph, buildSubjectGraph, buildWorkGraph } from "./graphService.js";
 
-vi.mock("./graphService.js", () => ({ buildAuthorGraph: vi.fn(), buildSubjectGraph: vi.fn(), buildWorkGraph: vi.fn() }));
+vi.mock("./graphService.js", () => ({
+  buildAuthorGraph: vi.fn(),
+  buildSubjectGraph: vi.fn(),
+  buildSubjectBooksGraph: vi.fn(),
+  buildWorkGraph: vi.fn(),
+}));
 
 const LIMITS: PathLimits = { maxDepth: 4, maxVisited: 300, maxExpansions: 40, timeBudgetMs: 1000, concurrency: 2 };
 
 // Builds a neighbours function from an edge list, the way the graph builders
-// return each node's one-hop graph (the node itself plus everything it touches).
-function fixture(edges: [string, string, string][]): Neighbours & { calls: string[] } {
+// return each node's one-hop graph (the node itself plus everything it touches),
+// with a subject's Open Library work count when `workCounts` names it.
+function fixture(edges: [string, string, string][], workCounts: Record<string, number> = {}): Neighbours & { calls: string[] } {
   const all: GraphEdge[] = edges.map(([source, relation, target]) => ({ source, relation, target }));
   const node = (id: string): GraphNode => ({ id, type: id.split(":")[0] as GraphNode["type"], label: id, navigable: true });
   const calls: string[] = [];
@@ -17,10 +24,12 @@ function fixture(edges: [string, string, string][]): Neighbours & { calls: strin
     calls.push(id);
     const touching = all.filter((e) => e.source === id || e.target === id);
     const ids = new Set([id, ...touching.flatMap((e) => [e.source, e.target])]);
-    return { nodes: [...ids].map(node), edges: touching };
+    return { nodes: [...ids].map(node), edges: touching, workCount: workCounts[id] };
   };
   return Object.assign(fn, { calls });
 }
+
+const pathIds = (result: PathResult, i = 0) => (result.found ? result.paths[i]?.nodes.map((n) => n.id) : null);
 
 describe("findPath", () => {
   it("finds the shortest path, keeping each edge's own direction", async () => {
@@ -38,11 +47,16 @@ describe("findPath", () => {
     const result = await findPath("author:A", "work:W2", graph, LIMITS);
     expect(result).toEqual({
       found: true,
-      nodes: ["author:A", "work:W1", "subject:s", "work:W2"].map((id) => expect.objectContaining({ id })),
-      edges: [
-        { source: "author:A", relation: "wrote", target: "work:W1" },
-        { source: "work:W1", relation: "subject", target: "subject:s" },
-        { source: "work:W2", relation: "subject", target: "subject:s" },
+      paths: [
+        {
+          nodes: ["author:A", "work:W1", "subject:s", "work:W2"].map((id) => expect.objectContaining({ id })),
+          edges: [
+            { source: "author:A", relation: "wrote", target: "work:W1" },
+            { source: "work:W1", relation: "subject", target: "subject:s" },
+            { source: "work:W2", relation: "subject", target: "subject:s" },
+          ],
+          summary: "Via work:W1 → subject:s",
+        },
       ],
     });
   });
@@ -50,7 +64,7 @@ describe("findPath", () => {
   it("finds a direct neighbour", async () => {
     const graph = fixture([["author:A", "wrote", "work:W"]]);
     const result = await findPath("work:W", "author:A", graph, LIMITS);
-    expect(result.found && result.nodes.map((n) => n.id)).toEqual(["work:W", "author:A"]);
+    expect(pathIds(result)).toEqual(["work:W", "author:A"]);
   });
 
   it("reports noPath when the two ends are in separate components", async () => {
@@ -74,7 +88,7 @@ describe("findPath", () => {
       ["subject:s", "broader", "subject:t"],
     ]);
     const result = await findPath("author:A", "subject:t", graph, LIMITS);
-    expect(result.found && result.nodes.map((n) => n.id)).toEqual(["author:A", "work:W1", "subject:s", "subject:t"]);
+    expect(result.found && result.paths.map((p) => p.nodes.map((n) => n.id))).toContainEqual(["author:A", "work:W1", "subject:s", "subject:t"]);
     // Every node is expanded at most once despite the cycle.
     expect(new Set(graph.calls).size).toBe(graph.calls.length);
   });
@@ -141,7 +155,7 @@ describe("findPath", () => {
     const result = await findPath("author:A", "work:T", failing, LIMITS);
     expect(warn).toHaveBeenCalledOnce();
     warn.mockRestore();
-    expect(result.found && result.nodes.map((n) => n.id)).toEqual(["author:A", "work:W1", "subject:s", "work:T"]);
+    expect(pathIds(result)).toEqual(["author:A", "work:W1", "subject:s", "work:T"]);
   });
 
   it("starts no queued expansions once the time budget has run out", async () => {
@@ -159,6 +173,98 @@ describe("findPath", () => {
     // Both authors, then only the first batch of works already running at the deadline.
     expect(wide.calls.length).toBeLessThanOrEqual(2 + LIMITS.concurrency);
   });
+
+  it("reaches a 4-edge author -> other work -> specific subject <- target path where level-by-level BFS hits the cap", async () => {
+    // Each end also has ten broad subjects of twelve books each. Plain BFS
+    // expands both ends' whole first ring (2 + 11 + 11 = 24 expansions) before
+    // it can meet, so it reports nodeCap at 16; best-first opens the author first.
+    const broad = (end: string, prefix: string) =>
+      Array.from({ length: 10 }, (_, i): [string, string, string][] => [
+        [end, "subject", `subject:${prefix}${i}`],
+        ...Array.from({ length: 12 }, (_, j): [string, string, string] => [`work:${prefix}${i}-${j}`, "subject", `subject:${prefix}${i}`]),
+      ]).flat();
+    const counts = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [[`subject:b${i}`, 1e6], [`subject:c${i}`, 1e6]]).flat());
+    const graph = fixture(
+      [
+        ["author:A", "wrote", "work:W1"],
+        ["author:A", "wrote", "work:W3"],
+        ["work:W3", "subject", "subject:s"],
+        ["work:W2", "subject", "subject:s"],
+        ...broad("work:W1", "b"),
+        ...broad("work:W2", "c"),
+      ],
+      { ...counts, "subject:s": 50 }
+    );
+    const result = await findPath("work:W1", "work:W2", graph, { ...LIMITS, maxExpansions: 16 });
+    expect(pathIds(result)).toEqual(["work:W1", "author:A", "work:W3", "subject:s", "work:W2"]);
+    expect(graph.calls.length).toBeLessThanOrEqual(16);
+  });
+
+  it("ranks a path through a specific subject above one through a generic subject", async () => {
+    const graph = fixture(
+      [
+        ["work:W1", "subject", "subject:fiction"],
+        ["work:W2", "subject", "subject:fiction"],
+        ["work:W1", "subject", "subject:tudor_england"],
+        ["work:W2", "subject", "subject:tudor_england"],
+      ],
+      { "subject:fiction": 1_000_000, "subject:tudor_england": 300 }
+    );
+    const result = await findPath("work:W1", "work:W2", graph, LIMITS);
+    expect(result.found && result.paths.map((p) => p.summary)).toEqual(["Both: subject:tudor_england", "Both: subject:fiction"]);
+  });
+
+  it("returns at most three distinct paths, most specific first", async () => {
+    const counts = [10, 100_000, 100, 1_000_000, 1000];
+    const graph = fixture(
+      counts.flatMap((_, i): [string, string, string][] => [
+        ["work:W1", "subject", `subject:s${i}`],
+        ["work:W2", "subject", `subject:s${i}`],
+      ]),
+      Object.fromEntries(counts.map((c, i) => [`subject:s${i}`, c]))
+    );
+    const result = await findPath("work:W1", "work:W2", graph, LIMITS);
+    expect(result.found && result.paths.map((p) => p.nodes[1].id)).toEqual(["subject:s0", "subject:s2", "subject:s4"]);
+  });
+
+  it("returns the paths found so far when the time budget runs out", async () => {
+    const graph = fixture([
+      ["work:W1", "subject", "subject:s"],
+      ["work:W2", "subject", "subject:s"],
+      ["work:W1", "subject", "subject:slow"],
+    ]);
+    const hanging: Neighbours = (id) => (id === "subject:slow" ? new Promise(() => {}) : graph(id));
+    const result = await findPath("work:W1", "work:W2", hanging, { ...LIMITS, timeBudgetMs: 30 });
+    expect(pathIds(result)).toEqual(["work:W1", "subject:s", "work:W2"]);
+  });
+
+  it("stops starting expansions as soon as the signal aborts", async () => {
+    const wide = fixture(Array.from({ length: 16 }, (_, i): [string, string, string] => ["author:A", "wrote", `work:${i}`]));
+    const controller = new AbortController();
+    const slow: Neighbours = async (id) => {
+      if (wide.calls.length === 3) controller.abort();
+      const hood = await wide(id);
+      await new Promise((r) => setTimeout(r, 5));
+      return hood;
+    };
+    const result = await findPath("author:A", "author:Z", slow, LIMITS, controller.signal);
+    expect(result).toEqual({ found: false, reason: "timeout" });
+    const callsAtAbort = wide.calls.length;
+    await new Promise((r) => setTimeout(r, 50));
+    expect(wide.calls.length).toBe(callsAtAbort);
+  });
+});
+
+describe("summarise", () => {
+  const node = (id: string, label: string): GraphNode => ({ id, type: id.split(":")[0] as GraphNode["type"], label, navigable: true });
+  it("names a shared author or subject, and otherwise the chain", () => {
+    const [w1, w2] = [node("work:1", "Wolf Hall"), node("work:2", "Bring Up the Bodies")];
+    expect(summarise([w1, node("author:A", "Hilary Mantel"), w2])).toBe("Same author: Hilary Mantel");
+    expect(summarise([w1, node("subject:t", "Tudor England"), w2])).toBe("Both: Tudor England");
+    expect(summarise([w1, node("author:A", "Hilary Mantel"), node("subject:t", "Tudor England"), w2])).toBe(
+      "Via Hilary Mantel → Tudor England"
+    );
+  });
 });
 
 describe("graphNeighbours", () => {
@@ -174,6 +280,20 @@ describe("graphNeighbours", () => {
     const hood = await graphNeighbours("work:OL1W");
     expect(hood?.nodes.map((n) => n.id)).toEqual(["work:OL1W", "author:OL3A"]);
     expect(hood?.edges).toEqual([{ source: "author:OL3A", target: "work:OL1W", relation: "author" }]);
+    expect(hood?.workCount).toBeUndefined();
+  });
+
+  it("opens a subject or genre as its book list and work count only, without the related-concept lookups", async () => {
+    vi.mocked(buildSubjectBooksGraph).mockResolvedValue({
+      centerId: "subject:fiction",
+      workCount: 900,
+      nodes: [{ id: "subject:fiction", type: "subject", label: "Fiction", navigable: true }],
+      edges: [],
+    });
+    const hood = await graphNeighbours("genre:fiction");
+    expect(buildSubjectBooksGraph).toHaveBeenCalledWith("fiction");
+    expect(buildSubjectGraph).not.toHaveBeenCalled();
+    expect(hood).toEqual({ nodes: [expect.objectContaining({ id: "genre:fiction" })], edges: [], workCount: 900 });
   });
 
   it("does not expand ids that have no graph of their own", async () => {

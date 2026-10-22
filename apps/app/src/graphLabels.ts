@@ -1,4 +1,4 @@
-import type { Graph, GraphNode, PathResult } from "@book-explorer/shared";
+import type { Graph, GraphNode, GraphPath, PathResult } from "@book-explorer/shared";
 
 export const NODE_LABELS: Record<GraphNode["type"], string> = {
   author: "Author",
@@ -34,7 +34,7 @@ export interface PathStep {
 }
 
 /** A found path as a top-to-bottom chain, each step labelled for screen readers with its relation. */
-export function pathSteps(path: Extract<PathResult, { found: true }>): PathStep[] {
+export function pathSteps(path: GraphPath): PathStep[] {
   const byId = new Map(path.nodes.map((n) => [n.id, n]));
   return path.nodes.map((node, i) => {
     const edge = i > 0 ? path.edges[i - 1] : undefined;
@@ -53,8 +53,9 @@ export const PATH_NOT_FOUND_MESSAGES: Record<Extract<PathResult, { found: false 
   timeout: "The search ran out of time before it found a connection.",
 };
 
-/** A path result as a graph centred on its start, for the graph renderer; throws the reason when none was found. */
-export function pathAsGraph(path: PathResult): Graph {
-  if (!path.found) throw new Error(PATH_NOT_FOUND_MESSAGES[path.reason]);
-  return { centerId: path.nodes[0].id, nodes: path.nodes, edges: path.edges };
+/** One path of a result (the best when `index` is out of range) as a graph centred on its start; throws the reason when none was found. */
+export function pathAsGraph(result: PathResult, index = 0): Graph {
+  if (!result.found) throw new Error(PATH_NOT_FOUND_MESSAGES[result.reason]);
+  const { nodes, edges } = result.paths[index] ?? result.paths[0];
+  return { centerId: nodes[0].id, nodes, edges };
 }

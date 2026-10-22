@@ -1,7 +1,11 @@
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import { describe, expect, it } from "vitest";
+import { PathResultSchema, type PathResult } from "@book-explorer/shared";
+import { describe, expect, it, vi } from "vitest";
+import { findPath } from "../services/graphQuery.js";
 import { pathRoutes } from "./path.js";
+
+vi.mock("../services/graphQuery.js", () => ({ findPath: vi.fn(), graphNeighbours: vi.fn() }));
 
 async function buildApp() {
   const app = Fastify();
@@ -37,5 +41,52 @@ describe("GET /api/path validation", () => {
     await app.close();
     expect(codes.slice(0, 10).every((c) => c === 400)).toBe(true);
     expect(codes[10]).toBe(429);
+  });
+});
+
+describe("GET /api/path search", () => {
+  it("returns the ranked paths in the shared response shape", async () => {
+    const found: PathResult = {
+      found: true,
+      paths: [
+        {
+          nodes: [
+            { id: "work:OL1W", type: "work", label: "Wolf Hall", navigable: true },
+            { id: "subject:tudors", type: "subject", label: "Tudors", navigable: true },
+            { id: "work:OL2W", type: "work", label: "The Mirror and the Light", navigable: true },
+          ],
+          edges: [
+            { source: "work:OL1W", relation: "subject", target: "subject:tudors" },
+            { source: "work:OL2W", relation: "subject", target: "subject:tudors" },
+          ],
+          summary: "Both: Tudors",
+        },
+      ],
+    };
+    vi.mocked(findPath).mockResolvedValueOnce(found);
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/path?from=work:OL1W&to=work:OL2W" });
+    await app.close();
+    expect(res.statusCode).toBe(200);
+    expect(PathResultSchema.parse(res.json())).toEqual(found);
+  });
+
+  it("aborts the search when the client disconnects", async () => {
+    let signal: AbortSignal | undefined;
+    vi.mocked(findPath).mockImplementationOnce((_from, _to, _neighbours, _limits, s) => {
+      signal = s;
+      return new Promise((resolve) => s?.addEventListener("abort", () => resolve({ found: false, reason: "timeout" })));
+    });
+    const app = await buildApp();
+    await app.listen({ port: 0, host: "127.0.0.1" });
+    const { port } = app.server.address() as { port: number };
+    const client = new AbortController();
+    const request = fetch(`http://127.0.0.1:${port}/api/path?from=work:OL1W&to=work:OL2W`, { signal: client.signal });
+    await vi.waitFor(() => expect(signal).toBeDefined());
+    expect(signal?.aborted).toBe(false);
+    client.abort();
+    await expect(request).rejects.toThrow();
+    await vi.waitFor(() => expect(signal?.aborted).toBe(true));
+    await app.close();
   });
 });

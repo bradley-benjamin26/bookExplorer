@@ -13,6 +13,8 @@ import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 // Same debounce and minimum as the search screen, for the same reasons.
 const DEBOUNCE_MS = 400;
 const MIN_QUERY_LENGTH = 3;
+// Matches the server's 25 s path search budget.
+const SEARCHING_MESSAGE = "Searching… this can take up to 25 seconds.";
 
 export default function Connection() {
   const params = useLocalSearchParams<{ from: string; label?: string }>();
@@ -40,18 +42,24 @@ export default function Connection() {
   const to = target ? `work:${target.openLibraryWorkId}` : "";
   const path = useQuery({
     queryKey: ["path", from, to],
-    queryFn: () => fetchPath(from, to),
+    queryFn: ({ signal }) => fetchPath(from, to, signal),
     enabled: !!from && !!to,
     // Each run is costly and tightly rate-limited server-side, so never repeat one on its own.
     retry: false,
     staleTime: Infinity,
   });
 
-  // iOS VoiceOver ignores accessibilityLiveRegion (Android-only), so the outcome is announced too.
+  // iOS VoiceOver ignores accessibilityLiveRegion (Android-only), so progress and the outcome are announced too.
+  useEffect(() => {
+    if (path.isLoading) AccessibilityInfo.announceForAccessibility(SEARCHING_MESSAGE);
+  }, [path.isLoading]);
   useEffect(() => {
     if (!path.data) return;
+    const { data } = path;
     AccessibilityInfo.announceForAccessibility(
-      path.data.found ? `Connection found in ${path.data.edges.length} steps` : PATH_NOT_FOUND_MESSAGES[path.data.reason]
+      data.found
+        ? `${data.paths.length === 1 ? "1 connection" : `${data.paths.length} connections`} found. Best match: ${data.paths[0].summary}`
+        : PATH_NOT_FOUND_MESSAGES[data.reason]
     );
   }, [path.data]);
 
@@ -96,9 +104,9 @@ export default function Connection() {
         {label} to {target.title}
       </Text>
       {path.isLoading && (
-        <View style={styles.loading} accessibilityLabel="Searching for a connection" accessible>
+        <View style={styles.loading} accessibilityLabel={SEARCHING_MESSAGE} accessibilityLiveRegion="polite" accessible>
           <ActivityIndicator color={theme.colors.cover} />
-          <Text style={styles.hint}>Searching — this can take a few seconds.</Text>
+          <Text style={styles.hint}>{SEARCHING_MESSAGE}</Text>
         </View>
       )}
       {path.isError && <Text style={styles.errorText} accessibilityLiveRegion="polite">{path.error.message}</Text>}
@@ -106,32 +114,40 @@ export default function Connection() {
         <Text style={styles.hint} accessibilityLiveRegion="polite">{PATH_NOT_FOUND_MESSAGES[path.data.reason]}</Text>
       )}
       {path.data?.found && (
-        <View style={styles.chain} accessibilityLiveRegion="polite">
-          {pathSteps(path.data).map((step) => (
-            <View key={step.node.id} accessible accessibilityLabel={step.accessibilityLabel}>
-              {step.relation && (
-                <View style={styles.link}>
-                  <View style={styles.linkLine} />
-                  <Text style={styles.linkText}>{step.relation}</Text>
-                </View>
-              )}
-              <View style={styles.node}>
-                <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
-                <Text style={styles.nodeLabel}>{step.node.label}</Text>
+        <View accessibilityLiveRegion="polite">
+          {path.data.paths.map((found, i) => {
+            const name = i === 0 ? "Best match" : `Connection ${i + 1}`;
+            return (
+              <View key={i} style={styles.chain}>
+                <Text style={styles.pathTitle} accessibilityRole="header">
+                  {name}: {found.summary}
+                </Text>
+                {pathSteps(found).map((step) => (
+                  <View key={step.node.id} accessible accessibilityLabel={step.accessibilityLabel}>
+                    {step.relation && (
+                      <View style={styles.link}>
+                        <View style={styles.linkLine} />
+                        <Text style={styles.linkText}>{step.relation}</Text>
+                      </View>
+                    )}
+                    <View style={styles.node}>
+                      <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
+                      <Text style={styles.nodeLabel}>{step.node.label}</Text>
+                    </View>
+                  </View>
+                ))}
+                <Button
+                  variant={i === 0 ? "primary" : "pill"}
+                  onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to, pathIndex: String(i) }))}
+                  style={styles.action}
+                  accessibilityLabel={`Show ${name.toLowerCase()} on the graph`}
+                >
+                  Show on Graph
+                </Button>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
-      )}
-      {path.data?.found && (
-        <Button
-          variant="primary"
-          onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to }))}
-          style={styles.action}
-          accessibilityLabel="Show this connection on the graph"
-        >
-          Show on Graph
-        </Button>
       )}
       <Button variant="pill" onPress={() => setTarget(null)} style={styles.action} accessibilityLabel="Choose a different book">
         Choose a Different Book
@@ -158,7 +174,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     loading: { marginTop: spacing.xl, alignItems: "center", gap: spacing.sm },
     hint: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
     errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
-    chain: { marginTop: spacing.md },
+    chain: { marginTop: spacing.xl },
+    pathTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.sm },
     node: { borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md },
     nodeType: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
     nodeLabel: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink },

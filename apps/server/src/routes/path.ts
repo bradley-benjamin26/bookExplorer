@@ -22,7 +22,12 @@ export async function pathRoutes(app: FastifyInstance) {
         reply.code(400);
         return { error: "'from' and 'to' must differ" };
       }
-      return findPath(from as string, to as string, graphNeighbours);
+      // A client that leaves before the answer stops the search starting more upstream work.
+      const disconnected = new AbortController();
+      reply.raw.on("close", () => {
+        if (!reply.raw.writableEnded) disconnected.abort();
+      });
+      return findPath(from as string, to as string, graphNeighbours, undefined, disconnected.signal);
     }
   );
 }

@@ -1,10 +1,10 @@
-import type { Graph, GraphNode, GraphEdge } from "@book-explorer/shared";
+import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
 import { slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
 import { getAuthorDetail } from "./authorService.js";
-import { getSubjectDetail } from "./subjectService.js";
+import { getSubjectBooks, getSubjectDetail } from "./subjectService.js";
 import { getWorkDetail } from "./workService.js";
 
 // Caps keep the force-directed layout on the client legible — a subject can
@@ -204,8 +204,16 @@ export async function buildAuthorGraph(openLibraryId: string): Promise<Graph | n
 
 export async function buildSubjectGraph(slug: string): Promise<Graph | null> {
   const subject = await getSubjectDetail(slug);
-  if (!subject) return null;
+  return subject && subjectGraph(subject);
+}
 
+/** Path search only: a subject's books and its work count, without the slow related-concept lookups. */
+export async function buildSubjectBooksGraph(slug: string): Promise<(Graph & { workCount: number }) | null> {
+  const subject = await getSubjectBooks(slug);
+  return subject && { ...subjectGraph(subject), workCount: subject.workCount };
+}
+
+function subjectGraph(subject: Subject): Graph {
   const centerId = `subject:${subject.slug}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "subject", label: subject.name, navigable: true }];
   const edges: GraphEdge[] = [];
