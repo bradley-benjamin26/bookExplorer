@@ -55,7 +55,7 @@ export default function WorkDetail() {
   }
 
   if (!data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No work found for ${id}`} />;
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No work found for ${id}`} />;
   }
 
   return (

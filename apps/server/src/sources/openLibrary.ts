@@ -1,5 +1,5 @@
 import type { AuthorRef } from "@book-explorer/shared";
-import { fetchWithTimeout } from "../httpClient.js";
+import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
 
 export const USER_AGENT = "BookExplorer/0.1 (contact: bbradle1@umd.edu)";
 
@@ -244,6 +244,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     Promise.all(
       authorIds.map(async (id) => {
         const author = await getAuthor(id).catch((err) => {
+          if (err instanceof UpstreamUnavailableError) throw err;
           console.warn(`[openLibrary] Failed to resolve author name for ${id}:`, err);
           return null;
         });
@@ -258,6 +259,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     // editions list on the work page, so a failure here shouldn't take down
     // the rest of an otherwise-good response.
     getWorkEditions(workId).catch((err) => {
+      if (err instanceof UpstreamUnavailableError) throw err;
       console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
       return [] as OpenLibraryEdition[];
     }),
@@ -479,6 +481,7 @@ async function resolveEditionExtras(editionKey: string | undefined): Promise<{ w
     const workKey = edition.works?.[0]?.key;
     return { workId: workKey ? workKey.replace("/works/", "") : null, format: edition.physical_format ?? null };
   } catch (err) {
+    if (err instanceof UpstreamUnavailableError) throw err;
     console.warn(`[openLibrary] Failed to resolve work id/format for edition ${editionKey}:`, err);
     return { workId: null, format: null };
   }

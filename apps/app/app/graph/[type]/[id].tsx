@@ -652,7 +652,7 @@ export default function GraphExplorer() {
   }
 
   if (!data || !layout || !center) {
-    return <ErrorState message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
   const handleNodePress = (node: PositionedNode) => {

@@ -54,7 +54,7 @@ export default function AuthorDetail() {
   }
 
   if (!data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No author found for ${id}`} />;
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No author found for ${id}`} />;
   }
 
   return (

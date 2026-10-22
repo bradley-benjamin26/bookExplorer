@@ -34,7 +34,7 @@ export default function SubjectDetail() {
   }
 
   if (!data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");

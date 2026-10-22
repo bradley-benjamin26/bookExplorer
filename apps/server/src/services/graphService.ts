@@ -1,3 +1,4 @@
+import { UpstreamUnavailableError } from "../httpClient.js";
 import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
 import { slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
@@ -186,6 +187,7 @@ export async function buildAuthorGraph(openLibraryId: string): Promise<Graph | n
           openLibrary.getAuthorWorks(match.openLibraryId, MAX_PSEUDONYM_WORKS)
         );
       } catch (err) {
+        if (err instanceof UpstreamUnavailableError) throw err;
         console.warn(`[graphService] Failed to look up pseudonym "${pseudonym}" for ${author.openLibraryId}:`, err);
         return [];
       }

@@ -45,10 +45,13 @@ type HostState = {
 };
 
 const hosts = new Map<string, HostState>();
+const leaveTimers = new Set<ReturnType<typeof setTimeout>>();
 
 /** Test hook: forget every host's limiter and cooldown state. */
 export function resetUpstreamState() {
   hosts.clear();
+  for (const t of leaveTimers) clearTimeout(t);
+  leaveTimers.clear();
 }
 
 function hostState(host: string): HostState {
@@ -76,12 +79,17 @@ function openCooldown(host: string, st: HostState, retryAfterMs?: number) {
   if (st.cooling) return;
   st.cooling = true;
   console.warn(`[httpClient] ${host} is cooling down for ${Math.round(ms / 1000)}s`);
-  const timer = setTimeout(function leave() {
-    if (Date.now() < st.cooldownUntil) return void setTimeout(leave, st.cooldownUntil - Date.now()).unref?.();
-    st.cooling = false;
-    console.warn(`[httpClient] ${host} cooldown over`);
-  }, ms);
-  timer.unref?.();
+  const watch = (wait: number) => {
+    const timer = setTimeout(() => {
+      leaveTimers.delete(timer);
+      if (Date.now() < st.cooldownUntil) return watch(st.cooldownUntil - Date.now());
+      st.cooling = false;
+      console.warn(`[httpClient] ${host} cooldown over`);
+    }, wait);
+    leaveTimers.add(timer);
+    timer.unref?.();
+  };
+  watch(ms);
 }
 
 /** Retry-After as milliseconds: delta-seconds or an HTTP date; undefined when absent or unparseable. */

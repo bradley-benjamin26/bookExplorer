@@ -101,6 +101,7 @@ export default function BookDetail() {
   if (!data) {
     return (
       <ErrorState
+        error={error}
         message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`}
         action={
           error instanceof ApiError && error.status === 404
