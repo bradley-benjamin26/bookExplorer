@@ -10,6 +10,7 @@ vi.mock("../sources/openLibrary.js", () => ({
 vi.mock("../sources/wikidata.js", () => ({
   searchConceptQid: vi.fn(),
   fetchRelatedConcepts: vi.fn(),
+  fetchDescription: vi.fn(),
 }));
 vi.mock("../sources/locLinkedData.js", () => ({
   findSubjectHeadingUri: vi.fn(),
@@ -29,6 +30,7 @@ describe("getSubjectDetail", () => {
     vi.mocked(openLibrary.getSubject).mockReset();
     vi.mocked(wikidata.searchConceptQid).mockReset();
     vi.mocked(wikidata.fetchRelatedConcepts).mockReset();
+    vi.mocked(wikidata.fetchDescription).mockReset().mockResolvedValue(null);
     vi.mocked(locLinkedData.findSubjectHeadingUri).mockReset();
     vi.mocked(locLinkedData.fetchBroaderNarrower).mockReset();
   });
@@ -46,6 +48,17 @@ describe("getSubjectDetail", () => {
     expect(subject?.relatedConcepts).toEqual([
       { relation: "broader", label: "Tales", sources: ["wikidata", "lcsh"], wikidataId: "Q999" },
     ]);
+  });
+
+  it("includes the Wikidata English description when available", async () => {
+    mockOpenLibrarySubject("Fairy tales (described)");
+    vi.mocked(wikidata.searchConceptQid).mockResolvedValue("Q123");
+    vi.mocked(wikidata.fetchRelatedConcepts).mockResolvedValue([]);
+    vi.mocked(wikidata.fetchDescription).mockResolvedValue("genre of folklore");
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue(null);
+
+    const subject = await getSubjectDetail("fairy_tales_described");
+    expect(subject?.description).toBe("genre of folklore");
   });
 
   it("includes an LCSH-only concept with a null wikidataId", async () => {

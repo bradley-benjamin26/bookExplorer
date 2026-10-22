@@ -50,8 +50,9 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
     if (!ol) return null;
 
     const qid = await wikidata.searchConceptQid(ol.name);
-    const [wikidataConcepts, lcshUri] = await Promise.all([
+    const [wikidataConcepts, description, lcshUri] = await Promise.all([
       qid ? wikidata.fetchRelatedConcepts(qid) : Promise.resolve([]),
+      qid ? wikidata.fetchDescription(qid).catch(() => null) : Promise.resolve(null),
       locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null),
     ]);
     const lcshConcepts = lcshUri
@@ -64,6 +65,7 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
       name: ol.name,
       workCount: ol.workCount,
       wikidataId: qid,
+      description,
       relatedConcepts,
       books: ol.works.map((w) => ({
         openLibraryWorkId: w.workId,
