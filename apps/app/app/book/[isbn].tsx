@@ -4,7 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { fetchBookByIsbn } from "../../src/api/client";
+import { ApiError, fetchBookByIsbn } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { ExpandableText } from "../../src/components/ExpandableText";
@@ -13,6 +13,7 @@ import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
+import { toAlternateIsbn } from "../../src/isbn";
 import { routes } from "../../src/navigation";
 import { addRecentIsbn } from "../../src/storage/history";
 import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
@@ -23,6 +24,22 @@ import { titleCase } from "../../src/titleCase";
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
 const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
 const OPEN_LIBRARY_URL = "https://openlibrary.org/isbn/";
+
+// A source often has only the other form of an ISBN (10 vs 13), so a 404 gets
+// one retry with it before the screen gives up.
+async function fetchBookWithAlternate(isbn: string) {
+  try {
+    return await fetchBookByIsbn(isbn);
+  } catch (err) {
+    const alternate = err instanceof ApiError && err.status === 404 ? toAlternateIsbn(isbn) : null;
+    if (!alternate) throw err;
+    try {
+      return await fetchBookByIsbn(alternate);
+    } catch {
+      throw err; // report the ISBN the user actually asked for
+    }
+  }
+}
 
 export default function BookDetail() {
   const { isbn: rawIsbn } = useLocalSearchParams<{ isbn: string }>();
@@ -37,7 +54,7 @@ export default function BookDetail() {
   const styles = useThemedStyles(createStyles);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["book", isbn],
-    queryFn: () => fetchBookByIsbn(isbn),
+    queryFn: () => fetchBookWithAlternate(isbn),
     enabled: !!isbn,
   });
 
@@ -92,7 +109,12 @@ export default function BookDetail() {
   }
 
   if (isError || !data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`} />;
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`}
+        action={{ label: "Search by title instead", onPress: () => router.push(routes.search(isbn)) }}
+      />
+    );
   }
 
   return (

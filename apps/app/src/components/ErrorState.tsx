@@ -1,15 +1,17 @@
 import { AlertTriangle } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
+import { Button } from "./Button";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 /** The "couldn't load this" state every detail screen needs (a bad ISBN, an id that doesn't resolve, a network failure) — a plain wall of red text read as more alarming than informative, so this gives it a little visual weight without overstating what's usually just a not-found. */
-export function ErrorState({ message }: { message: string }) {
+export function ErrorState({ message, action }: { message: string; action?: { label: string; onPress: () => void } }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container}>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><AlertTriangle size={28} color={theme.colors.danger} strokeWidth={2} opacity={0.7} /></View>
       <Text style={styles.message}>{message}</Text>
+      {action && <Button variant="primary" onPress={action.onPress}>{action.label}</Button>}
     </View>
   );
 }
