@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPseudonyms, isValidQid, searchConceptQid } from "./wikidata.js";
+import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchConceptQid } from "./wikidata.js";
 
 describe("isValidQid", () => {
   it("accepts a well-formed QID", () => {
@@ -82,5 +82,70 @@ describe("searchConceptQid", () => {
       searchResponses({ travel: [{ id: "Q9", label: "Travel Channel", description: "cable network" }] })
     );
     expect(await searchConceptQid("travel")).toBeNull();
+  });
+});
+
+describe("compareOrdinals", () => {
+  it("sorts numerics by value, fractional between integers, non-numeric and missing last", () => {
+    const sorted = ["10", "A", null, "2.5", "2", "1"].sort(compareOrdinals);
+    expect(sorted).toEqual(["1", "2", "2.5", "10", "A", null]);
+  });
+});
+
+describe("series lookups", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const seriesClaim = (id: string, ordinal?: string) => ({
+    mainsnak: { datavalue: { value: { id } } },
+    ...(ordinal && { qualifiers: { P1545: [{ datavalue: { value: ordinal } }] } }),
+  });
+  const entity = (label: string, claims: object = {}) => ({ labels: { en: { value: label } }, claims });
+
+  function stubWikidata(entities: Record<string, object>, searchTitles: string[] = []) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("list=search")) return { ok: true, json: async () => ({ query: { search: searchTitles.map((title) => ({ title })) } }) };
+        const ids = new URL(url).searchParams.get("ids")!.split("|");
+        return { ok: true, json: async () => ({ entities: Object.fromEntries(ids.map((id) => [id, entities[id]])) }) };
+      })
+    );
+  }
+
+  it("returns null for a work with no series", async () => {
+    stubWikidata({ Q1: entity("Book", {}) });
+    expect(await fetchWorkSeries("Q1")).toBeNull();
+  });
+
+  it("keeps a non-numeric ordinal as text and collapses a duplicated series statement", async () => {
+    stubWikidata({
+      Q1: entity("Book", { P179: [seriesClaim("Q9", "A"), seriesClaim("Q9", "A")] }),
+      Q9: entity("The Saga"),
+    });
+    expect(await fetchWorkSeries("Q1")).toEqual({ name: "The Saga", position: "A", wikidataId: "Q9" });
+  });
+
+  it("orders members, keeps 2.5 between 2 and 3, and lists an Open Library id found on two items once", async () => {
+    const ol = (id: string) => ({ P648: [{ mainsnak: { datavalue: { value: id } } }] });
+    stubWikidata(
+      {
+        Q9: entity("The Saga"),
+        Q3: entity("Three", { ...ol("OL3W"), P179: [seriesClaim("Q9", "3")] }),
+        Q2: entity("Two", { ...ol("OL2W"), P179: [seriesClaim("Q9", "2")] }),
+        Q25: entity("Two and a half", { P179: [seriesClaim("Q9", "2.5")] }),
+        Q22: entity("Two (dup)", { ...ol("OL2W"), P179: [seriesClaim("Q9", "2")] }),
+      },
+      ["Q3", "Q2", "Q25", "Q22"]
+    );
+    const series = await fetchSeries("Q9");
+    expect(series?.members.map((m) => m.title)).toEqual(["Two", "Two and a half", "Three"]);
+    expect(series?.members[1]).toMatchObject({ position: "2.5", openLibraryWorkId: null });
+  });
+
+  it("returns null for a malformed qid without calling out", async () => {
+    stubWikidata({});
+    expect(await fetchSeries("nope")).toBeNull();
   });
 });

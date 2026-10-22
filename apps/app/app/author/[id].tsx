@@ -8,6 +8,7 @@ import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
+import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -108,6 +109,8 @@ export default function AuthorDetail() {
       >
         View as Graph
       </Button>
+
+      <MoreByAuthor title="Works" works={data.moreByAuthor} />
 
       {SECTIONS.map(({ relation, title }) => {
         const items = data.relations.filter((r) => r.relation === relation);

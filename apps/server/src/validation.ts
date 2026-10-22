@@ -13,6 +13,11 @@ export function isOpenLibraryWorkId(id: string): boolean {
   return /^OL\d+W$/.test(id);
 }
 
+/** A Wikidata item id, e.g. "Q42". */
+export function isWikidataQid(id: string): boolean {
+  return /^Q[1-9]\d*$/.test(id);
+}
+
 export const SEARCH_SORTS = ["relevance", "new", "old"] as const;
 
 export interface SearchFilters {

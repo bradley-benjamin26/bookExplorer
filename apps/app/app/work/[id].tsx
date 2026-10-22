@@ -13,6 +13,7 @@ import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
+import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -144,6 +145,9 @@ export default function WorkDetail() {
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
         </View>
       )}
+
+      <SeriesSection seriesQid={data.series?.wikidataId} currentWorkId={data.openLibraryWorkId} />
+      <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
       <ReviewsSection reviews={data.reviews} />
     </ScrollView>

@@ -1,4 +1,4 @@
-import type { AuthorRelation, SubjectConcept } from "@book-explorer/shared";
+import type { AuthorRelation, Series, SubjectConcept } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
@@ -119,6 +119,7 @@ export function isValidQid(qid: string): boolean {
 interface WbStatement {
   rank?: string;
   mainsnak?: { datavalue?: { value: unknown } };
+  qualifiers?: Record<string, { datavalue?: { value: unknown } }[]>;
 }
 
 interface WbEntity {
@@ -401,4 +402,60 @@ export async function fetchDescription(qid: string): Promise<string | null> {
   if (!isValidQid(qid)) return null;
   const entities = await wbGetEntities([qid], "descriptions", "en");
   return entities[qid]?.descriptions?.en?.value ?? null;
+}
+
+/** Numeric ordinals sort by value ("2.5" between 2 and 3); anything else ("A", "prequel") sorts after them, alphabetically. */
+export function compareOrdinals(a: string | null, b: string | null): number {
+  const na = a === null ? NaN : Number(a);
+  const nb = b === null ? NaN : Number(b);
+  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+  if (!Number.isNaN(na)) return -1;
+  if (!Number.isNaN(nb)) return 1;
+  return (a ?? "\uffff").localeCompare(b ?? "\uffff");
+}
+
+/** The series ordinal (P1545) qualifying the work's P179 statement for `seriesQid`, or null when absent/blank. */
+export function seriesOrdinal(entity: WbEntity | undefined, seriesQid: string): string | null {
+  const statement = (entity?.claims?.P179 ?? []).find(
+    (s) => s.rank !== "deprecated" && (s.mainsnak?.datavalue?.value as { id?: string } | undefined)?.id === seriesQid
+  );
+  const raw = statement?.qualifiers?.P1545?.[0]?.datavalue?.value;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+/** The first series (P179) a work belongs to, with its position (P1545); null when it has none. */
+export async function fetchWorkSeries(
+  workQid: string
+): Promise<{ name: string; position: string | null; wikidataId: string } | null> {
+  if (!isValidQid(workQid)) return null;
+  const entities = await wbGetEntities([workQid], "claims");
+  // The same series can be listed twice (duplicate statements), so only the first distinct one is used.
+  const seriesQid = claimItemIds(entities[workQid], "P179")[0];
+  if (!seriesQid) return null;
+  const resolved = await resolveItems([seriesQid]);
+  const name = resolved.get(seriesQid)?.label;
+  return name ? { name, position: seriesOrdinal(entities[workQid], seriesQid), wikidataId: seriesQid } : null;
+}
+
+/** Every item that is part of the series (P179 -> seriesQid), in series order. */
+export async function fetchSeries(seriesQid: string): Promise<Series | null> {
+  if (!isValidQid(seriesQid)) return null;
+  const [memberQids, seriesResolved] = await Promise.all([
+    searchReverseStatementQids("P179", seriesQid, 100),
+    resolveItems([seriesQid]),
+  ]);
+  const name = seriesResolved.get(seriesQid)?.label;
+  if (!name) return null;
+
+  const [entities, resolved] = await Promise.all([wbGetEntities(memberQids, "claims"), resolveItems(memberQids)]);
+  const seen = new Set<string>();
+  const members = [...new Set(memberQids)].flatMap((qid) => {
+    const item = resolved.get(qid);
+    // Two Wikidata items can carry the same Open Library id (e.g. a work and its edition record); list it once.
+    if (!item || (item.openLibraryId && seen.has(item.openLibraryId))) return [];
+    if (item.openLibraryId) seen.add(item.openLibraryId);
+    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId: item.openLibraryId }];
+  });
+  members.sort((a, b) => compareOrdinals(a.position, b.position));
+  return { wikidataId: seriesQid, name, members };
 }

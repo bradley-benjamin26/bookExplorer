@@ -83,6 +83,17 @@ export const BookSchema = z.object({
 });
 export type Book = z.infer<typeof BookSchema>;
 
+// Open Library subject listings return works (title/author, no specific
+// edition), not ISBNs — so this is a distinct, lighter-weight concept from
+// `Book`, which always represents one scanned edition.
+export const WorkRefSchema = z.object({
+  openLibraryWorkId: z.string(),
+  title: z.string(),
+  authors: z.array(AuthorRefSchema),
+  coverUrl: z.string().nullable(),
+});
+export type WorkRef = z.infer<typeof WorkRefSchema>;
+
 export const AuthorRelationSchema = z.object({
   relation: z.enum(["influencedBy", "influenced", "notableWork", "movement"]),
   wikidataId: z.string(),
@@ -109,19 +120,10 @@ export const AuthorSchema = z.object({
   // published name as a "preferred" P742 statement alongside their actual
   // pseudonyms, which isn't useful to surface as "also known as".
   pseudonyms: z.array(z.string()),
+  // Optional enrichment from Open Library; absent when that lookup failed.
+  moreByAuthor: z.array(WorkRefSchema).optional(),
 });
 export type Author = z.infer<typeof AuthorSchema>;
-
-// Open Library subject listings return works (title/author, no specific
-// edition), not ISBNs — so this is a distinct, lighter-weight concept from
-// `Book`, which always represents one scanned edition.
-export const WorkRefSchema = z.object({
-  openLibraryWorkId: z.string(),
-  title: z.string(),
-  authors: z.array(AuthorRefSchema),
-  coverUrl: z.string().nullable(),
-});
-export type WorkRef = z.infer<typeof WorkRefSchema>;
 
 // One specific printing of a work — from Open Library's editions listing for
 // that work, best-effort (fields are whatever that edition's catalogers
@@ -148,6 +150,11 @@ export const WorkSchema = WorkRefSchema.extend({
   editions: z.array(EditionSchema),
   rating: RatingSchema.nullable(),
   reviews: z.array(ReviewSchema),
+  // Optional enrichments (Wikidata P179/P1545, Open Library author works);
+  // absent when the work has none or that lookup failed. `position` is text
+  // because ordinals aren't always integers ("2.5", "A").
+  series: z.object({ name: z.string(), position: z.string().nullable(), wikidataId: z.string() }).optional(),
+  moreByAuthor: z.array(WorkRefSchema).optional(),
 });
 export type Work = z.infer<typeof WorkSchema>;
 
@@ -280,3 +287,19 @@ export const SnapshotExportSchema = z.object({
   libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
 });
 export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;
+
+export const SeriesMemberSchema = z.object({
+  wikidataId: z.string(),
+  title: z.string(),
+  position: z.string().nullable(),
+  // Wikidata doesn't always know the Open Library id, so not every member is navigable.
+  openLibraryWorkId: z.string().nullable(),
+});
+export type SeriesMember = z.infer<typeof SeriesMemberSchema>;
+
+export const SeriesSchema = z.object({
+  wikidataId: z.string(),
+  name: z.string(),
+  members: z.array(SeriesMemberSchema),
+});
+export type Series = z.infer<typeof SeriesSchema>;

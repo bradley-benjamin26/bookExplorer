@@ -9,6 +9,7 @@ import { subjectsRoutes } from "./routes/subjects.js";
 import { worksRoutes } from "./routes/works.js";
 import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
+import { seriesRoutes } from "./routes/series.js";
 import { initPersistentCache } from "./cache.js";
 
 // Behind a load balancer or reverse proxy (most hosting platforms), every
@@ -60,6 +61,7 @@ await app.register(subjectsRoutes);
 await app.register(worksRoutes);
 await app.register(graphRoutes);
 await app.register(searchRoutes);
+await app.register(seriesRoutes);
 
 if (process.env.CACHE_DB_PATH) initPersistentCache(process.env.CACHE_DB_PATH);
 

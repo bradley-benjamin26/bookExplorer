@@ -5,12 +5,14 @@ import {
   AuthorSchema,
   BookSchema,
   GraphSchema,
+  SeriesSchema,
   SubjectSchema,
   WorkRefSchema,
   WorkSchema,
   type Author,
   type Book,
   type Graph,
+  type Series,
   type GraphNode,
   type Subject,
   type Work,
@@ -115,4 +117,8 @@ export type GraphCenterType = Exclude<GraphNode["type"], "genre" | "editions">;
 
 export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
   return getJson(`/api/graph/${type}/${encodeURIComponent(id)}`, GraphSchema);
+}
+
+export function fetchSeries(qid: string): Promise<Series> {
+  return getJson(`/api/series/${encodeURIComponent(qid)}`, SeriesSchema);
 }

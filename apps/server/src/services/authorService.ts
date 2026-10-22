@@ -1,5 +1,6 @@
 import type { Author } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
+import { fetchMoreByAuthor } from "./bookEnrichment.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
@@ -26,14 +27,17 @@ const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24, 1000, "auth
  * failure for a full day.
  */
 export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
-  return authorCache.wrap(openLibraryId, async () => {
+  return authorCache.wrap(openLibraryId, async (entry) => {
     const ol = await openLibrary.getAuthor(openLibraryId);
     if (!ol) return null;
 
+    const moreByAuthorPromise = fetchMoreByAuthor({ openLibraryId, name: ol.name }, null, entry);
     const qid = ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name));
     const [relations, wikipedia, rawPseudonyms] = qid
       ? await Promise.all([wikidata.fetchAuthorRelations(qid), fetchWikipediaExtract(qid), wikidata.fetchPseudonyms(qid)])
       : [[], null, []];
+
+    const moreByAuthor = await moreByAuthorPromise;
 
     // Open Library's own bio is often a single sentence (or missing
     // entirely), while Wikipedia's lead section is written to stand alone
@@ -52,6 +56,7 @@ export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
       deathDate: ol.deathDate,
       relations,
       pseudonyms: rawPseudonyms.filter((p) => p.toLowerCase() !== ol.name.toLowerCase()),
+      ...(moreByAuthor?.length && { moreByAuthor }),
     };
     return result;
   });

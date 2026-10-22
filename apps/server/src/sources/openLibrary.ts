@@ -394,6 +394,7 @@ export async function getSubject(slug: string, limit = 20): Promise<OpenLibraryS
 export interface OpenLibraryAuthorWork {
   workId: string;
   title: string;
+  coverUrl: string | null;
 }
 
 /**
@@ -419,16 +420,20 @@ export interface OpenLibraryAuthorWork {
 export async function getAuthorWorks(openLibraryId: string, limit = 15): Promise<OpenLibraryAuthorWork[]> {
   const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(
     `author_key:${openLibraryId}`
-  )}&fields=title,key,language&limit=${Math.max(limit * 2, 40)}`;
+  )}&fields=title,key,language,cover_i&limit=${Math.max(limit * 2, 40)}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return [];
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
-  const data = (await res.json()) as { docs?: { key: string; title: string; language?: string[] }[] };
+  const data = (await res.json()) as { docs?: { key: string; title: string; language?: string[]; cover_i?: number }[] };
   return (data.docs ?? [])
     .filter((d) => d.key && d.title && (!d.language || d.language.includes("eng")))
     .slice(0, limit)
-    .map((d) => ({ workId: d.key.replace("/works/", ""), title: d.title }));
+    .map((d) => ({
+      workId: d.key.replace("/works/", ""),
+      title: d.title,
+      coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null,
+    }));
 }
 
 interface AuthorSearchResult {

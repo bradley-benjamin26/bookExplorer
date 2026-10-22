@@ -3,7 +3,7 @@ import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
-import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
+import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByAuthor, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
@@ -31,7 +31,18 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     const workQid = await findWorkQid(ol.title, firstAuthorName, entry);
     const wikidataGenres = workQid ? await wikidata.fetchGenres(workQid).catch(optionalSource(entry, "wikidata genres", [] as string[])) : [];
 
-    const [locMetadata, hc, olRatings] = await Promise.all([locMetadataPromise, hardcoverPromise, olRatingsPromise]);
+    const seriesPromise = workQid
+      ? wikidata.fetchWorkSeries(workQid).catch(optionalSource(entry, "wikidata series", null))
+      : Promise.resolve(null);
+    const moreByAuthorPromise = fetchMoreByAuthor(ol.authors[0], workId, entry);
+
+    const [locMetadata, hc, olRatings, series, moreByAuthor] = await Promise.all([
+      locMetadataPromise,
+      hardcoverPromise,
+      olRatingsPromise,
+      seriesPromise,
+      moreByAuthorPromise,
+    ]);
 
     const result: Work = {
       openLibraryWorkId: workId,
@@ -45,6 +56,8 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
       genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
       rating: blendHardcoverAndOpenLibraryRating(hc, olRatings),
       reviews: hc?.reviews ?? [],
+      ...(series && { series }),
+      ...(moreByAuthor?.length && { moreByAuthor }),
     };
     return result;
   });

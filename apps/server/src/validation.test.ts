@@ -46,3 +46,11 @@ describe("parseSearchFilters", () => {
     expect(typeof parseSearchFilters(raw)).toBe("string");
   });
 });
+
+describe("isWikidataQid", () => {
+  it("accepts Q followed by digits and rejects anything else", async () => {
+    const { isWikidataQid } = await import("./validation.js");
+    expect(isWikidataQid("Q42")).toBe(true);
+    for (const bad of ["", "42", "Q0", "Q01", "Qabc", "Q42/../x"]) expect(isWikidataQid(bad)).toBe(false);
+  });
+});
