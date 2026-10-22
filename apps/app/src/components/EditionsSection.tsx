@@ -1,6 +1,8 @@
 import type { Edition } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { collapseSelfPublished } from "../editions";
 import { routes } from "../navigation";
 import { useThemedStyles, type Theme } from "../theme";
 
@@ -49,15 +51,33 @@ function EditionCard({ edition }: { edition: Edition }) {
 
 export function EditionsSection({ editions, highlighted }: { editions: Edition[]; highlighted?: boolean }) {
   const styles = useThemedStyles(createStyles);
+  const [showAll, setShowAll] = useState(false);
   if (editions.length === 0) return null;
+
+  const { shown, hiddenCount } = collapseSelfPublished(editions);
+  const visible = showAll ? editions : shown;
 
   return (
     <View style={[styles.section, highlighted && styles.sectionHighlighted]}>
       <Text style={styles.sectionTitle}>Find Your Edition ({editions.length})</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
-        {editions.map((edition, i) => (
+        {visible.map((edition, i) => (
           <EditionCard key={`${edition.openLibraryEditionId || edition.isbn}-${i}`} edition={edition} />
         ))}
+        {hiddenCount > 0 && (
+          <Pressable
+            style={({ pressed }) => [styles.moreCard, pressed && styles.pressed]}
+            onPress={() => setShowAll((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showAll }}
+            accessibilityLabel={showAll ? "Show fewer independently published editions" : `View ${hiddenCount} more independently published editions`}
+          >
+            <Text style={styles.moreCount}>{showAll ? "Show fewer" : `+${hiddenCount}`}</Text>
+            <Text style={styles.moreText}>
+              {showAll ? "independently published" : "more independently published editions"}
+            </Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -80,6 +100,21 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     pressed: { opacity: 0.6 },
+    // Sized like an edition card so the carousel's rhythm doesn't break.
+    moreCard: {
+      width: 140,
+      minHeight: 240,
+      borderRadius: radii.sm,
+      padding: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      borderWidth: 1,
+      borderStyle: "dashed",
+      borderColor: colors.thread,
+    },
+    moreCount: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.cover },
+    moreText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, textAlign: "center" },
     carousel: { gap: spacing.md, paddingRight: 4 },
     card: {
       width: 140,
