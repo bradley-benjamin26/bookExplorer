@@ -15,6 +15,7 @@ import Animated, {
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
+import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { titleCase } from "../../../src/titleCase";
@@ -464,7 +465,7 @@ export default function GraphExplorer() {
   const [center, setCenter] = useState<Center | null>(type && id ? { type: type as GraphNode["type"], id } : null);
   const [history, setHistory] = useState<Center[]>([]);
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["graph", center?.type, center?.id],
     // Never actually "genre" here — routes.graph() (the only way center gets
     // set from outside) and handleNodePress below (the only way it gets set
@@ -637,7 +638,7 @@ export default function GraphExplorer() {
     );
   }
 
-  if (isError || !data || !layout || !center) {
+  if (!data || !layout || !center) {
     return <ErrorState message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
@@ -707,6 +708,7 @@ export default function GraphExplorer() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Tap a node to explore it, or swipe through them with a screen reader — activate the highlighted center node
         for full details.

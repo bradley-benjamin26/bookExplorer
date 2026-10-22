@@ -1,6 +1,7 @@
 import { Fraunces_500Medium, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -12,11 +13,15 @@ import { Footer } from "../src/components/Footer";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { NewSearchButton } from "../src/components/NewSearchButton";
+import { persistOptions } from "../src/queryCache";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    // Unused queries must outlive a session in memory too, or the next persist would drop them from the offline cache.
+    () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })
+  );
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,
@@ -37,9 +42,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
           <ThemedShell />
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

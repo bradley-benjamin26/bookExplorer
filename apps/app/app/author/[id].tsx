@@ -7,6 +7,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -25,7 +26,7 @@ export default function AuthorDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["author", id],
     queryFn: () => fetchAuthor(id),
     enabled: !!id,
@@ -51,12 +52,13 @@ export default function AuthorDetail() {
     );
   }
 
-  if (isError || !data) {
+  if (!data) {
     return <ErrorState message={error instanceof Error ? error.message : `No author found for ${id}`} />;
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
       {(data.birthDate || data.deathDate) && (
         <Text style={styles.dates}>

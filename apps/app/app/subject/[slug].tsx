@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { fetchSubject } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { ShareButton } from "../../src/components/ShareButton";
@@ -18,7 +19,7 @@ export default function SubjectDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["subject", slug],
     queryFn: () => fetchSubject(slug),
     enabled: !!slug,
@@ -32,7 +33,7 @@ export default function SubjectDetail() {
     );
   }
 
-  if (isError || !data) {
+  if (!data) {
     return <ErrorState message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
@@ -47,6 +48,7 @@ export default function SubjectDetail() {
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
+          <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
           <Text style={styles.name} accessibilityRole="header">{titleCase(data.name)}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           {data.description && <Text style={styles.description}>{data.description}</Text>}

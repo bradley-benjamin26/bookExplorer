@@ -6,6 +6,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
 import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
@@ -23,7 +24,7 @@ export default function WorkDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["work", id],
     queryFn: () => fetchWork(id),
     enabled: !!id,
@@ -49,12 +50,13 @@ export default function WorkDetail() {
     );
   }
 
-  if (isError || !data) {
+  if (!data) {
     return <ErrorState message={error instanceof Error ? error.message : `No work found for ${id}`} />;
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
       <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
       {data.authors.map((author) => (

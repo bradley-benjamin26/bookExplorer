@@ -8,6 +8,7 @@ import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { ExpandableText } from "../../src/components/ExpandableText";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
@@ -38,7 +39,7 @@ export default function BookDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["book", isbn],
     queryFn: () => fetchBookWithAlternate(isbn),
     enabled: !!isbn,
@@ -94,7 +95,7 @@ export default function BookDetail() {
     );
   }
 
-  if (isError || !data) {
+  if (!data) {
     return (
       <ErrorState
         message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`}
@@ -109,6 +110,7 @@ export default function BookDetail() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
       {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
       {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
