@@ -13,6 +13,7 @@ import {
   type Library,
 } from "../src/storage/librarySettings";
 import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { stamp, type Unversioned } from "../src/storage/schema";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
@@ -23,7 +24,7 @@ function LibraryCard({
   onRemove,
 }: {
   library: Library;
-  onSave: (library: Library) => Promise<void>;
+  onSave: (library: Unversioned<Library>) => Promise<void>;
   onRemove: (id: string) => void;
 }) {
   const theme = useTheme();
@@ -224,10 +225,10 @@ export default function Saved() {
   };
 
   const handleAddLibrary = () => {
-    setLibraries((prev) => [...prev, { id: generateLibraryId(), name: "", isbnUrl: "", titleUrl: "" }]);
+    setLibraries((prev) => [...prev, stamp({ id: generateLibraryId(), name: "", isbnUrl: "", titleUrl: "" })]);
   };
 
-  const handleSaveLibrary = async (library: Library) => {
+  const handleSaveLibrary = async (library: Unversioned<Library>) => {
     const next = await upsertLibrary(library);
     setLibraries(next);
   };

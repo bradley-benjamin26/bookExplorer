@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { stamp, type Unversioned, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
 const LIBRARIES_KEY = "book-explorer:libraries";
@@ -9,7 +10,7 @@ const LIBRARIES_KEY = "book-explorer:libraries";
 const LEGACY_ISBN_URL_KEY = "book-explorer:local-library-isbn-url";
 const LEGACY_TITLE_URL_KEY = "book-explorer:local-library-title-url";
 
-export interface Library {
+export interface Library extends Versioned {
   id: string;
   name: string;
   isbnUrl: string;
@@ -36,7 +37,7 @@ async function migrateLegacyLibrary(): Promise<Library[]> {
   if (!isbnUrl && !titleUrl) return [];
 
   const migrated: Library[] = [
-    { id: generateLibraryId(), name: "My Library", isbnUrl: isbnUrl ?? "", titleUrl: titleUrl ?? "" },
+    stamp({ id: generateLibraryId(), name: "My Library", isbnUrl: isbnUrl ?? "", titleUrl: titleUrl ?? "" }),
   ];
   await AsyncStorage.setItem(LIBRARIES_KEY, JSON.stringify(migrated));
   await Promise.all([AsyncStorage.removeItem(LEGACY_ISBN_URL_KEY), AsyncStorage.removeItem(LEGACY_TITLE_URL_KEY)]);
@@ -71,8 +72,9 @@ export async function saveLibraries(libraries: Library[]): Promise<void> {
   await AsyncStorage.setItem(LIBRARIES_KEY, JSON.stringify(libraries));
 }
 
-export function upsertLibrary(library: Library): Promise<Library[]> {
+export function upsertLibrary(input: Unversioned<Library>): Promise<Library[]> {
   return enqueueWrite(LIBRARIES_KEY, async () => {
+    const library = stamp({ ...input, updatedAt: Date.now() });
     const libraries = await getLibraries();
     const index = libraries.findIndex((l) => l.id === library.id);
     const next = index === -1 ? [...libraries, library] : libraries.map((l, i) => (i === index ? library : l));

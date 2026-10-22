@@ -21,6 +21,10 @@ const AsyncStorage = {
     await io();
     store.delete(key);
   },
+  getAllKeys: async () => {
+    await io();
+    return [...store.keys()];
+  },
   clear: async () => {
     store.clear();
   },

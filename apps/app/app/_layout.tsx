@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
@@ -12,6 +12,7 @@ import { Footer } from "../src/components/Footer";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { NewSearchButton } from "../src/components/NewSearchButton";
+import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
 export default function RootLayout() {
@@ -24,8 +25,14 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
+  // Held back until stored data is upgraded, so no screen writes mid-migration; a failure must not blank the app.
+  const [migrated, setMigrated] = useState(false);
+  useEffect(() => {
+    migrateStorage().catch(() => undefined).finally(() => setMigrated(true));
+  }, []);
+
   // A failed font load falls back to system fonts rather than blanking the app.
-  if (!fontsLoaded && !fontError) return null;
+  if ((!fontsLoaded && !fontError) || !migrated) return null;
 
   return (
     <GestureHandlerRootView style={styles.root}>
