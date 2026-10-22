@@ -9,6 +9,8 @@ const SUGGEST_URL = "https://id.loc.gov/authorities/subjects/suggest2/";
 
 const SKOS_BROADER = "http://www.w3.org/2004/02/skos/core#broader";
 const SKOS_NARROWER = "http://www.w3.org/2004/02/skos/core#narrower";
+const SKOS_EXACT_MATCH = "http://www.w3.org/2004/02/skos/core#exactMatch";
+const SKOS_CLOSE_MATCH = "http://www.w3.org/2004/02/skos/core#closeMatch";
 const SKOS_PREF_LABEL = "http://www.w3.org/2004/02/skos/core#prefLabel";
 
 interface Suggest2Hit {
@@ -26,6 +28,8 @@ interface SkosEntry {
   "@id": string;
   [SKOS_BROADER]?: SkosRef[];
   [SKOS_NARROWER]?: SkosRef[];
+  [SKOS_EXACT_MATCH]?: SkosRef[];
+  [SKOS_CLOSE_MATCH]?: SkosRef[];
   [SKOS_PREF_LABEL]?: { "@value": string }[];
 }
 
@@ -69,6 +73,19 @@ export async function findSubjectHeadingUri(name: string): Promise<string | null
   }
 }
 
+const WIKIDATA_ENTITY = /^https?:\/\/www\.wikidata\.org\/entity\/(Q[1-9]\d*)$/;
+
+/** The Wikidata item an LCSH record links to itself (exactMatch preferred over closeMatch), if any. */
+function wikidataIdOf(entry: SkosEntry | undefined): string | null {
+  for (const key of [SKOS_EXACT_MATCH, SKOS_CLOSE_MATCH] as const) {
+    for (const ref of entry?.[key] ?? []) {
+      const match = WIKIDATA_ENTITY.exec(ref["@id"]);
+      if (match) return match[1];
+    }
+  }
+  return null;
+}
+
 async function resolveLabel(uri: string): Promise<string | null> {
   const res = await fetchWithTimeout(`${uri}.skos.json`, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) return null;
@@ -82,27 +99,37 @@ async function resolveLabels(uris: string[]): Promise<string[]> {
   return results.flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []));
 }
 
+export interface BroaderNarrower {
+  broader: string[];
+  narrower: string[];
+  wikidataId: string | null;
+}
+
+export const EMPTY: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
+
 /**
  * Fetches the broader/narrower SKOS relations for an LCSH authority URI and
- * resolves each related URI to its own prefLabel. Each list is capped to 20
+ * resolves each related URI to its own prefLabel. Also returns the Wikidata
+ * item the record itself links to (`wikidataId`), which is a curated
+ * identifier rather than a guess from the heading's text. Each list is capped to 20
  * URIs before resolution (some headings, e.g. "Fiction", have 80+ narrower
  * terms) to bound the number of outgoing requests. Resolutions run in
  * parallel and a failed one is dropped rather than failing the whole call —
  * one bad broader/narrower lookup shouldn't erase the rest. Never throws:
  * any failure (top-level request, absent keys) degrades to empty arrays.
  */
-export async function fetchBroaderNarrower(uri: string): Promise<{ broader: string[]; narrower: string[] }> {
+export async function fetchBroaderNarrower(uri: string): Promise<BroaderNarrower> {
   try {
     const res = await fetchWithTimeout(`${uri}.skos.json`, { headers: { "User-Agent": USER_AGENT } });
-    if (!res.ok) return { broader: [], narrower: [] };
+    if (!res.ok) return EMPTY;
     const entries = (await res.json()) as SkosEntry[];
     const entry = entries.find((e) => e["@id"] === uri);
     const broaderUris = (entry?.[SKOS_BROADER] ?? []).map((r) => r["@id"]).slice(0, 20);
     const narrowerUris = (entry?.[SKOS_NARROWER] ?? []).map((r) => r["@id"]).slice(0, 20);
 
     const [broader, narrower] = await Promise.all([resolveLabels(broaderUris), resolveLabels(narrowerUris)]);
-    return { broader, narrower };
+    return { broader, narrower, wikidataId: wikidataIdOf(entry) };
   } catch {
-    return { broader: [], narrower: [] };
+    return EMPTY;
   }
 }

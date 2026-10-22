@@ -204,6 +204,45 @@ describe("fetchBroaderNarrower", () => {
     );
 
     const result = await fetchBroaderNarrower(uri);
-    expect(result).toEqual({ broader: [], narrower: [] });
+    expect(result).toEqual({ broader: [], narrower: [], wikidataId: null });
+  });
+});
+
+describe("fetchBroaderNarrower wikidataId", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const URI = "http://id.loc.gov/authorities/subjects/sh85054821";
+  const entryWith = (extra: Record<string, unknown>) =>
+    vi.fn(async () => ({ ok: true, json: async () => [{ "@id": URI, ...extra }] }));
+
+  it("reads the Wikidata item from a closeMatch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      entryWith({
+        "http://www.w3.org/2004/02/skos/core#closeMatch": [
+          { "@id": "http://id.worldcat.org/fast/942434" },
+          { "@id": "http://www.wikidata.org/entity/Q45529" },
+        ],
+      })
+    );
+    expect((await fetchBroaderNarrower(URI)).wikidataId).toBe("Q45529");
+  });
+
+  it("prefers an exactMatch over a closeMatch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      entryWith({
+        "http://www.w3.org/2004/02/skos/core#closeMatch": [{ "@id": "http://www.wikidata.org/entity/Q1" }],
+        "http://www.w3.org/2004/02/skos/core#exactMatch": [{ "@id": "http://www.wikidata.org/entity/Q2" }],
+      })
+    );
+    expect((await fetchBroaderNarrower(URI)).wikidataId).toBe("Q2");
+  });
+
+  it("is null when the record links to no Wikidata item", async () => {
+    vi.stubGlobal("fetch", entryWith({}));
+    expect((await fetchBroaderNarrower(URI)).wikidataId).toBeNull();
   });
 });

@@ -1,8 +1,11 @@
 import type { Subject, SubjectConcept } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as locLinkedData from "../sources/locLinkedData.js";
+import type { BroaderNarrower } from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
+
+const NO_LCSH: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
 
 const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24);
 
@@ -49,15 +52,19 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
     const ol = await openLibrary.getSubject(slug);
     if (!ol) return null;
 
-    const qid = await wikidata.searchConceptQid(ol.name);
-    const [wikidataConcepts, description, lcshUri] = await Promise.all([
+    // Matching by name alone confuses same-spelled things ("ghosts" the
+    // supernatural vs. a TV series), so the Wikidata item LCSH itself links
+    // its heading to is trusted first; only a heading with no such link (or
+    // no heading at all) falls back to a — stricter — Wikidata name search.
+    const lcshUri = await locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null);
+    const lcshConcepts = lcshUri
+      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => NO_LCSH)
+      : NO_LCSH;
+    const qid = lcshConcepts.wikidataId ?? (await wikidata.searchConceptQid(ol.name));
+    const [wikidataConcepts, description] = await Promise.all([
       qid ? wikidata.fetchRelatedConcepts(qid) : Promise.resolve([]),
       qid ? wikidata.fetchDescription(qid).catch(() => null) : Promise.resolve(null),
-      locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null),
     ]);
-    const lcshConcepts = lcshUri
-      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => ({ broader: [] as string[], narrower: [] as string[] }))
-      : { broader: [] as string[], narrower: [] as string[] };
     const relatedConcepts = mergeSubjectConcepts(wikidataConcepts, lcshConcepts);
 
     const result: Subject = {

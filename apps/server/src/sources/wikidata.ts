@@ -3,7 +3,7 @@ import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
 interface WbSearchResult {
-  search: { id: string; description?: string }[];
+  search: { id: string; label?: string; description?: string }[];
 }
 
 const AUTHOR_KEYWORDS = ["writer", "author", "novelist", "poet", "playwright", "journalist"];
@@ -18,14 +18,27 @@ export async function searchAuthorQid(name: string): Promise<string | null> {
 // Open Library subject strings are topics/genres, not named works, so results
 // that are clearly about a specific film/book/episode/etc of the same name
 // are rejected rather than guessed at — a wrong disambiguation would surface
-// nonsense "related concepts", which is worse than surfacing none.
+// nonsense "related concepts", which is worse than surfacing none. (Wikidata
+// writes "television series", not "tv series" — verified live, that gap let a
+// 2021 TV show "Ghosts" stand in for the supernatural concept.)
 const CONCEPT_REJECT_KEYWORDS = [
   "film",
   "album",
   "episode",
   "song",
   "tv series",
+  "television",
+  "series",
+  "musical",
+  "band",
+  "recording",
   "video game",
+  "website",
+  "software",
+  "company",
+  "family name",
+  "given name",
+  "fictional",
   " by ",
   "edition of",
   "painting",
@@ -33,13 +46,33 @@ const CONCEPT_REJECT_KEYWORDS = [
   "disambiguation",
 ];
 
-/** Best-effort match of a (often messy) Open Library subject string to a Wikidata concept. */
+// Subject headings are conventionally plural where Wikidata labels concepts
+// singular ("Ghosts" → "ghost"), so either form of the name counts as the
+// same label.
+function nameVariants(name: string): string[] {
+  const target = name.toLowerCase().trim();
+  return [target, target.endsWith("s") ? target.slice(0, -1) : `${target}s`];
+}
+
+/**
+ * Best-effort match of a (often messy) Open Library subject string to a
+ * Wikidata concept, used only when LCSH has no Wikidata link of its own to
+ * trust. The result's label must be the subject's name (or its singular/
+ * plural), not merely something that name-searches near it, and its
+ * description mustn't read as a work of art or a named thing.
+ */
 export async function searchConceptQid(name: string): Promise<string | null> {
-  const body = await wbSearchEntities(name, 8);
-  const match = body.search.find(
-    (r) => !CONCEPT_REJECT_KEYWORDS.some((kw) => r.description?.toLowerCase().includes(kw))
-  );
-  return match?.id ?? null;
+  const variants = nameVariants(name);
+  for (const query of variants) {
+    const body = await wbSearchEntities(query, 8);
+    const match = body.search.find(
+      (r) =>
+        variants.includes(r.label?.toLowerCase().trim() ?? "") &&
+        !CONCEPT_REJECT_KEYWORDS.some((kw) => r.description?.toLowerCase().includes(kw))
+    );
+    if (match) return match.id;
+  }
+  return null;
 }
 
 // Wikidata's search descriptions for literary works are reliably shaped

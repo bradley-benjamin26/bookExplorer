@@ -42,7 +42,7 @@ describe("getSubjectDetail", () => {
       { relation: "broader", label: "Tales", sources: ["wikidata"], wikidataId: "Q999" },
     ]);
     vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("https://id.loc.gov/authorities/subjects/sh123");
-    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: ["Tales"], narrower: [] });
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: ["Tales"], narrower: [], wikidataId: null });
 
     const subject = await getSubjectDetail("fairy_tales");
     expect(subject?.relatedConcepts).toEqual([
@@ -66,7 +66,7 @@ describe("getSubjectDetail", () => {
     vi.mocked(wikidata.searchConceptQid).mockResolvedValue(null);
     vi.mocked(wikidata.fetchRelatedConcepts).mockResolvedValue([]);
     vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("https://id.loc.gov/authorities/subjects/sh456");
-    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: ["Folklore"], narrower: [] });
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: ["Folklore"], narrower: [], wikidataId: null });
 
     const subject = await getSubjectDetail("fairy_tales_lcsh_only");
     expect(subject?.relatedConcepts).toEqual([{ relation: "broader", label: "Folklore", sources: ["lcsh"], wikidataId: null }]);
@@ -79,11 +79,34 @@ describe("getSubjectDetail", () => {
       { relation: "broader", label: "Tales", sources: ["wikidata"], wikidataId: "Q999" },
     ]);
     vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue(null);
-    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: [], narrower: [] });
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: [], narrower: [], wikidataId: null });
 
     const subject = await getSubjectDetail("fairy_tales_no_lcsh");
     expect(subject?.relatedConcepts).toEqual([
       { relation: "broader", label: "Tales", sources: ["wikidata"], wikidataId: "Q999" },
     ]);
+  });
+  it("trusts the Wikidata id LCSH links to over a name search", async () => {
+    mockOpenLibrarySubject("Ghosts");
+    vi.mocked(wikidata.searchConceptQid).mockResolvedValue("Q107122133");
+    vi.mocked(wikidata.fetchRelatedConcepts).mockResolvedValue([]);
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("https://id.loc.gov/authorities/subjects/sh85054821");
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: [], narrower: [], wikidataId: "Q45529" });
+
+    const subject = await getSubjectDetail("ghosts_lcsh_link");
+    expect(subject?.wikidataId).toBe("Q45529");
+    expect(wikidata.searchConceptQid).not.toHaveBeenCalled();
+    expect(wikidata.fetchRelatedConcepts).toHaveBeenCalledWith("Q45529");
+  });
+
+  it("falls back to the name search when the LCSH record has no Wikidata link", async () => {
+    mockOpenLibrarySubject("Ghosts (no link)");
+    vi.mocked(wikidata.searchConceptQid).mockResolvedValue("Q777");
+    vi.mocked(wikidata.fetchRelatedConcepts).mockResolvedValue([]);
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("https://id.loc.gov/authorities/subjects/sh1");
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: [], narrower: [], wikidataId: null });
+
+    const subject = await getSubjectDetail("ghosts_no_link");
+    expect(subject?.wikidataId).toBe("Q777");
   });
 });

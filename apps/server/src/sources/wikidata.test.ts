@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchPseudonyms, isValidQid } from "./wikidata.js";
+import { fetchPseudonyms, isValidQid, searchConceptQid } from "./wikidata.js";
 
 describe("isValidQid", () => {
   it("accepts a well-formed QID", () => {
@@ -51,5 +51,36 @@ describe("wbGetEntities request coalescing", () => {
     await fetchPseudonyms("Q42");
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("searchConceptQid", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const searchResponses = (byQuery: Record<string, { id: string; label: string; description: string }[]>) =>
+    vi.fn(async (url: string) => {
+      const query = new URL(url).searchParams.get("search") ?? "";
+      return { ok: true, json: async () => ({ search: byQuery[query] ?? [] }) };
+    });
+
+  it("rejects a television series of the same name and finds the concept under its singular label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      searchResponses({
+        ghosts: [{ id: "Q107122133", label: "Ghosts", description: "2021 American television series" }],
+        ghost: [{ id: "Q45529", label: "ghost", description: "soul or spirit of a dead person" }],
+      })
+    );
+    expect(await searchConceptQid("ghosts")).toBe("Q45529");
+  });
+
+  it("requires the result's label to be the subject's name, not just a near search hit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      searchResponses({ travel: [{ id: "Q9", label: "Travel Channel", description: "cable network" }] })
+    );
+    expect(await searchConceptQid("travel")).toBeNull();
   });
 });
