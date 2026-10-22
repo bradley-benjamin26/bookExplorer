@@ -1,4 +1,4 @@
-import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-explorer/shared";
+import { slugifySubject, type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
 import type { Snapshot } from "./storage/snapshot";
 
 // Bounds on the candidate fetch: one /api/subjects call per top subject and one
@@ -55,6 +55,26 @@ export function reasonHeading({ kind, label, seedTitles }: Reason): string {
   if (kind === "author") return `More by ${label}`;
   if (kind === "influence") return `Influenced by ${label}`;
   return `Because you like ${label}${seedTitles.length > 1 ? ` (${seedTitles.length} saved)` : ""}`;
+}
+
+/**
+ * Author seeds (saved authors, plus the authors of saved books and works) and the slugs of
+ * public subjects, both read only from cached API details. A record's own subjects are never
+ * public: they may be the user's tags. Items with no cached detail contribute nothing.
+ */
+export function seedsFromCache(snapshot: Snapshot, cachedBooks: (Book | undefined)[], cachedWorks: (Work | undefined)[]) {
+  const seeds: AuthorSeed[] = snapshot.items
+    .filter((i) => !i.deletedAt && i.type === "author")
+    .map((i) => ({ id: i.id, name: i.title, seedTitle: i.title }));
+  const publicSlugs = new Set<string>();
+  const take = (cached: Book | Work | undefined, title: string) => {
+    if (!cached) return;
+    for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: title });
+    for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
+  };
+  for (const r of snapshot.books) if (!r.deletedAt) take(cachedBooks.find((b) => b?.isbn === r.isbn), r.title);
+  for (const r of snapshot.works) if (!r.deletedAt) take(cachedWorks.find((w) => w?.openLibraryWorkId === r.openLibraryWorkId), r.title);
+  return { seeds, publicSlugs };
 }
 
 /**
@@ -173,8 +193,8 @@ export function rankRecommendations(
 }
 
 /** The primary reason is the heaviest evidence; ties go to more saved items sharing it, then the label. */
-function explain(reasons: Evidence["reasons"]): { reason: Reason; shares: string[] } {
-  const [{ kind, label, seedTitles }] = [...reasons].sort((a, b) => b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.share, b.share));
+export function explain(reasons: Evidence["reasons"]): { reason: Reason; shares: string[] } {
+  const [{ kind, label, seedTitles }] = [...reasons].sort((a, b) => b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.label, b.label));
   return { reason: { kind, label, seedTitles }, shares: reasons.map((r) => r.share) };
 }
 

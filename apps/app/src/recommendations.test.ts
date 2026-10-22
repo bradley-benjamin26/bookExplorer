@@ -1,6 +1,7 @@
 import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { buildTasteProfile, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import type { Work } from "@book-explorer/shared";
+import { buildTasteProfile, explain, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -76,10 +77,19 @@ describe("buildTasteProfile", () => {
 
 describe("saved works as seeds", () => {
   const withWork = snapshot([], [], [savedWork("Hyperion", ["Science fiction", "Read in 2020"])]);
-  it("counts a saved work's API subjects but never its user-typed ones", () => {
-    const profile = buildTasteProfile(withWork, [], new Set(["science_fiction"]));
+  const cached = (subjects: string[]) =>
+    ({ openLibraryWorkId: "OLHyperionW", authors: [{ openLibraryId: "OLsA", name: "Simmons" }], subjects: subjects.map((label) => ({ label })), genres: [] }) as unknown as Work;
+  it("counts a saved work's cached API subjects but never its user-typed ones", () => {
+    const { seeds, publicSlugs } = seedsFromCache(withWork, [], [cached(["Science fiction"])]);
+    expect([...publicSlugs]).toEqual(["science_fiction"]);
+    expect(seeds).toEqual([{ id: "OLsA", name: "Simmons", seedTitle: "Hyperion" }]);
+    const profile = buildTasteProfile(withWork, seeds, publicSlugs);
     expect(profile.subjects.map((s) => s.slug)).toEqual(["science_fiction"]);
-    expect(profile.subjects[0].seedTitles).toEqual(["Hyperion"]);
+  });
+  it("contributes nothing without a cached detail", () => {
+    const { seeds, publicSlugs } = seedsFromCache(withWork, [], []);
+    expect(seeds).toEqual([]);
+    expect(publicSlugs.size).toBe(0);
   });
 });
 
@@ -91,9 +101,26 @@ describe("recommendation reasons", () => {
     expect(reasonKey(rec.reason)).toBe("subject:Napoleonic Wars");
     expect(reasonHeading(rec.reason)).toBe("Because you like Napoleonic Wars (2 saved)");
   });
-  it("is deterministic and words author and influence headings", () => {
-    const a = rankRecommendations(profileOf(two, []), subjects(subject("napoleonic_wars", [work("W2"), work("W1")])), new Map());
-    expect(rankRecommendations(profileOf(two, []), subjects(subject("napoleonic_wars", [work("W2"), work("W1")])), new Map())).toEqual(a);
+  it("is deterministic whatever the input order", () => {
+    const books = [book("Zed", ["Alpha", "Beta"]), book("Abe", ["Alpha", "Beta"]), book("Mid", ["Beta"])];
+    const listing = (order: string[]) => subjects(...order.map((slug) => subject(slug, [work("W1"), work("W2")])));
+    const run = (b: SavedBookRecord[], order: string[]) => rankRecommendations(profileOf(snapshot(b), []), listing(order), new Map()).map((r) => [r.work.openLibraryWorkId, reasonKey(r.reason), r.reason.seedTitles]);
+    const base = run(books, ["alpha", "beta"]);
+    expect(run([...books].reverse(), ["beta", "alpha"])).toEqual(base);
+    expect(run([books[1], books[2], books[0]], ["beta", "alpha"])).toEqual(base);
+  });
+  it("breaks reason ties on weight, then saved count, then label", () => {
+    // Weight is idf: the rarer subject wins even with fewer saved books.
+    const rare = rankRecommendations(profileOf(snapshot([book("A", ["Common", "Rare"]), book("B", ["Common"]), book("C", ["Common"])]), []), subjects(subject("common", [work("W1")]), subject("rare", [work("W1")])), new Map());
+    expect(rare[0].reason.label).toBe("Rare");
+    // Equal weights: more saved items wins, then the label.
+    const reasons = (labels: [string, string[]][]) =>
+      labels.map(([label, seedTitles]) => ({ kind: "subject" as const, label, seedTitles, share: label, weight: 1 }));
+    const pick = (r: ReturnType<typeof reasons>) => explain(r).reason.label;
+    expect(pick(reasons([["A", ["x"]], ["B", ["x", "y"]]]))).toBe("B");
+    expect(pick(reasons([["B", ["x"]], ["A", ["y"]]]))).toBe("A");
+  });
+  it("words the headings", () => {
     expect(reasonHeading({ kind: "subject", label: "Fantasy", seedTitles: ["A"] })).toBe("Because you like Fantasy");
     expect(reasonHeading({ kind: "author", label: "Tolkien", seedTitles: [] })).toBe("More by Tolkien");
     expect(reasonHeading({ kind: "influence", label: "Tolkien", seedTitles: [] })).toBe("Influenced by Tolkien");

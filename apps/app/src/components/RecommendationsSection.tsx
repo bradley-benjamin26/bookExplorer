@@ -1,4 +1,4 @@
-import { slugifySubject, type Book, type Graph, type Subject, type Work } from "@book-explorer/shared";
+import { type Book, type Graph, type Subject, type Work } from "@book-explorer/shared";
 import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -10,9 +10,9 @@ import {
   FETCH_CONCURRENCY,
   mapWithConcurrency,
   rankRecommendations,
+  seedsFromCache,
   reasonHeading,
   reasonKey,
-  type AuthorSeed,
   type Recommendation,
 } from "../recommendations";
 import { getSnapshot, type Snapshot } from "../storage/snapshot";
@@ -47,29 +47,12 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
 
   const profile = useMemo(() => {
     if (!snapshot) return null;
-    const seeds: AuthorSeed[] = snapshot.items
-      .filter((i) => !i.deletedAt && i.type === "author")
-      .map((i) => ({ id: i.id, name: i.title, seedTitle: i.title }));
-    // Saved books keep only author names; their ids come from the book's cached detail, which the offline cache keeps for saved items.
-    const cachedBooks = queryClient.getQueriesData<Book>({ queryKey: ["book"] }).map(([, b]) => b);
-    // Subjects the API itself gave a saved book; a record's other subjects are the user's private tags.
-    const publicSlugs = new Set<string>();
-    for (const record of snapshot.books) {
-      if (record.deletedAt) continue;
-      const cached = cachedBooks.find((b) => b?.isbn === record.isbn);
-      if (!cached) continue;
-      for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
-      for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
-    }
-    // Saved works: the same, from the cached work detail.
-    const cachedWorks = queryClient.getQueriesData<Work>({ queryKey: ["work"] }).map(([, w]) => w);
-    for (const record of snapshot.works) {
-      if (record.deletedAt) continue;
-      const cached = cachedWorks.find((w) => w?.openLibraryWorkId === record.openLibraryWorkId);
-      if (!cached) continue;
-      for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
-      for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
-    }
+    // Ids and public subjects come from cached details, which the offline cache keeps for saved items.
+    const { seeds, publicSlugs } = seedsFromCache(
+      snapshot,
+      queryClient.getQueriesData<Book>({ queryKey: ["book"] }).map(([, b]) => b),
+      queryClient.getQueriesData<Work>({ queryKey: ["work"] }).map(([, w]) => w)
+    );
     return buildTasteProfile(snapshot, seeds, publicSlugs);
   }, [snapshot, queryClient, cacheVersion]);
 
