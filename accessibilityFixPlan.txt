@@ -1,0 +1,40 @@
+Now I have everything needed. Here's the plan:
+
+## Plan: WCAG 2.2 AA fixes
+
+**Phase 1 — Button.tsx (fixes the save-toggle glyph issue everywhere at once)**
+- Add optional `accessibilityLabel` prop to `Button`, passed through to the inner `Pressable`, plus `accessibilityRole="button"` and `accessibilityState={{ selected: active }}` for the pill toggle.
+- Update the 3 call sites (`book/[isbn].tsx:109`, `author/[id].tsx:63`, `work/[id].tsx:66`) to pass `accessibilityLabel={saved ? "Saved" : "Save"}` while keeping the `★/☆` glyph in visible children.
+
+**Phase 2 — Bare Pressable rows: add role + label, hide decorative glyphs**
+Mechanical pattern per row: add `accessibilityRole="button"`, compose `accessibilityLabel` from the row's real content, and mark the chevron/glyph `Text` with `accessibilityElementsHidden` + `importantForAccessibility="no-hide-descendants"`.
+- `app/index.tsx:93-99` (recent-item row)
+- `app/saved.tsx` rows: book/author rows (158-178), remove/edit-done (237-253), add-library (270-276)
+- `src/components/WorkListRow.tsx:10-26`
+- `src/components/LibraryFindLinks.tsx:42-51` (role already present per grep — add label + hide chevron)
+- `app/book/[isbn].tsx:186-206` find-rows
+- `app/author/[id].tsx:109-125`, `app/subject/[slug].tsx:71-78` relation/concept tags
+- `src/components/SavedBookEditor.tsx:28-30` tag-remove "×" → `accessibilityLabel={`Remove ${tag}`}`
+- `src/components/ErrorState.tsx:9` warning glyph → hide, rely on surrounding text
+- `src/components/ReviewsSection.tsx:39` chevron toggle → add role/label, hide glyph, plus `hitSlop={8}` (also covers Phase 4 for this file)
+
+**Phase 3 — theme.ts contrast fixes**
+- `textFaint` (light): `#9a9aab` → `#767687` (~4.5:1)
+- `warning` (light): `#a87d00` → `#8a6600` (~4.5:1 at non-bold small sizes)
+- `inputBorder`: light `#d8d8e0` → `#a8a8b8`, dark `#3c3c48` → `#5c5c6c` (clears 3:1 non-text minimum)
+- Leave `border`/`cardBorder` as-is (lower-stakes pure dividers per reviewer) unless you want them bumped too — flagging as optional, not doing by default.
+
+**Phase 4 — Target size**
+- `SavedBookEditor.tsx` tag-remove Pressable: add `hitSlop={8}`.
+- `ReviewsSection.tsx` header toggle: add `hitSlop={8}` (bundled into Phase 2 edit above).
+
+**Phase 5 — Headings + focus visibility**
+- Add `accessibilityRole="header"` to main title `Text` on `book/[isbn].tsx`, `author/[id].tsx`, `work/[id].tsx`, `subject/[slug].tsx`.
+- Add a visible focus style to `Button.tsx`'s `Pressable` (web/external-keyboard target) using `colors.link` as a 2px outline on `:focus` via RN Web's `focusVisibleStyle`/`style` callback third arg (`focused` state) — scoped to `Button` only, not every bare Pressable, to keep this bounded.
+
+**Phase 6 — Minor: text reflow**
+- `index.tsx` header row: add `flexWrap: "wrap"` so title + "My Library" link don't clip at large accessibility text sizes.
+
+**Verification:** run `npx tsc --noEmit` and the existing vitest suite after each phase; no new tests needed since this is prop/style-only (no new logic branches to test per ponytail's "trivial changes need none" rule) — the fixes are declarative accessibility props, not algorithms.
+
+Want me to proceed with all phases, or should I skip/adjust any (e.g. the optional border/cardBorder contrast bump, or the focus-style phase if you don't target web)?

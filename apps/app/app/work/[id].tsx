@@ -13,7 +13,7 @@ import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
 import { routes } from "../../src/navigation";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
-import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { fonts, useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 export default function WorkDetail() {
   const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
@@ -67,11 +67,12 @@ export default function WorkDetail() {
       <Button
         variant="pill"
         active={saved}
+        starIcon
         onPress={handleToggleSaved}
         style={styles.saveButton}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
-        {saved ? "★ Saved" : "☆ Save"}
+        {saved ? "Saved" : "Save"}
       </Button>
 
       <Button
@@ -138,25 +139,25 @@ export default function WorkDetail() {
   );
 }
 
-function createStyles({ colors, kicker, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20, alignItems: "center" },
+    content: { padding: 20, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     cover: { width: 180, height: 260, marginBottom: 20, borderRadius: 6, backgroundColor: colors.background, ...cardStyle },
-    title: { fontSize: 25, fontWeight: "700", textAlign: "center", letterSpacing: -0.3, color: colors.text },
-    author: { fontSize: 17, color: colors.link, marginTop: 4, textDecorationLine: "underline" },
+    title: { fontSize: 25, fontFamily: fonts.display, textAlign: "left", letterSpacing: -0.2, color: colors.text },
+    author: { fontSize: 17, fontFamily: fonts.body, color: colors.link, marginTop: 4, textDecorationLine: "underline" },
     saveButton: { marginTop: 14 },
     genresSection: { marginTop: 28, width: "100%" },
     genreTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: 16, paddingHorizontal: 13, paddingVertical: 7 },
-    genreTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextGenre },
+    genreTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextGenre, textTransform: "uppercase", letterSpacing: 0.5 },
     aboutSection: { marginTop: 28, width: "100%" },
-    description: { fontSize: 15, color: colors.text, lineHeight: 22 },
-    viewMore: { fontSize: 13, fontWeight: "600", color: colors.link, marginTop: 6 },
+    description: { fontSize: 15, fontFamily: fonts.body, color: colors.text, lineHeight: 22 },
+    viewMore: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.link, marginTop: 6 },
     graphButton: { width: "100%", marginTop: 20 },
     pressed: { opacity: 0.6 },
-    sectionTitle: { ...kicker, marginBottom: 12 },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 12 },
     subjectsSection: { marginTop: 28, width: "100%" },
     subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     // Matches how the graph explorer colors subject nodes, so the same
@@ -168,6 +169,6 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
       paddingHorizontal: 12,
       paddingVertical: 7,
     },
-    subjectTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextSubject },
+    subjectTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextSubject, textTransform: "uppercase", letterSpacing: 0.5 },
   });
 }

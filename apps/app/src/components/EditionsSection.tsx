@@ -2,7 +2,7 @@ import type { Edition } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
-import { useThemedStyles, type Theme } from "../theme";
+import { fonts, useThemedStyles, type Theme } from "../theme";
 
 function EditionCard({ edition }: { edition: Edition }) {
   const styles = useThemedStyles(createStyles);
@@ -63,7 +63,7 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
   );
 }
 
-function createStyles({ colors, kicker, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle }: Theme) {
   return StyleSheet.create({
     section: { marginTop: 28, width: "100%" },
     // Landed on from the "Editions" graph node (see the graph screen's
@@ -78,7 +78,7 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
       padding: 12,
       marginHorizontal: -12,
     },
-    sectionTitle: { ...kicker, marginBottom: 12 },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 12 },
     pressed: { opacity: 0.6 },
     carousel: { gap: 12, paddingRight: 4 },
     card: {
@@ -98,8 +98,8 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
       alignItems: "center",
       justifyContent: "center",
     },
-    coverPlaceholderText: { fontSize: 12, color: colors.textFaint, textAlign: "center" },
-    format: { fontSize: 13, fontWeight: "600", color: colors.text, textTransform: "capitalize" },
-    meta: { fontSize: 12, color: colors.textFaint, marginTop: 2, lineHeight: 16 },
+    coverPlaceholderText: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint, textAlign: "center" },
+    format: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text, textTransform: "capitalize" },
+    meta: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint, marginTop: 2, lineHeight: 16 },
   });
 }

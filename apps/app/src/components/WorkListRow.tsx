@@ -1,10 +1,12 @@
 import type { WorkRef } from "@book-explorer/shared";
+import { ChevronRight } from "lucide-react-native";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 /** A tappable cover/title/author row for a work — shared by any screen that
  * lists works from Open Library (a subject's book list, search results). */
 export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => void }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const authorNames = work.authors.map((a) => a.name).join(", ") || "Unknown author";
   return (
@@ -27,9 +29,7 @@ export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => v
           {authorNames}
         </Text>
       </View>
-      <Text style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        ›
-      </Text>
+      <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -50,6 +50,5 @@ function createStyles({ colors }: Theme) {
     info: { flex: 1, justifyContent: "center" },
     title: { fontSize: 16, fontWeight: "600", color: colors.text },
     authors: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
-    chevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
   });
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
-import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { fonts, useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
 
 function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; onChange: (next: string[]) => void }) {
@@ -172,14 +172,14 @@ export function SavedBookEditor({
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors }: Theme) {
   return StyleSheet.create({
     container: { width: "100%", marginTop: 24 },
     section: { marginBottom: 20 },
-    sectionTitle: { ...kicker, marginBottom: 10 },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 10 },
     tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
     tag: { backgroundColor: colors.chipBackground, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
-    tagText: { fontSize: 13, fontWeight: "600", color: colors.text },
+    tagText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text },
     addRow: { flexDirection: "row", gap: 8, alignItems: "center" },
     input: {
       flex: 1,
@@ -189,6 +189,7 @@ function createStyles({ colors, kicker }: Theme) {
       paddingHorizontal: 12,
       paddingVertical: 9,
       fontSize: 14,
+      fontFamily: fonts.body,
       color: colors.text,
     },
     addButton: { alignSelf: "auto" },
@@ -199,6 +200,7 @@ function createStyles({ colors, kicker }: Theme) {
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 15,
+      fontFamily: fonts.body,
       color: colors.text,
       minHeight: 100,
       textAlignVertical: "top",

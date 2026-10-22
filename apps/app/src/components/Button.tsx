@@ -1,6 +1,7 @@
+import { Star } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 type Variant = "primary" | "pill";
 
@@ -13,6 +14,8 @@ export function Button({
   onPress,
   variant = "primary",
   active = false,
+  /** Pill variant only: shows a star before the text, filled when `active`. For the save/unsave toggle. */
+  starIcon = false,
   style,
   textStyle,
   accessibilityLabel,
@@ -22,11 +25,15 @@ export function Button({
   variant?: Variant;
   /** Pill variant only: toggled visual state, e.g. an item that's already saved. */
   active?: boolean;
+  starIcon?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
 }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
+  const labelStyle = [variant === "primary" ? styles.primaryText : styles.pillText, textStyle];
+  const starColor = active ? theme.colors.marginalia : theme.colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -41,7 +48,14 @@ export function Button({
         style,
       ]}
     >
-      <Text style={[variant === "primary" ? styles.primaryText : styles.pillText, textStyle]}>{children}</Text>
+      {starIcon ? (
+        <View style={styles.starRow}>
+          <Star size={14} color={starColor} strokeWidth={2} fill={active ? starColor : "transparent"} />
+          <Text style={labelStyle}>{children}</Text>
+        </View>
+      ) : (
+        <Text style={labelStyle}>{children}</Text>
+      )}
     </Pressable>
   );
 }
@@ -64,6 +78,7 @@ function createStyles({ colors, radii, spacing }: Theme) {
       backgroundColor: colors.chipBackground,
     },
     pillActive: { backgroundColor: colors.pillActiveBackground },
+    starRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     pillText: { fontSize: 14, fontWeight: "600", color: colors.text },
     pressed: { opacity: 0.6 },
     // Keyboard/external-switch focus ring (RN Web passes `focused` as a third

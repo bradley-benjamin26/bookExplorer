@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { ChevronDown, ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
@@ -8,7 +9,7 @@ import {
   getConfiguredLibraries,
   type Library,
 } from "../storage/librarySettings";
-import { useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 /**
  * With a single configured library, its ISBN/title links are shown as two
@@ -20,6 +21,7 @@ import { useThemedStyles, type Theme } from "../theme";
  */
 export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title: string }) {
   const router = useRouter();
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -50,9 +52,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       accessibilityLabel={label}
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        ›
-      </Text>
+      <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
     </Pressable>
   );
 
@@ -89,9 +89,11 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
               accessibilityState={{ expanded }}
             >
               <Text style={styles.findRowText}>Find at {library.name}</Text>
-              <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                {expanded ? "⌄" : "›"}
-              </Text>
+              {expanded ? (
+                <ChevronDown size={18} color={theme.colors.textFaint} strokeWidth={2} />
+              ) : (
+                <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
+              )}
             </Pressable>
             {expanded && (
               <View style={styles.subRows}>
@@ -121,7 +123,6 @@ function createStyles({ colors }: Theme) {
     },
     subRows: { paddingLeft: 16 },
     findRowText: { fontSize: 16, color: colors.link },
-    findRowChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
     findRowHint: { fontSize: 13, color: colors.textFaint, fontStyle: "italic" },
     pressed: { opacity: 0.6 },
   });

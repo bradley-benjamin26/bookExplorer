@@ -5,7 +5,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from "
 import { searchBooks } from "../src/api/client";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { routes } from "../src/navigation";
-import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { fonts, useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 // Waits for typing to pause before actually searching — Open Library is hit
 // on every distinct query, so searching on every keystroke would fire a
@@ -86,21 +86,22 @@ export default function Search() {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, radii }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
+    content: { padding: spacing.lg },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
       fontSize: 16,
+      fontFamily: fonts.body,
       color: colors.text,
     },
-    hint: { fontSize: 14, color: colors.textFaint, fontStyle: "italic", marginTop: 16 },
-    loadingRow: { marginTop: 20, alignItems: "center" },
-    errorText: { fontSize: 14, color: colors.danger, marginTop: 16 },
+    hint: { fontSize: 14, fontFamily: fonts.body, color: colors.textFaint, fontStyle: "italic", marginTop: spacing.lg },
+    loadingRow: { marginTop: spacing.xl, alignItems: "center" },
+    errorText: { fontSize: 14, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
   });
 }

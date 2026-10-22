@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
@@ -8,7 +9,7 @@ import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { routes } from "../../src/navigation";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
-import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { fonts, useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
   { relation: "influencedBy", title: "Influenced by" },
@@ -63,11 +64,12 @@ export default function AuthorDetail() {
       <Button
         variant="pill"
         active={saved}
+        starIcon
         onPress={handleToggleSaved}
         style={styles.saveButton}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
-        {saved ? "★ Saved" : "☆ Save"}
+        {saved ? "Saved" : "Save"}
       </Button>
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
@@ -115,11 +117,7 @@ export default function AuthorDetail() {
               const content = (
                 <View style={styles.relationRow}>
                   <Text style={styles.relationLabel}>{item.label}</Text>
-                  {isNavigable && (
-                    <Text style={styles.relationChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                      ›
-                    </Text>
-                  )}
+                  {isNavigable && <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />}
                 </View>
               );
               return isNavigable ? (
@@ -143,24 +141,24 @@ export default function AuthorDetail() {
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
+    content: { padding: 20, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    name: { fontSize: 27, fontWeight: "700", letterSpacing: -0.3, color: colors.text },
-    dates: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
+    name: { fontSize: 25, fontFamily: fonts.display, letterSpacing: -0.2, color: colors.text },
+    dates: { fontSize: 15, fontFamily: fonts.body, color: colors.textMuted, marginTop: 4 },
     saveButton: { marginTop: 14 },
-    bio: { fontSize: 15, color: colors.text, marginTop: 16, lineHeight: 22 },
-    bioSource: { fontSize: 12, color: colors.link, marginTop: 6 },
-    pseudonyms: { fontSize: 13, color: colors.textMuted, marginTop: 10, fontStyle: "italic" },
-    noMatch: { fontSize: 13, color: colors.warning, marginTop: 16, fontStyle: "italic" },
+    bio: { fontSize: 15, fontFamily: fonts.body, color: colors.text, marginTop: 16, lineHeight: 22 },
+    bioSource: { fontSize: 12, fontFamily: fonts.body, color: colors.link, marginTop: 6 },
+    pseudonyms: { fontSize: 13, fontFamily: fonts.body, color: colors.textMuted, marginTop: 10, fontStyle: "italic" },
+    noMatch: { fontSize: 13, fontFamily: fonts.body, color: colors.warning, marginTop: 16, fontStyle: "italic" },
     openLibraryLink: { alignSelf: "flex-start", marginTop: 16 },
-    openLibraryLinkText: { fontSize: 14, color: colors.link, fontWeight: "600" },
-    graphButton: { marginTop: 20 },
+    openLibraryLinkText: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.link },
+    graphButton: { width: "100%", marginTop: 20 },
     pressed: { opacity: 0.6 },
-    section: { marginTop: 28 },
-    sectionTitle: { ...kicker, marginBottom: 12 },
+    section: { marginTop: 28, width: "100%" },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 12 },
     relationRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -169,7 +167,6 @@ function createStyles({ colors, kicker }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    relationLabel: { fontSize: 16, color: colors.text },
-    relationChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
+    relationLabel: { fontSize: 16, fontFamily: fonts.body, color: colors.text },
   });
 }

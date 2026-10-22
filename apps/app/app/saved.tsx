@@ -1,4 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
@@ -13,7 +14,7 @@ import {
 } from "../src/storage/librarySettings";
 import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
-import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
+import { fonts, useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
 
 function LibraryCard({
@@ -198,6 +199,7 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
 
 export default function Saved() {
   const router = useRouter();
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [items, setItems] = useState<SavedItem[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
@@ -292,21 +294,21 @@ export default function Saved() {
         accessibilityRole="button"
         accessibilityLabel="Add new library"
       >
-        <Text style={styles.addLibraryPlus} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          +
-        </Text>
+        <View style={styles.addLibraryIcon}>
+          <Plus size={16} color={theme.colors.link} strokeWidth={2} />
+        </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { padding: 20 },
-    sectionTitle: { ...kicker, marginTop: 28, marginBottom: 12 },
-    emptyText: { fontSize: 14, color: colors.textFaint, fontStyle: "italic" },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 12 },
+    emptyText: { fontSize: 14, fontFamily: fonts.body, color: colors.textFaint, fontStyle: "italic" },
     row: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -316,17 +318,17 @@ function createStyles({ colors, kicker }: Theme) {
       borderBottomColor: colors.border,
     },
     rowMain: { flex: 1, paddingRight: 12 },
-    rowText: { fontSize: 16, color: colors.text },
+    rowText: { fontSize: 16, fontFamily: fonts.body, color: colors.text },
     bookBlock: { borderBottomWidth: 1, borderBottomColor: colors.border },
     editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.chipBackground, marginRight: 8 },
-    editText: { fontSize: 13, color: colors.text, fontWeight: "600" },
+    editText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text },
     removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.dangerBackground },
-    removeText: { fontSize: 13, color: colors.danger, fontWeight: "600" },
+    removeText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.danger },
     pressed: { opacity: 0.6 },
-    helpText: { fontSize: 13, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
+    helpText: { fontSize: 13, fontFamily: fonts.body, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
     themeOptions: { flexDirection: "row", gap: 8 },
     themeOption: { alignSelf: "auto" },
-    fieldLabel: { fontSize: 14, fontWeight: "600", color: colors.text, marginBottom: 4 },
+    fieldLabel: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.text, marginBottom: 4 },
     fieldLabelSpaced: { marginTop: 16 },
     input: {
       borderWidth: 1,
@@ -335,6 +337,7 @@ function createStyles({ colors, kicker }: Theme) {
       paddingHorizontal: 14,
       paddingVertical: 12,
       fontSize: 15,
+      fontFamily: fonts.body,
       color: colors.text,
     },
     saveButton: { marginTop: 14 },
@@ -358,19 +361,15 @@ function createStyles({ colors, kicker }: Theme) {
       marginTop: 20,
       paddingVertical: 10,
     },
-    addLibraryPlus: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: colors.link,
+    addLibraryIcon: {
       width: 26,
       height: 26,
-      lineHeight: 26,
-      textAlign: "center",
       borderRadius: 13,
       borderWidth: 1,
       borderColor: colors.link,
-      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
     },
-    addLibraryText: { fontSize: 16, color: colors.link, fontWeight: "600" },
+    addLibraryText: { fontSize: 16, fontFamily: fonts.bodySemiBold, color: colors.link },
   });
 }

@@ -1,7 +1,8 @@
 import type { Review } from "@book-explorer/shared";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { fonts, useTheme, useThemedStyles, type Theme } from "../theme";
 
 function ReviewCard({ review }: { review: Review }) {
   const styles = useThemedStyles(createStyles);
@@ -28,6 +29,7 @@ function ReviewCard({ review }: { review: Review }) {
 }
 
 export function ReviewsSection({ reviews }: { reviews: Review[] }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   if (reviews.length === 0) return null;
@@ -43,9 +45,11 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
         accessibilityState={{ expanded: open }}
       >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
-        <Text style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          {open ? "︿" : "﹀"}
-        </Text>
+        {open ? (
+          <ChevronUp size={16} color={theme.colors.textFaint} strokeWidth={2} />
+        ) : (
+          <ChevronDown size={16} color={theme.colors.textFaint} strokeWidth={2} />
+        )}
       </Pressable>
       {open && (
         <>
@@ -59,7 +63,7 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
   );
 }
 
-function createStyles({ colors, kicker, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle }: Theme) {
   return StyleSheet.create({
     section: { marginTop: 28, width: "100%" },
     header: {
@@ -68,8 +72,7 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
       justifyContent: "space-between",
       marginBottom: 12,
     },
-    sectionTitle: { ...kicker },
-    chevron: { fontSize: 14, color: colors.textFaint },
+    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text },
     pressed: { opacity: 0.6 },
     card: {
       borderRadius: 12,
@@ -79,10 +82,10 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
       ...cardStyle,
     },
     cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-    reviewer: { fontSize: 14, fontWeight: "600", color: colors.text },
-    rating: { fontSize: 13, fontWeight: "700", color: colors.warning },
-    text: { fontSize: 14, color: colors.text, lineHeight: 20 },
-    spoilerText: { fontSize: 14, color: colors.link, fontStyle: "italic" },
-    attribution: { fontSize: 12, color: colors.textFaint },
+    reviewer: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.text },
+    rating: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.warning },
+    text: { fontSize: 14, fontFamily: fonts.body, color: colors.text, lineHeight: 20 },
+    spoilerText: { fontSize: 14, fontFamily: fonts.body, color: colors.link, fontStyle: "italic" },
+    attribution: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint },
   });
 }

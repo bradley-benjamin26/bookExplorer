@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -530,7 +531,8 @@ export default function GraphExplorer() {
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
         >
-          <Text style={styles.backButtonText}>‹ Back</Text>
+          <ChevronLeft size={16} color={theme.colors.link} strokeWidth={2} />
+          <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
       )}
       <View
@@ -712,7 +714,7 @@ function createStyles({ colors }: Theme) {
     legendSwatch: { width: 12, height: 12, borderRadius: 6 },
     legendSwatchFaded: { backgroundColor: colors.graphSubject, opacity: 0.4 },
     legendLabel: { fontSize: 12, color: colors.textMuted },
-    backButton: { alignSelf: "center", paddingVertical: 4, paddingHorizontal: 12, marginBottom: 8 },
+    backButton: { flexDirection: "row", alignItems: "center", gap: 2, alignSelf: "center", paddingVertical: 4, paddingHorizontal: 12, marginBottom: 8 },
     // overflow: hidden clips the canvas to the visible viewport — now that
     // the canvas is panned/zoomed rather than fitted to the screen, it's
     // routinely larger than this box at 100% scale.
