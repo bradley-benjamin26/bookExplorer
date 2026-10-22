@@ -64,6 +64,14 @@ describe("savedBooks", () => {
     expect(await getSavedBook(book.isbn)).toBeNull();
   });
 
+  it("reads see writes that were queued before them", async () => {
+    await saveBookFromApi(book);
+    void updateSavedBook(book.isbn, { notes: "pending" });
+    expect((await getSavedBook(book.isbn))?.notes).toBe("pending");
+    void removeSavedBook(book.isbn);
+    expect(await getSavedBook(book.isbn)).toBeNull();
+  });
+
   it("starts fresh after the record is removed", async () => {
     await saveBookFromApi(book);
     await updateSavedBook(book.isbn, { notes: "old" });
