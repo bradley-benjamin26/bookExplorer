@@ -1,6 +1,6 @@
+import { isValidIsbn } from "@book-explorer/shared";
 import type { FastifyInstance } from "fastify";
 import { getBookDetail } from "../services/bookService.js";
-import { isValidIsbn } from "../validation.js";
 
 export async function booksRoutes(app: FastifyInstance) {
   app.get<{ Params: { isbn: string } }>("/api/books/isbn/:isbn", async (req, reply) => {

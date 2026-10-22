@@ -1,5 +1,6 @@
+import { isValidIsbn } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isValidIsbn } from "./validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId } from "./validation.js";
 
 describe("isValidIsbn", () => {
   it("accepts bare and hyphenated ISBN-13s and ISBN-10s", () => {

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { normalizeIsbn, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchBookByIsbn } from "../../src/api/client";
@@ -115,7 +116,8 @@ export default function BookDetail() {
         variant="pill"
         active={saved}
         onPress={handleToggleSaved}
-        style={styles.saveButton}
+        style={[styles.saveButton, saved && styles.savedPill]}
+        textStyle={[styles.saveText, saved && styles.savedText]}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
         {saved ? "★ Saved" : "☆ Save"}
@@ -130,7 +132,7 @@ export default function BookDetail() {
         <View style={styles.metaRow}>
           {data.format && (
             <View style={styles.metaColumn}>
-              <Text style={styles.sectionTitle}>Format</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">Format</Text>
               <View style={styles.genreTags}>
                 <View style={styles.formatTag}>
                   <Text style={styles.formatTagText}>{data.format}</Text>
@@ -141,7 +143,7 @@ export default function BookDetail() {
 
           {displayGenres.length > 0 && (
             <View style={styles.metaColumn}>
-              <Text style={styles.sectionTitle}>Genre</Text>
+              <Text style={styles.sectionTitle} accessibilityRole="header">Genre</Text>
               <View style={styles.genreTags}>
                 {displayGenres.map((genre) => (
                   <Pressable
@@ -164,7 +166,7 @@ export default function BookDetail() {
 
       {displaySubjects.length > 0 && (
         <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle}>Subjects</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Subjects</Text>
           <View style={styles.subjectTags}>
             {displaySubjects.slice(0, 12).map((subject) => (
               <Pressable
@@ -185,7 +187,7 @@ export default function BookDetail() {
 
       {savedRecord?.notes ? (
         <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle}>Your Notes</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Your Notes</Text>
           <Text style={styles.description}>{savedRecord.notes}</Text>
         </View>
       ) : null}
@@ -195,13 +197,14 @@ export default function BookDetail() {
           variant="primary"
           onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
           style={styles.graphButton}
+          textStyle={styles.graphButtonText}
         >
           View as Graph
         </Button>
       )}
 
       <View style={styles.findSection}>
-        <Text style={styles.sectionTitle}>Find This Book</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
@@ -209,9 +212,9 @@ export default function BookDetail() {
           accessibilityLabel="View on Open Library"
         >
           <Text style={styles.findRowText}>View on Open Library</Text>
-          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            ›
-          </Text>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <ChevronRight size={18} color={theme.colors.inkFaint} />
+          </View>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
@@ -220,9 +223,9 @@ export default function BookDetail() {
           accessibilityLabel="Search on Bookshop.org"
         >
           <Text style={styles.findRowText}>Search on Bookshop.org</Text>
-          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            ›
-          </Text>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <ChevronRight size={18} color={theme.colors.inkFaint} />
+          </View>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
@@ -231,16 +234,16 @@ export default function BookDetail() {
           accessibilityLabel="Search on WorldCat"
         >
           <Text style={styles.findRowText}>Search on WorldCat</Text>
-          <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            ›
-          </Text>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <ChevronRight size={18} color={theme.colors.inkFaint} />
+          </View>
         </Pressable>
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
 
       {data.description && (
         <View style={styles.aboutSection}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
           {/* Wikipedia and Google Books content require attribution on reuse. */}
           {data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
@@ -260,16 +263,32 @@ export default function BookDetail() {
   );
 }
 
-function createStyles({ colors, kicker, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20, alignItems: "center" },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    cover: { width: 180, height: 260, marginBottom: 20, borderRadius: 6, backgroundColor: colors.background, ...cardStyle },
-    title: { fontSize: 25, fontWeight: "700", textAlign: "center", letterSpacing: -0.3, color: colors.text },
-    author: { fontSize: 17, color: colors.link, marginTop: 4, textDecorationLine: "underline" },
-    saveButton: { marginTop: 14 },
-    editInLibraryLink: { fontSize: 13, color: colors.link, marginTop: 10, textDecorationLine: "underline" },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg, alignItems: "flex-start" },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
+    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
+    author: {
+      fontFamily: fonts.bodyMedium,
+      fontSize: typeScale.sm,
+      color: colors.cover,
+      marginTop: spacing.xs,
+      textDecorationLine: "underline",
+    },
+    saveButton: { marginTop: spacing.md },
+    // Overrides the pill's yellow active fill: marginalia text on it is only 4.07:1 in dark mode.
+    savedPill: { backgroundColor: colors.chipBackground },
+    saveText: { fontFamily: fonts.bodySemiBold, color: colors.ink },
+    savedText: { color: colors.marginalia },
+    editInLibraryLink: {
+      fontFamily: fonts.body,
+      fontSize: typeScale.xs,
+      color: colors.cover,
+      marginTop: spacing.sm,
+      textDecorationLine: "underline",
+    },
     // Format and Genre are two distinct labeled sections (different
     // headings, different tag styling) rather than tags sharing one row —
     // but stacking each in its own full-width block wasted vertical space
@@ -277,54 +296,61 @@ function createStyles({ colors, kicker, cardStyle }: Theme) {
     // one row instead, each keeping its own heading. `flexWrap` lets Genre's
     // tags fall to a second line under its own heading if the row gets too
     // narrow, without disturbing Format's column.
-    metaRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 28, width: "100%", justifyContent: "center", gap: 24 },
-    metaColumn: { alignItems: "center" },
-    genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
-    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: 16, paddingHorizontal: 13, paddingVertical: 7 },
-    genreTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextGenre },
+    metaRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginTop: spacing.xxl,
+      width: "100%",
+      justifyContent: "flex-start",
+      gap: spacing.xl,
+    },
+    // flexShrink lets a long genre list wrap within the row instead of running off the right edge.
+    metaColumn: { alignItems: "flex-start", flexShrink: 1 },
+    genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: spacing.sm },
+    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: radii.pill, paddingHorizontal: 13, paddingVertical: 7 },
+    genreTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextGenre },
     // A format tag isn't a link to anywhere (there's no "format" browse page
     // the way there is for a genre/subject) — an outlined, neutral style
     // instead of the genre tags' filled pink signals that difference
     // without a caption.
     formatTag: {
       backgroundColor: colors.chipBackground,
-      borderRadius: 16,
+      borderRadius: radii.pill,
       paddingHorizontal: 13,
       paddingVertical: 7,
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    formatTagText: { fontSize: 13, fontWeight: "600", color: colors.text, textTransform: "capitalize" },
-    aboutSection: { marginTop: 28, width: "100%" },
-    description: { fontSize: 15, color: colors.text, lineHeight: 22 },
-    viewMore: { fontSize: 13, fontWeight: "600", color: colors.link, marginTop: 6 },
-    descriptionSource: { fontSize: 12, color: colors.link, marginTop: 6 },
-    findSection: { marginTop: 28, width: "100%" },
+    formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.text, textTransform: "capitalize" },
+    aboutSection: { marginTop: spacing.xxl, width: "100%" },
+    description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
+    viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
+    descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
+    findSection: { marginTop: spacing.xxl, width: "100%" },
     findRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    findRowText: { fontSize: 16, color: colors.link },
-    findRowChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
-    findRowHint: { fontSize: 13, color: colors.textFaint, fontStyle: "italic" },
-    graphButton: { width: "100%", marginTop: 20 },
+    findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
+    graphButton: { width: "100%", marginTop: spacing.lg, backgroundColor: colors.cover },
+    graphButtonText: { fontFamily: fonts.bodySemiBold, color: colors.paper },
     pressed: { opacity: 0.6 },
-    subjectsSection: { marginTop: 28, width: "100%" },
-    sectionTitle: { ...kicker, marginBottom: 12 },
-    subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    subjectsSection: { marginTop: spacing.xxl, width: "100%" },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
+    subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     // Matches how the graph explorer colors subject nodes, so the same
     // concept reads as the same color whether you're browsing a book/work
     // page or the graph.
     subjectTag: {
       backgroundColor: colors.chipBackgroundSubject,
-      borderRadius: 16,
-      paddingHorizontal: 12,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
       paddingVertical: 7,
     },
-    subjectTagText: { fontSize: 13, fontWeight: "600", color: colors.chipTextSubject },
+    subjectTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });
 }

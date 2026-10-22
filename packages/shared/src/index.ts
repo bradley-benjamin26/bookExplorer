@@ -215,3 +215,8 @@ export type Graph = z.infer<typeof GraphSchema>;
 export function normalizeIsbn(isbn: string): string {
   return isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
+
+/** An ISBN-10 or ISBN-13, hyphens/spaces allowed. */
+export function isValidIsbn(raw: string): boolean {
+  return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
+}

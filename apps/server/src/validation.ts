@@ -1,13 +1,7 @@
-import { normalizeIsbn } from "@book-explorer/shared";
-
 // Cheap shape checks on route params, so malformed input is rejected with a
 // 400 up front instead of costing upstream requests (and a cache entry)
-// just to learn it can't match anything.
-
-/** An ISBN-10 or ISBN-13, hyphens/spaces allowed. */
-export function isValidIsbn(raw: string): boolean {
-  return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
-}
+// just to learn it can't match anything. (ISBN checking lives in
+// @book-explorer/shared, since the app's search bar needs it too.)
 
 /** An Open Library author id, e.g. "OL21594A". */
 export function isOpenLibraryAuthorId(id: string): boolean {

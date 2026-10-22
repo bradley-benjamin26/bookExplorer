@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { useThemedStyles, type Theme } from "../theme";
 
 type Variant = "primary" | "pill";
@@ -14,6 +14,7 @@ export function Button({
   variant = "primary",
   active = false,
   style,
+  textStyle,
   accessibilityLabel,
 }: {
   children: ReactNode;
@@ -22,6 +23,7 @@ export function Button({
   /** Pill variant only: toggled visual state, e.g. an item that's already saved. */
   active?: boolean;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
 }) {
   const styles = useThemedStyles(createStyles);
@@ -39,7 +41,7 @@ export function Button({
         style,
       ]}
     >
-      <Text style={variant === "primary" ? styles.primaryText : styles.pillText}>{children}</Text>
+      <Text style={[variant === "primary" ? styles.primaryText : styles.pillText, textStyle]}>{children}</Text>
     </Pressable>
   );
 }
