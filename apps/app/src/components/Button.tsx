@@ -19,6 +19,7 @@ export function Button({
   style,
   textStyle,
   accessibilityLabel,
+  disabled = false,
 }: {
   children: ReactNode;
   onPress: () => void;
@@ -29,6 +30,7 @@ export function Button({
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
+  disabled?: boolean;
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -37,13 +39,14 @@ export function Button({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={variant === "pill" ? { selected: active } : undefined}
+      accessibilityState={variant === "pill" ? { selected: active, disabled } : { disabled }}
       style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         variant === "primary" ? styles.primary : styles.pill,
         active && styles.pillActive,
-        pressed && styles.pressed,
+        (pressed || disabled) && styles.pressed,
         focused && styles.focused,
         style,
       ]}

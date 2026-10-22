@@ -59,6 +59,16 @@ export function toggleSaved(item: Unversioned<SavedItem>): Promise<boolean> {
   });
 }
 
+/** Idempotent save: unlike toggleSaved, never removes an item that's already saved. */
+export function ensureSaved(item: Unversioned<SavedItem>): Promise<void> {
+  return enqueueWrite(SAVED_KEY, async () => {
+    const items = await getAllSavedItems();
+    const key = itemKey(item.type, item.id);
+    if (items.some((i) => itemKey(i.type, i.id) === key && !i.deletedAt)) return;
+    await write([stamp(item), ...items.filter((i) => itemKey(i.type, i.id) !== key)]);
+  });
+}
+
 export function removeSaved(type: SavedItem["type"], id: string): Promise<void> {
   return enqueueWrite(SAVED_KEY, async () => write(tombstone(await getAllSavedItems(), itemKey(type, id))));
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
+import { ensureSaved, getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -13,6 +13,13 @@ describe("savedItems", () => {
     expect(await isItemSaved("book", item.id)).toBe(true);
     expect(await toggleSaved(item)).toBe(false);
     expect(await isItemSaved("book", item.id)).toBe(false);
+  });
+
+  it("ensureSaved is idempotent, even when called concurrently", async () => {
+    const item = { type: "book" as const, id: "9780141439518", title: "Pride and Prejudice" };
+    await Promise.all([ensureSaved(item), ensureSaved(item)]);
+    expect(await getSavedItems()).toHaveLength(1);
+    expect(await isItemSaved("book", item.id)).toBe(true);
   });
 
   it("keys items by type as well as id", async () => {
