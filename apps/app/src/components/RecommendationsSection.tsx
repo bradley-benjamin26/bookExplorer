@@ -1,4 +1,4 @@
-import type { Book, Graph, Subject, Work } from "@book-explorer/shared";
+import { slugifySubject, type Book, type Graph, type Subject, type Work } from "@book-explorer/shared";
 import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -29,6 +29,19 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
   useEffect(() => {
     getSnapshot().then(setSnapshot);
   }, [refreshKey]);
+  // Book and work details feed author ids, public subjects and ratings, and can land after the
+  // snapshot (persisted cache hydrating, a detail opened elsewhere), so re-read when one does.
+  const [cacheVersion, setCacheVersion] = useState(0);
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((e) => {
+        const kind = e.query.queryKey[0];
+        // Hydration adds queries ("added") or overwrites them ("setState"); a fetch ends in "success".
+        const landed = e.type === "added" || (e.type === "updated" && (e.action.type === "success" || e.action.type === "setState"));
+        if (landed && (kind === "book" || kind === "work")) setCacheVersion((v) => v + 1);
+      }),
+    [queryClient]
+  );
 
   const profile = useMemo(() => {
     if (!snapshot) return null;
@@ -37,13 +50,17 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
       .map((i) => ({ id: i.id, name: i.title, seedTitle: i.title }));
     // Saved books keep only author names; their ids come from the book's cached detail, which the offline cache keeps for saved items.
     const cachedBooks = queryClient.getQueriesData<Book>({ queryKey: ["book"] }).map(([, b]) => b);
+    // Subjects the API itself gave a saved book; a record's other subjects are the user's private tags.
+    const publicSlugs = new Set<string>();
     for (const record of snapshot.books) {
       if (record.deletedAt) continue;
       const cached = cachedBooks.find((b) => b?.isbn === record.isbn);
-      for (const a of cached?.authors ?? []) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
+      if (!cached) continue;
+      for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
+      for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
     }
-    return buildTasteProfile(snapshot, seeds);
-  }, [snapshot, queryClient]);
+    return buildTasteProfile(snapshot, seeds, publicSlugs);
+  }, [snapshot, queryClient, cacheVersion]);
 
   const slugs = profile?.subjects.map((s) => s.slug) ?? [];
   const authorIds = profile?.authors.map((a) => a.id) ?? [];
@@ -76,7 +93,7 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
       if (d?.openLibraryWorkId && d.rating) ratings.set(d.openLibraryWorkId, d.rating.average);
     }
     return rankRecommendations(profile, subjects, graphs, ratings);
-  }, [profile, data, queryClient]); // slugs/authorIds derive from profile
+  }, [profile, data, queryClient, cacheVersion]); // slugs/authorIds derive from profile
 
   if (recommendations.length === 0) return null;
 

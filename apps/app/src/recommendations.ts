@@ -27,6 +27,8 @@ export interface TasteProfile {
   authors: AuthorSeed[];
   /** Work ids already saved (as a work, or as a book's work), never recommended. */
   excludedWorkIds: Set<string>;
+  /** Normalised titles of saved books and works, for saved books with no work id. */
+  excludedTitles: Set<string>;
 }
 
 export interface Recommendation {
@@ -38,14 +40,19 @@ export interface Recommendation {
   shares: string[];
 }
 
-/** The live parts of a snapshot reduced to what scoring needs. Author seeds come from the caller, which can resolve ids. */
-export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[]): TasteProfile {
+/**
+ * The live parts of a snapshot reduced to what scoring needs. Author seeds come from the caller, which can resolve ids.
+ * Only slugs in `publicSlugs` (terms an API response gave) are used, since a saved
+ * book's subjects also hold the user's own tags, which must never be sent anywhere.
+ */
+export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[], publicSlugs: Set<string>): TasteProfile {
   const books = snapshot.books.filter((b) => !b.deletedAt);
   const terms = new Map<string, { label: string; seedTitles: string[] }>();
   for (const book of books) {
     // A term listed as both subject and genre counts once per book.
     const slugs = new Map([...book.subjects, ...book.genres].map((label) => [slugifySubject(label), label]));
     for (const [slug, label] of slugs) {
+      if (!publicSlugs.has(slug)) continue;
       const term = terms.get(slug) ?? { label, seedTitles: [] };
       term.seedTitles.push(book.title);
       terms.set(slug, term);
@@ -59,6 +66,7 @@ export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[]): Ta
   const excludedWorkIds = new Set<string>();
   for (const b of books) if (b.openLibraryWorkId) excludedWorkIds.add(b.openLibraryWorkId);
   for (const i of snapshot.items) if (!i.deletedAt && i.type === "work") excludedWorkIds.add(i.id);
+  const excludedTitles = new Set([...books.map((b) => b.title), ...snapshot.items.filter((i) => !i.deletedAt && i.type !== "author").map((i) => i.title)].map(normalizeTitle));
 
   // The authors behind the most saved items, each credited to its first saved title.
   const byId = new Map<string, AuthorSeed[]>();
@@ -67,8 +75,10 @@ export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[]): Ta
     .sort((a, b) => b.length - a.length || cmp(a[0].id, b[0].id))
     .slice(0, TOP_AUTHORS)
     .map((seeds) => seeds.sort((a, b) => cmp(a.seedTitle, b.seedTitle))[0]);
-  return { subjects, authors: topAuthors, excludedWorkIds };
+  return { subjects, authors: topAuthors, excludedWorkIds, excludedTitles };
 }
+
+const normalizeTitle = (title: string) => title.trim().toLowerCase().replace(/\s+/g, " ");
 
 interface Evidence {
   work: WorkRef;
@@ -91,7 +101,7 @@ export function rankRecommendations(
 ): Recommendation[] {
   const candidates = new Map<string, Evidence>();
   const add = (work: WorkRef, share: string, weight: number, seedTitles: string[]) => {
-    if (profile.excludedWorkIds.has(work.openLibraryWorkId)) return;
+    if (profile.excludedWorkIds.has(work.openLibraryWorkId) || profile.excludedTitles.has(normalizeTitle(work.title))) return;
     const c = candidates.get(work.openLibraryWorkId) ?? { work, reasons: [] };
     // Subject listings carry covers and author ids that graph nodes don't; keep the richer ref.
     if (!c.work.coverUrl && work.coverUrl) c.work = work;
