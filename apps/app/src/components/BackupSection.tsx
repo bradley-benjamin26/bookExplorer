@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Image } from "expo-image";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
   exportCsv,
@@ -26,6 +28,11 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
   const [pendingBackup, setPendingBackup] = useState<Snapshot | null>(null);
   const [csv, setCsv] = useState<{ rows: CsvBookRow[]; progress: CsvImportProgress; running: boolean } | null>(null);
   const stopRequested = useRef(false);
+  const queryClient = useQueryClient();
+  // Leaving the screen pauses a running CSV import, so it can't run on unseen or overlap one started on return.
+  useEffect(() => () => {
+    stopRequested.current = true;
+  }, []);
 
   // Any failure is shown inline; an ImportError's message is written for the user.
   const attempt = async (action: () => Promise<void>) => {
@@ -64,6 +71,11 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
           setCsv({ rows, progress: p, running: true });
         },
         isStopped: () => stopRequested.current,
+        // Seeds the offline cache and keeps the cover on disk, as opening the book page would.
+        onSaved: (book) => {
+          queryClient.setQueryData(["book", book.isbn], book);
+          if (book.coverUrl) Image.prefetch(book.coverUrl, "disk");
+        },
       });
     } finally {
       // Even after a throw, so the Resume button and backup import come back.

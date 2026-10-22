@@ -98,9 +98,16 @@ describe("CSV import", () => {
       return apiBook(isbn, `Book ${isbn}`);
     });
     const seen: number[] = [];
-    const result = await runCsvImport(rows, NEW_CSV_IMPORT, { onProgress: (p) => seen.push(p.next), isStopped: () => false, gapMs: 0 });
+    const cached: string[] = [];
+    const result = await runCsvImport(rows, NEW_CSV_IMPORT, {
+      onProgress: (p) => seen.push(p.next),
+      isStopped: () => false,
+      onSaved: (book) => cached.push(book.isbn),
+      gapMs: 0,
+    });
     expect(result).toEqual({ next: 4, saved: 2, alreadySaved: 0, noIsbn: ["No ISBN"], failed: ["Missing"] });
     expect(seen).toEqual([1, 2, 3, 4]);
+    expect(cached).toEqual(["9780000000001", "9780000000003"]);
     expect((await getSavedItems()).map((i) => i.id).sort()).toEqual(["9780000000001", "9780000000003"]);
     expect(await getSavedBook("9780000000003")).not.toBeNull();
   });

@@ -1,12 +1,13 @@
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { CameraView, type BarcodeScanningResult } from "expo-camera";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, FlatList, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import type { Book } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "../api/bookLookup";
 import { acceptScan, parseTypedIsbn, saveAll } from "../batchScan";
-import { ensureSaved } from "../storage/savedItems";
-import { saveBookFromApi, updateSavedBook } from "../storage/savedBooks";
+import { saveBook, updateSavedBook } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
 
@@ -17,9 +18,11 @@ interface Row {
   save: "idle" | "saved" | "failed";
 }
 
-async function saveScanned(book: Book, tag: string) {
-  await ensureSaved({ type: "book", id: book.isbn, title: book.title });
-  const record = await saveBookFromApi(book);
+async function saveScanned(queryClient: QueryClient, book: Book, tag: string) {
+  const record = await saveBook(book);
+  // Seeds the offline cache and keeps the cover on disk, as opening the book page would.
+  queryClient.setQueryData(["book", book.isbn], book);
+  if (book.coverUrl) Image.prefetch(book.coverUrl, "disk");
   const label = tag.trim();
   // Libraries in this app are catalogue-search templates, not collections, so the "set" is a tag added to each book's subjects.
   if (label && !record.subjects.includes(label)) await updateSavedBook(book.isbn, { subjects: [...record.subjects, label] });
@@ -28,6 +31,7 @@ async function saveScanned(book: Book, tag: string) {
 export function BatchScan({ onExit }: { onExit: () => void }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
+  const queryClient = useQueryClient();
   const [rows, setRows] = useState<Row[]>([]);
   const [toast, setToast] = useState("");
   const [finishing, setFinishing] = useState(false);
@@ -85,7 +89,7 @@ export function BatchScan({ onExit }: { onExit: () => void }) {
     setSaving(true);
     const outcome = await saveAll(
       targets.filter((r): r is Row & { book: Book } => !!r.book),
-      (r) => saveScanned(r.book, tag)
+      (r) => saveScanned(queryClient, r.book, tag)
     );
     setRows((rs) => rs.map((r) => (outcome[r.isbn] ? { ...r, save: outcome[r.isbn] } : r)));
     setSaving(false);

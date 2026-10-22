@@ -1,9 +1,8 @@
-import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema, type SnapshotExport } from "@book-explorer/shared";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema, type Book, type SnapshotExport } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "./api/bookLookup";
 import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
-import { getSavedBook, saveBookFromApi } from "./storage/savedBooks";
-import { ensureSaved } from "./storage/savedItems";
+import { getSavedBook, saveBook } from "./storage/savedBooks";
 import { SCHEMA_VERSION } from "./storage/schema";
 import { applySnapshot, getSnapshot, type Snapshot } from "./storage/snapshot";
 
@@ -81,11 +80,17 @@ const LOOKUP_GAP_MS = 1500;
  * one lookup at a time. Stops between rows once `isStopped()` is true; pass the
  * returned progress back in to resume. Books already saved are skipped without
  * a lookup, so re-importing the same file after a restart also picks up where it left off.
+ * `onSaved` gets each newly saved book, so the caller can cache it for offline use.
  */
 export async function runCsvImport(
   rows: CsvBookRow[],
   from: CsvImportProgress,
-  { onProgress, isStopped, gapMs = LOOKUP_GAP_MS }: { onProgress: (p: CsvImportProgress) => void; isStopped: () => boolean; gapMs?: number }
+  {
+    onProgress,
+    isStopped,
+    onSaved,
+    gapMs = LOOKUP_GAP_MS,
+  }: { onProgress: (p: CsvImportProgress) => void; isStopped: () => boolean; onSaved?: (book: Book) => void; gapMs?: number }
 ): Promise<CsvImportProgress> {
   const p = { ...from, noIsbn: [...from.noIsbn], failed: [...from.failed] };
   while (p.next < rows.length && !isStopped()) {
@@ -95,8 +100,8 @@ export async function runCsvImport(
     else {
       try {
         const book = await fetchBookWithAlternate(isbn);
-        await saveBookFromApi(book);
-        await ensureSaved({ type: "book", id: book.isbn, title: book.title });
+        await saveBook(book);
+        onSaved?.(book);
         p.saved++;
       } catch {
         p.failed.push(title || isbn);
