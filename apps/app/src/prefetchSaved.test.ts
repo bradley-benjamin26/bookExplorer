@@ -49,8 +49,21 @@ describe("runBounded", () => {
 
   it("keeps going after a failed fetch and reports it", async () => {
     vi.useFakeTimers();
-    const fetchOne = vi.fn((t: PrefetchTarget) => (t.id === "OL1W" ? Promise.reject(new Error("503")) : Promise.resolve()));
+    const fetchOne = vi.fn((t: PrefetchTarget) => (t.id === "OL1W" ? Promise.reject(Object.assign(new Error("gone"), { status: 404 })) : Promise.resolve()));
     const done = runBounded(targets(3), fetchOne, 1, 10);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(await done).toEqual([{ kind: "work", id: "OL1W" }]);
+    expect(fetchOne).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["a 429", { status: 429 }],
+    ["a 503", { status: 503 }],
+    ["a network error", new TypeError("Network request failed")],
+  ])("stops the pass on %s without marking the item or the ones not reached", async (_, err) => {
+    vi.useFakeTimers();
+    const fetchOne = vi.fn((t: PrefetchTarget) => (t.id === "OL2W" ? Promise.reject(err) : t.id === "OL1W" ? Promise.reject({ status: 500 }) : Promise.resolve()));
+    const done = runBounded(targets(5), fetchOne, 2, 10);
     await vi.advanceTimersByTimeAsync(100);
     expect(await done).toEqual([{ kind: "work", id: "OL1W" }]);
     expect(fetchOne).toHaveBeenCalledTimes(3);

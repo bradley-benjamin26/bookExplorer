@@ -1,6 +1,6 @@
 import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import type { Work } from "@book-explorer/shared";
+import type { Book, Work } from "@book-explorer/shared";
 import { buildTasteProfile, explain, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
@@ -79,17 +79,34 @@ describe("saved works as seeds", () => {
   const withWork = snapshot([], [], [savedWork("Hyperion", ["Science fiction", "Read in 2020"])]);
   const cached = (subjects: string[]) =>
     ({ openLibraryWorkId: "OLHyperionW", authors: [{ openLibraryId: "OLsA", name: "Simmons" }], subjects: subjects.map((label) => ({ label })), genres: [] }) as unknown as Work;
+  const none = () => undefined;
+  // Cached under the query id; the payload's own id may differ.
+  const byQueryId = <T,>(entries: Record<string, T>) => (id: string) => entries[id];
   it("counts a saved work's cached API subjects but never its user-typed ones", () => {
-    const { seeds, publicSlugs } = seedsFromCache(withWork, [], [cached(["Science fiction"])]);
+    const { seeds, publicSlugs } = seedsFromCache(withWork, none, byQueryId({ OLHyperionW: cached(["Science fiction"]) }));
     expect([...publicSlugs]).toEqual(["science_fiction"]);
     expect(seeds).toEqual([{ id: "OLsA", name: "Simmons", seedTitle: "Hyperion" }]);
     const profile = buildTasteProfile(withWork, seeds, publicSlugs);
     expect(profile.subjects.map((s) => s.slug)).toEqual(["science_fiction"]);
   });
   it("contributes nothing without a cached detail", () => {
-    const { seeds, publicSlugs } = seedsFromCache(withWork, [], []);
+    const { seeds, publicSlugs } = seedsFromCache(withWork, none, none);
     expect(seeds).toEqual([]);
     expect(publicSlugs.size).toBe(0);
+  });
+  it("finds a detail under the saved id even when the server redirected the work", () => {
+    const redirected = { ...cached(["Science fiction"]), openLibraryWorkId: "OLnewW" } as Work;
+    const { seeds } = seedsFromCache(withWork, none, byQueryId({ OLHyperionW: redirected }));
+    expect(seeds).toEqual([{ id: "OLsA", name: "Simmons", seedTitle: "Hyperion" }]);
+  });
+  it("finds a book's detail under the saved ISBN or its other form, whatever ISBN the payload carries", () => {
+    const detail = (isbn: string) => ({ isbn, authors: [{ openLibraryId: "OLaA", name: "Austen" }], subjects: [{ label: "Courtship" }], genres: [] }) as unknown as Book;
+    const saved = snapshot([book("Emma", [], { isbn: "0141439580" })]);
+    // Cached under the route's ISBN-13 form, payload carrying yet another ISBN.
+    const { seeds, publicSlugs } = seedsFromCache(saved, byQueryId({ "9780141439587": detail("9999999999") }), none);
+    expect(seeds).toEqual([{ id: "OLaA", name: "Austen", seedTitle: "Emma" }]);
+    expect([...publicSlugs]).toEqual(["courtship"]);
+    expect(seedsFromCache(saved, byQueryId({ "0141439580": detail("x") }), none).seeds).toHaveLength(1);
   });
 });
 
@@ -123,7 +140,7 @@ describe("recommendation reasons", () => {
   it("words the headings", () => {
     expect(reasonHeading({ kind: "subject", label: "Fantasy", seedTitles: ["A"] })).toBe("Because you like Fantasy");
     expect(reasonHeading({ kind: "author", label: "Tolkien", seedTitles: [] })).toBe("More by Tolkien");
-    expect(reasonHeading({ kind: "influence", label: "Tolkien", seedTitles: [] })).toBe("Influenced by Tolkien");
+    expect(reasonHeading({ kind: "influence", label: "Tolkien", seedTitles: [] })).toBe("Connected to Tolkien");
   });
 });
 

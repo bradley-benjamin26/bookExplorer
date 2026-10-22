@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
@@ -18,7 +18,7 @@ import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSectio
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
-import { getSavedWork, saveWork, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
+import { getSavedWork, saveWork, seedSavedWorkFromApi, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -46,6 +46,11 @@ export default function WorkDetail() {
       if (savedId) getSavedWork(savedId).then(setSavedRecord);
     }, [savedId])
   );
+
+  // A record from the migration or a v1 import starts blank; give it the API's tags once they load.
+  useEffect(() => {
+    if (data && savedRecord) seedSavedWorkFromApi(savedRecord.openLibraryWorkId, data).then((r) => r && setSavedRecord(r));
+  }, [data, savedRecord]);
 
   const handleToggleSaved = async () => {
     if (!data) return;

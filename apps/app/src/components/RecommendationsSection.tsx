@@ -50,8 +50,8 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
     // Ids and public subjects come from cached details, which the offline cache keeps for saved items.
     const { seeds, publicSlugs } = seedsFromCache(
       snapshot,
-      queryClient.getQueriesData<Book>({ queryKey: ["book"] }).map(([, b]) => b),
-      queryClient.getQueriesData<Work>({ queryKey: ["work"] }).map(([, w]) => w)
+      (isbn) => queryClient.getQueryData<Book>(["book", isbn]),
+      (workId) => queryClient.getQueryData<Work>(["work", workId])
     );
     return buildTasteProfile(snapshot, seeds, publicSlugs);
   }, [snapshot, queryClient, cacheVersion]);

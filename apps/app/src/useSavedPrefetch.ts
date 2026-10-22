@@ -6,9 +6,9 @@ import { fetchWork } from "./api/client";
 import { toAlternateIsbn } from "./isbn";
 import { pendingTargets, runBounded, type PrefetchTarget } from "./prefetchSaved";
 import { getAllSavedBooks } from "./storage/savedBooks";
-import { getAllSavedWorks } from "./storage/savedWorks";
+import { getAllSavedWorks, seedSavedWorkFromApi } from "./storage/savedWorks";
 
-// Failed items are left for the next session (the server may be cooling down), so a rerun skips them too.
+// Items that failed on their own (a 404, a 500) are left for the next session, so a rerun skips them too.
 const failedThisSession = new Set<string>();
 let running: Promise<void> | null = null;
 let rerun = false;
@@ -27,7 +27,10 @@ async function pass(queryClient: QueryClient) {
   const failed = await runBounded(targets, (t) =>
     t.kind === "book"
       ? queryClient.fetchQuery({ queryKey: ["book", t.id], queryFn: () => fetchBookWithAlternate(t.id) })
-      : queryClient.fetchQuery({ queryKey: ["work", t.id], queryFn: () => fetchWork(t.id) })
+      : queryClient
+          .fetchQuery({ queryKey: ["work", t.id], queryFn: () => fetchWork(t.id) })
+          // A seeding failure is local storage, not the fetch, so it never marks the item failed.
+          .then((work) => seedSavedWorkFromApi(t.id, work).catch(() => undefined))
   );
   failed.forEach((t) => failedThisSession.add(keyOf(t)));
 }

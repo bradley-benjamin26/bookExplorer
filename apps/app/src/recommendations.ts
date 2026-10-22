@@ -1,4 +1,5 @@
 import { slugifySubject, type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
+import { toAlternateIsbn } from "./isbn";
 import type { Snapshot } from "./storage/snapshot";
 
 // Bounds on the candidate fetch: one /api/subjects call per top subject and one
@@ -53,7 +54,7 @@ export const reasonKey = (r: Reason) => `${r.kind}:${r.label}`;
 
 export function reasonHeading({ kind, label, seedTitles }: Reason): string {
   if (kind === "author") return `More by ${label}`;
-  if (kind === "influence") return `Influenced by ${label}`;
+  if (kind === "influence") return `Connected to ${label}`; // influence edges run either way
   return `Because you like ${label}${seedTitles.length > 1 ? ` (${seedTitles.length} saved)` : ""}`;
 }
 
@@ -61,8 +62,10 @@ export function reasonHeading({ kind, label, seedTitles }: Reason): string {
  * Author seeds (saved authors, plus the authors of saved books and works) and the slugs of
  * public subjects, both read only from cached API details. A record's own subjects are never
  * public: they may be the user's tags. Items with no cached detail contribute nothing.
+ * Details are looked up by query id (the saved ISBN or its other form, the saved work id), since the
+ * payload can carry a redirected work id or the other ISBN form.
  */
-export function seedsFromCache(snapshot: Snapshot, cachedBooks: (Book | undefined)[], cachedWorks: (Work | undefined)[]) {
+export function seedsFromCache(snapshot: Snapshot, cachedBook: (isbn: string) => Book | undefined, cachedWork: (workId: string) => Work | undefined) {
   const seeds: AuthorSeed[] = snapshot.items
     .filter((i) => !i.deletedAt && i.type === "author")
     .map((i) => ({ id: i.id, name: i.title, seedTitle: i.title }));
@@ -72,8 +75,11 @@ export function seedsFromCache(snapshot: Snapshot, cachedBooks: (Book | undefine
     for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: title });
     for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
   };
-  for (const r of snapshot.books) if (!r.deletedAt) take(cachedBooks.find((b) => b?.isbn === r.isbn), r.title);
-  for (const r of snapshot.works) if (!r.deletedAt) take(cachedWorks.find((w) => w?.openLibraryWorkId === r.openLibraryWorkId), r.title);
+  for (const r of snapshot.books) {
+    const alternate = toAlternateIsbn(r.isbn);
+    if (!r.deletedAt) take(cachedBook(r.isbn) ?? (alternate ? cachedBook(alternate) : undefined), r.title);
+  }
+  for (const r of snapshot.works) if (!r.deletedAt) take(cachedWork(r.openLibraryWorkId), r.title);
   return { seeds, publicSlugs };
 }
 

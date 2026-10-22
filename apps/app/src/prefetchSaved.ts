@@ -1,8 +1,10 @@
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { SavedWorkRecord } from "./storage/savedWorks";
 
-export const PREFETCH_CONCURRENCY = 2;
-export const PREFETCH_DELAY_MS = 500;
+// The server allows 100 requests/min per IP (apps/server/src/index.ts); one at a time every 2 s is at most
+// 30 items/min (60 requests if every book needs its alternate-ISBN retry), leaving room for the screens.
+export const PREFETCH_CONCURRENCY = 1;
+export const PREFETCH_DELAY_MS = 2000;
 
 export interface PrefetchTarget {
   kind: "book" | "work";
@@ -21,9 +23,16 @@ export function pendingTargets(
   ].filter((t) => !isCached(t));
 }
 
+/** A rate limit, an unavailable server or no network (no status): every later request would fail too. */
+export function stopsPass(err: unknown): boolean {
+  const status = (err as { status?: unknown } | null)?.status;
+  return typeof status !== "number" || status === 429 || status === 503;
+}
+
 /**
  * Runs `fetchOne` over every target with at most `concurrency` in flight, each worker pausing `delayMs` after
- * each request. Returns the targets whose fetch failed; one failure never stops the rest.
+ * each request. Returns the targets whose fetch failed on their own (a 404, a 500), which never stop the rest.
+ * An error `stopsPass` accepts ends the pass instead, and neither it nor the targets not reached are returned.
  */
 export async function runBounded(
   targets: PrefetchTarget[],
@@ -33,9 +42,11 @@ export async function runBounded(
 ): Promise<PrefetchTarget[]> {
   const queue = [...targets];
   const failed: PrefetchTarget[] = [];
+  let stopped = false;
   const worker = async () => {
-    for (let t = queue.shift(); t; t = queue.shift()) {
-      await fetchOne(t).catch(() => failed.push(t));
+    for (let t = queue.shift(); t && !stopped; t = queue.shift()) {
+      await fetchOne(t).catch((err) => (stopsPass(err) ? (stopped = true) : failed.push(t)));
+      if (stopped) return;
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   };

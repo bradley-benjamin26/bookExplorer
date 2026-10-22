@@ -78,6 +78,27 @@ export function updateSavedWork(workId: string, changes: SavedWorkChanges): Prom
   });
 }
 
+/**
+ * Fills a record that has never had API tags (one made by the v2 migration or a v1 import) from `work`, once.
+ * Users never edit `authorNames`, so a record with authors keeps whatever tags the user left, even none.
+ * Returns the seeded record, or null when nothing was written.
+ */
+export function seedSavedWorkFromApi(workId: string, work: Work): Promise<SavedWorkRecord | null> {
+  return enqueueWrite(storageKey(workId), async () => {
+    const existing = await readRecord(workId);
+    if (!existing || existing.deletedAt || existing.authorNames.length + existing.subjects.length + existing.genres.length > 0) return null;
+    const seeded = {
+      authorNames: work.authors.map((a) => a.name),
+      subjects: work.subjects.map((t) => t.label),
+      genres: work.genres.map((t) => t.label),
+    };
+    if (seeded.authorNames.length + seeded.subjects.length + seeded.genres.length === 0) return null;
+    const next = { ...existing, ...seeded, updatedAt: Date.now() };
+    await AsyncStorage.setItem(storageKey(workId), JSON.stringify(next));
+    return next;
+  });
+}
+
 export function removeSavedWork(workId: string): Promise<void> {
   return enqueueWrite(storageKey(workId), async () => {
     const existing = await readRecord(workId);
