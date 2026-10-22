@@ -9,6 +9,7 @@ import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { routes } from "../../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleCase } from "../../src/titleCase";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -44,7 +45,7 @@ export default function SubjectDetail() {
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
-          <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
+          <Text style={styles.name} accessibilityRole="header">{titleCase(data.name)}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           {data.description && <Text style={styles.description}>{data.description}</Text>}
 
@@ -75,10 +76,10 @@ export default function SubjectDetail() {
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
                         accessibilityRole="button"
-                        accessibilityLabel={concept.label}
+                        accessibilityLabel={titleCase(concept.label)}
                       >
                         <Text style={styles.conceptTagText}>
-                          {concept.label}
+                          {titleCase(concept.label)}
                           <SourceBadge sources={concept.sources} />
                         </Text>
                       </Pressable>
@@ -106,7 +107,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     name: {
       fontFamily: fonts.display,
       fontSize: typeScale.lg,
-      textTransform: "capitalize",
       letterSpacing: -0.3,
       color: colors.ink,
     },

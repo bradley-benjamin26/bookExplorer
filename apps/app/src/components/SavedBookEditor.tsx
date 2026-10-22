@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { titleCase } from "../titleCase";
 
 function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; onChange: (next: string[]) => void }) {
   const styles = useThemedStyles(createStyles);
@@ -33,7 +34,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
               accessibilityRole="button"
               accessibilityLabel={`Remove ${tag}`}
             >
-              <Text style={styles.tagText}>{tag} ×</Text>
+              <Text style={styles.tagText}>{titleCase(tag)} ×</Text>
             </Pressable>
           ))}
         </View>

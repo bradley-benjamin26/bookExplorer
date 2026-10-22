@@ -14,6 +14,7 @@ import { SourceBadge } from "../../src/components/SourceBadge";
 import { routes } from "../../src/navigation";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleCase } from "../../src/titleCase";
 
 export default function WorkDetail() {
   const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
@@ -94,10 +95,10 @@ export default function WorkDetail() {
                 key={genre.label}
                 style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
-                accessibilityLabel={genre.label}
+                accessibilityLabel={titleCase(genre.label)}
               >
                 <Text style={styles.genreTagText}>
-                  {genre.label}
+                  {titleCase(genre.label)}
                   <SourceBadge sources={genre.sources} />
                 </Text>
               </Pressable>
@@ -115,10 +116,10 @@ export default function WorkDetail() {
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
-                accessibilityLabel={subject.label}
+                accessibilityLabel={titleCase(subject.label)}
               >
                 <Text style={styles.subjectTagText}>
-                  {subject.label}
+                  {titleCase(subject.label)}
                   <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
@@ -161,8 +162,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       fontFamily: fonts.bodySemiBold,
       fontSize: typeScale.xs,
       color: colors.chipTextGenre,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
     },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
@@ -185,8 +184,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       fontFamily: fonts.bodySemiBold,
       fontSize: typeScale.xs,
       color: colors.chipTextSubject,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
     },
   });
 }

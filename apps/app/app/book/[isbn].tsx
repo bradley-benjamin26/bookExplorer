@@ -18,6 +18,7 @@ import { addRecentIsbn } from "../../src/storage/history";
 import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleCase } from "../../src/titleCase";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
 const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
@@ -150,10 +151,10 @@ export default function BookDetail() {
                     key={genre.label}
                     style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                     onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
-                    accessibilityLabel={genre.label}
+                    accessibilityLabel={titleCase(genre.label)}
                   >
                     <Text style={styles.genreTagText}>
-                      {genre.label}
+                      {titleCase(genre.label)}
                       <SourceBadge sources={genre.sources} />
                     </Text>
                   </Pressable>
@@ -173,10 +174,10 @@ export default function BookDetail() {
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
-                accessibilityLabel={subject.label}
+                accessibilityLabel={titleCase(subject.label)}
               >
                 <Text style={styles.subjectTagText}>
-                  {subject.label}
+                  {titleCase(subject.label)}
                   <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
