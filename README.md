@@ -49,7 +49,7 @@ curl http://localhost:3001/health
 Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
 server's public-API cache in SQLite across restarts (otherwise it is memory-only).
 It stores only public book/author data, never anything about a user's library
-(search queries stay in memory). This needs Node 22.5+ (`node:sqlite`); on older
+(search queries stay in memory). This needs Node 22.13+ (`node:sqlite`); on older
 Node the server logs a warning and stays memory-only.
 
 Optionally, set `GOOGLE_BOOKS_API_KEY` to a [Google Books API

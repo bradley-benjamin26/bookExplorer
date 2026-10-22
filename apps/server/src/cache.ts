@@ -27,7 +27,7 @@ function purgeExpired(): void {
 export function initPersistentCache(path: string): void {
   closePersistentCache();
   try {
-    // Loaded only here: node:sqlite needs Node 22.5+, and persistence is opt-in, so the default server runs on Node 20.
+    // Loaded only here: node:sqlite needs Node 22.13+, and persistence is opt-in, so the default server runs on Node 20.
     const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
     db = new sqlite.DatabaseSync(path);
     db.exec("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, expires_at INTEGER NOT NULL)");
