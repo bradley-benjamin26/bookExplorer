@@ -768,16 +768,16 @@ export default function GraphExplorer() {
           <ScrollView style={styles.sheet} accessibilityViewIsModal>
             <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
             <Text style={styles.sheetHeading}>Node types</Text>
-            {[...new Set(data.nodes.map((n) => n.type))].map((t) => (
+            {[...new Set([...(data.nodes.map((n) => n.type) as string[]), ...filter.hiddenTypes])].map((t) => (
               <FilterRow
                 key={t}
-                label={NODE_LABELS[t]}
+                label={NODE_LABELS[t as GraphNode["type"]] ?? t}
                 checked={!filter.hiddenTypes.includes(t)}
                 onPress={() => updateFilter({ ...filter, hiddenTypes: toggle(filter.hiddenTypes, t) })}
               />
             ))}
             <Text style={styles.sheetHeading}>Connections</Text>
-            {[...new Set(data.edges.map((e) => e.relation))].map((r) => (
+            {[...new Set([...data.edges.map((e) => e.relation), ...filter.hiddenRelations])].map((r) => (
               <FilterRow
                 key={r}
                 label={RELATION_LABELS[r] ?? r}

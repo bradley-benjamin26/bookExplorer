@@ -24,9 +24,20 @@ export function applyGraphFilter(graph: Graph, filter: GraphFilter): Graph {
   const edges = graph.edges.filter(
     (e) => !filter.hiddenRelations.includes(e.relation) && kept.has(e.source) && kept.has(e.target)
   );
-  const linked = new Set(edges.flatMap((e) => [e.source, e.target]));
-  const nodes = [...kept.values()].filter((n) => n.id === graph.centerId || linked.has(n.id));
-  return { ...graph, nodes, edges };
+  // Keep only what is still connected to the centre, so no islands float free.
+  const reach = new Set([graph.centerId]);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const e of edges) {
+      if (reach.has(e.source) !== reach.has(e.target)) {
+        reach.add(e.source).add(e.target);
+        grew = true;
+      }
+    }
+  }
+  const nodes = [...kept.values()].filter((n) => reach.has(n.id));
+  const keptEdges = edges.filter((e) => reach.has(e.source) && reach.has(e.target));
+  return { ...graph, nodes, edges: keptEdges };
 }
 
 /** Route query params for a filter; omitted entirely when nothing is hidden. */
@@ -37,8 +48,9 @@ export function filterToParams(f: GraphFilter): Record<string, string> {
   };
 }
 
-export function filterFromParams(params: { hideTypes?: string; hideRelations?: string }): GraphFilter {
-  const list = (s?: string) => (s ? s.split(",").filter(Boolean) : []);
+export function filterFromParams(params: { hideTypes?: string | string[]; hideRelations?: string | string[] }): GraphFilter {
+  // A hand-edited link can repeat a key, which the router hands back as an array.
+  const list = (s?: string | string[]) => (s ? [s].flat().flatMap((v) => v.split(",")).filter(Boolean) : []);
   return { hiddenTypes: list(params.hideTypes), hiddenRelations: list(params.hideRelations) };
 }
 

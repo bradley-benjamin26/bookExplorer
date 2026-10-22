@@ -32,6 +32,12 @@ describe("applyGraphFilter", () => {
     expect(out.edges).toHaveLength(2);
   });
 
+  it("drops islands cut off from the centre", () => {
+    const out = applyGraphFilter(graph, { hiddenTypes: [], hiddenRelations: ["notableWork"] });
+    expect(out.nodes.map((x) => x.id)).toEqual(["author:a", "author:b"]);
+    expect(out.edges).toHaveLength(1);
+  });
+
   it("never removes the centre node", () => {
     const out = applyGraphFilter(graph, { hiddenTypes: ["author", "work", "subject"], hiddenRelations: [] });
     expect(out.nodes.map((x) => x.id)).toEqual(["author:a"]);
@@ -45,6 +51,10 @@ describe("filter params", () => {
     expect(filterFromParams(filterToParams(f))).toEqual(f);
     expect(filterToParams(NO_FILTER)).toEqual({});
     expect(filterFromParams({})).toEqual(NO_FILTER);
+  });
+
+  it("accepts repeated keys without throwing", () => {
+    expect(filterFromParams({ hideTypes: ["work", "genre,author"] }).hiddenTypes).toEqual(["work", "genre", "author"]);
   });
 
   it("toggle adds then removes", () => {
