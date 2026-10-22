@@ -97,7 +97,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Export & Import</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Export & Import</Text>
       <Text style={styles.helpText}>
         A backup holds your saved books, authors, tags, notes and libraries. The CSV has your books in Goodreads' format.
       </Text>

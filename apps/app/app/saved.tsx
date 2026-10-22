@@ -133,7 +133,7 @@ function AppearanceSection() {
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Appearance</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Appearance</Text>
       <View style={styles.themeOptions}>
         {THEME_OPTIONS.map((option) => (
           <Button
@@ -250,14 +250,14 @@ export default function Saved() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Saved Books{books.length > 0 ? ` (${books.length})` : ""}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Saved Books{books.length > 0 ? ` (${books.length})` : ""}</Text>
       {books.length === 0 ? (
         <Text style={styles.emptyText}>No saved books yet — tap "Save" on a book page to add one.</Text>
       ) : (
         books.map((item) => <BookRow key={`${item.type}:${item.id}`} item={item} onRemove={handleRemove} />)
       )}
 
-      <Text style={styles.sectionTitle}>Saved Authors{authors.length > 0 ? ` (${authors.length})` : ""}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Saved Authors{authors.length > 0 ? ` (${authors.length})` : ""}</Text>
       {authors.length === 0 ? (
         <Text style={styles.emptyText}>No saved authors yet — tap "Save" on an author page to add one.</Text>
       ) : (
@@ -290,7 +290,7 @@ export default function Saved() {
 
       <AppearanceSection />
 
-      <Text style={styles.sectionTitle}>Libraries</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Libraries</Text>
       <Text style={styles.helpText}>
         Book pages can link out to a library catalog's search — configure more than one if you use several (a public
         library and a school library, say). ISBN search is more precise, but not every catalog indexes ISBNs well —

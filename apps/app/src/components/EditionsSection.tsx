@@ -60,7 +60,7 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
 
   return (
     <View style={[styles.section, highlighted && styles.sectionHighlighted]}>
-      <Text style={styles.sectionTitle}>Find Your Edition ({editions.length})</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Find Your Edition ({editions.length})</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
         {visible.map((edition, i) => (
           <EditionCard key={`${edition.openLibraryEditionId || edition.isbn}-${i}`} edition={edition} />

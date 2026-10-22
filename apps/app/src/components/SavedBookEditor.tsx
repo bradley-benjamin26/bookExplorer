@@ -22,7 +22,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{label}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">{label}</Text>
       {tags.length > 0 && (
         <View style={styles.tagRow}>
           {tags.map((tag) => (
@@ -158,7 +158,7 @@ export function SavedBookEditor({
         }}
       />
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Notes</Text>
         <TextInput
           style={styles.notesInput}
           placeholder="Your notes about this book..."
