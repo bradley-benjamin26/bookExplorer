@@ -35,6 +35,10 @@ describe("parseSearchFilters", () => {
     });
   });
 
+  it("rejects repeated (array) params instead of throwing", () => {
+    expect(typeof parseSearchFilters({ author: ["a", "b"] })).toBe("string");
+  });
+
   it.each([
     [{ yearFrom: "19x0" }], [{ yearTo: "99" }], [{ yearFrom: "1990", yearTo: "1980" }],
     [{ language: "english" }], [{ sort: "random" }], [{ author: "a".repeat(101) }],

@@ -39,8 +39,8 @@ export function searchBooks(query: string, filters: SearchFilters = {}): Promise
   const trimmed = query.trim();
   // The 3-char minimum applies to whatever text drives the search: the free
   // text, or (when there is none) an author/subject filter.
-  const driver = trimmed || filters.author || filters.subject || "";
-  if (driver.length < MIN_QUERY_LENGTH) return Promise.resolve([]);
+  const drivers = [trimmed, filters.author, filters.subject];
+  if (!drivers.some((d) => (d?.length ?? 0) >= MIN_QUERY_LENGTH)) return Promise.resolve([]);
 
   const q = buildQuery(trimmed, filters);
   const sort = filters.sort === "relevance" ? undefined : filters.sort;

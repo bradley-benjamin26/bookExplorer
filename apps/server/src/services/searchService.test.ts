@@ -65,6 +65,12 @@ describe("searchBooks", () => {
     expect(openLibrary.searchWorks).not.toHaveBeenCalled();
   });
 
+  it("searches when a short q is paired with a long-enough author", async () => {
+    vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+    await searchBooks("ab", { author: "Le Guin" });
+    expect(openLibrary.searchWorks).toHaveBeenCalledTimes(1);
+  });
+
   it("caches separately per filter", async () => {
     vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
     await searchBooks("dune cachekey");

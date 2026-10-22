@@ -89,7 +89,6 @@ export default function Search() {
           <Pressable
             onPress={() => setFiltersOpen((o) => !o)}
             accessibilityRole="button"
-            accessibilityLabel="Search filters"
             accessibilityState={{ expanded: filtersOpen }}
             style={styles.filterToggle}
           >

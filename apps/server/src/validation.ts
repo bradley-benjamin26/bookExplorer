@@ -30,28 +30,33 @@ const MAX_FILTER_TEXT = 100;
  * Validates the raw /api/search filter params. Returns the typed filters, or
  * an error message for the 400 (malformed years, unknown sort/language, ...).
  */
-export function parseSearchFilters(raw: Record<string, string | undefined>): SearchFilters | string {
+export function parseSearchFilters(raw: Record<string, unknown>): SearchFilters | string {
+  // A repeated param (?author=a&author=b) arrives as an array.
+  for (const [key, v] of Object.entries(raw)) {
+    if (v !== undefined && typeof v !== "string") return `'${key}' must be a single value`;
+  }
+  const r = raw as Record<string, string | undefined>;
   const out: SearchFilters = {};
   for (const key of ["author", "subject"] as const) {
-    const v = raw[key]?.trim();
+    const v = r[key]?.trim();
     if (!v) continue;
     if (v.length > MAX_FILTER_TEXT) return `'${key}' is too long`;
     out[key] = v;
   }
-  if (raw.language) {
+  if (r.language) {
     // Open Library uses 3-letter ISO 639-2 codes, e.g. "eng".
-    if (!/^[a-z]{3}$/.test(raw.language)) return "'language' must be a 3-letter code";
-    out.language = raw.language;
+    if (!/^[a-z]{3}$/.test(r.language)) return "'language' must be a 3-letter code";
+    out.language = r.language;
   }
   for (const key of ["yearFrom", "yearTo"] as const) {
-    if (!raw[key]) continue;
-    if (!/^\d{4}$/.test(raw[key]!)) return `'${key}' must be a 4-digit year`;
-    out[key] = Number(raw[key]);
+    if (!r[key]) continue;
+    if (!/^\d{4}$/.test(r[key]!)) return `'${key}' must be a 4-digit year`;
+    out[key] = Number(r[key]);
   }
   if (out.yearFrom && out.yearTo && out.yearFrom > out.yearTo) return "'yearFrom' must not be after 'yearTo'";
-  if (raw.sort) {
-    if (!(SEARCH_SORTS as readonly string[]).includes(raw.sort)) return "'sort' must be relevance, new or old";
-    out.sort = raw.sort as SearchFilters["sort"];
+  if (r.sort) {
+    if (!(SEARCH_SORTS as readonly string[]).includes(r.sort)) return "'sort' must be relevance, new or old";
+    out.sort = r.sort as SearchFilters["sort"];
   }
   return out;
 }
