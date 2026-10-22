@@ -21,6 +21,7 @@ const keys = (c: PersistedClient) => c.clientState.queries.map((q) => q.queryKey
 describe("savedKeyFor", () => {
   it("maps detail and graph queries to their saved-item key and ignores the rest", () => {
     expect(savedKeyFor(["book", "123"])).toBe("book:123");
+    expect(savedKeyFor(["book", "0306406152"], { isbn: "9780306406157" })).toBe("book:9780306406157");
     expect(savedKeyFor(["graph", "work", "OL1W"])).toBe("work:OL1W");
     expect(savedKeyFor(["search", { q: "x" }])).toBeNull();
   });
@@ -83,6 +84,16 @@ describe("persisted query cache", () => {
     const restored = await restore();
     expect(restored.getQueryData(["book", "1"])).toEqual(book);
     expect(restored.getQueryCache().getAll()).toHaveLength(51);
+  });
+
+  it("protects a book saved under the server's ISBN, as the book screen saves it, when opened by the other ISBN form", async () => {
+    const fetched = { isbn: "9780306406157", title: "Cached" };
+    await toggleSaved({ type: "book", id: fetched.isbn, title: fetched.title }); // what book/[isbn].tsx does: id = data.isbn
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["book", "0306406152"], fetched, { updatedAt: 1 });
+    for (let i = 0; i < 60; i++) await queryClient.fetchQuery({ queryKey: ["work", `w${i}`], queryFn: () => ({ i }) });
+    await save(queryClient);
+    expect((await restore()).getQueryData(["book", "0306406152"])).toEqual(fetched);
   });
 
   it("drops the cache when the schema version is bumped", async () => {

@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
@@ -39,6 +40,8 @@ export default function WorkDetail() {
   const handleToggleSaved = async () => {
     if (!data) return;
     const nowSaved = await toggleSaved({ type: "work", id: data.openLibraryWorkId, title: data.title });
+    // Keeps the cover on disk so the saved work still shows it offline.
+    if (nowSaved && data.coverUrl) Image.prefetch(data.coverUrl, "disk");
     setSaved(nowSaved);
   };
 
@@ -57,7 +60,7 @@ export default function WorkDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
+      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
       <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
       {data.authors.map((author) => (
         <Pressable

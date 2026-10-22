@@ -7,7 +7,7 @@ export function OfflineBanner({ show, updatedAt }: { show: boolean; updatedAt: n
   if (!show) return null;
   return (
     <Text style={styles.banner} accessibilityRole="alert" accessibilityLiveRegion="polite">
-      Offline, last updated {new Date(updatedAt).toLocaleString()}
+      Couldn't refresh. Showing the copy from {new Date(updatedAt).toLocaleString()}
     </Text>
   );
 }

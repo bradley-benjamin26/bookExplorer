@@ -3,7 +3,8 @@ import { normalizeIsbn, slugifySubject, type TaggedTerm } from "@book-explorer/s
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
@@ -69,6 +70,8 @@ export default function BookDetail() {
     if (!data) return;
     const nowSaved = await toggleSaved({ type: "book", id: data.isbn, title: data.title });
     if (nowSaved) {
+      // Keeps the cover on disk so the saved book still shows it offline.
+      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
       setSavedRecord(await saveBookFromApi(data));
     } else {
       await removeSavedBook(data.isbn);
@@ -111,7 +114,7 @@ export default function BookDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
+      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
       {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
       {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
         <GoogleBooksAttribution label="Cover image" />

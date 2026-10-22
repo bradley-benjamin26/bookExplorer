@@ -697,6 +697,7 @@ export default function GraphExplorer() {
     const centerLabel = layout.nodes[0]?.label ?? "this";
     return (
       <View style={styles.center}>
+        <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
         <Text style={styles.emptyGraphText}>No linked connections found for {centerLabel} yet.</Text>
       </View>
     );

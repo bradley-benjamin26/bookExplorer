@@ -10,16 +10,18 @@ export const CACHE_LIMIT = 50;
 const DETAIL_TYPES = ["book", "work", "author", "subject"];
 
 /** The `type:id` saved-item key a detail or graph query belongs to, or null for queries the offline cache ignores. */
-export function savedKeyFor(queryKey: readonly unknown[]): string | null {
+export function savedKeyFor(queryKey: readonly unknown[], data?: unknown): string | null {
   const [kind, a, b] = queryKey;
   if (kind === "graph") return `${a}:${b}`;
+  // A book is saved under the ISBN the server returned, which can be the other (10 vs 13) form of the one in the route.
+  if (kind === "book") return `book:${(data as { isbn?: string } | undefined)?.isbn ?? a}`;
   return DETAIL_TYPES.includes(kind as string) ? `${kind}:${a}` : null;
 }
 
 /** Keeps every saved item's detail and graph, plus the `limit` most recently fetched other details; drops the rest (search, unsaved graphs). */
 export function pruneClient(client: PersistedClient, savedKeys: Set<string>, limit = CACHE_LIMIT): PersistedClient {
   const kept = client.clientState.queries.filter((q) => savedKeyFor(q.queryKey) !== null);
-  const isSaved = (q: (typeof kept)[number]) => savedKeys.has(savedKeyFor(q.queryKey)!);
+  const isSaved = (q: (typeof kept)[number]) => savedKeys.has(savedKeyFor(q.queryKey, q.state.data)!);
   const recent = kept
     .filter((q) => !isSaved(q) && q.queryKey[0] !== "graph")
     .sort((x, y) => y.state.dataUpdatedAt - x.state.dataUpdatedAt)
