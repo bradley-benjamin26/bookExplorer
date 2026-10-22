@@ -286,6 +286,19 @@ export const SavedBookExportSchema = z.object({
   savedAt: z.number().int().nonnegative(),
 });
 
+export const SavedWorkExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  // Becomes part of a storage key, so only Open Library's work id form.
+  openLibraryWorkId: z.string().regex(/^OL\d+W$/),
+  title: text,
+  authorNames: tagList,
+  subjects: tagList,
+  genres: tagList,
+  notes: text,
+  savedAt: z.number().int().nonnegative(),
+});
+
 export const LibraryExportSchema = z.object({
   ...VersionedFields,
   id: z.string().min(1).max(200),
@@ -294,13 +307,21 @@ export const LibraryExportSchema = z.object({
   titleUrl: webUrl,
 });
 
-/** A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts). */
-export const SnapshotExportSchema = z.object({
-  schemaVersion: z.number().int().positive(),
-  items: z.array(SavedItemExportSchema).max(MAX_IMPORT_RECORDS),
-  books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
-  libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
-});
+/**
+ * A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts).
+ * Version 1 files predate saved-work records, so they have no `works` and read as none;
+ * from version 2 on `works` is required. (A newer schemaVersion is the app's to reject.)
+ */
+export const SnapshotExportSchema = z
+  .object({
+    schemaVersion: z.number().int().positive(),
+    items: z.array(SavedItemExportSchema).max(MAX_IMPORT_RECORDS),
+    books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
+    works: z.array(SavedWorkExportSchema).max(MAX_IMPORT_RECORDS).optional(),
+    libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
+  })
+  .refine((s) => s.schemaVersion < 2 || s.works !== undefined, { message: "works is required from schemaVersion 2", path: ["works"] })
+  .transform(({ works = [], ...rest }) => ({ ...rest, works }));
 export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;
 
 export const SeriesMemberSchema = z.object({

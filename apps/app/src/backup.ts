@@ -4,7 +4,7 @@ import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
 import { getSavedBook, saveBook } from "./storage/savedBooks";
 import { SCHEMA_VERSION } from "./storage/schema";
-import { applySnapshot, getSnapshot, type Snapshot } from "./storage/snapshot";
+import { applySnapshot, getSnapshot, withWorkRecords, type Snapshot } from "./storage/snapshot";
 
 // Fails to compile unless the shared import schema and the stored Snapshot are the same
 // type, so a field added to a stored record can't be silently stripped on import.
@@ -46,7 +46,8 @@ export function parseSnapshotJson(text: string): Snapshot {
 
 /** Merge: union with what's saved, newer edit wins per record. Replace: the backup becomes the whole dataset. */
 export async function importSnapshot(imported: Snapshot, mode: "merge" | "replace"): Promise<void> {
-  await applySnapshot(mode === "replace" ? imported : mergeSnapshots(await getSnapshot(), imported));
+  // After the merge, so a v1 backup's work items only get a blank record where neither side has one.
+  await applySnapshot(withWorkRecords(mode === "replace" ? imported : mergeSnapshots(await getSnapshot(), imported)));
 }
 
 export function parseBookCsv(text: string): CsvBookRow[] {

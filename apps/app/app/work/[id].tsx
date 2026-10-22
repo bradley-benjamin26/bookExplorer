@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
@@ -12,12 +12,13 @@ import { EditionsSection } from "../../src/components/EditionsSection";
 import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
+import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { SourceBadge } from "../../src/components/SourceBadge";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
-import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
+import { getSavedWork, saveWork, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -32,18 +33,30 @@ export default function WorkDetail() {
     enabled: !!id,
   });
 
-  const [saved, setSaved] = useState(false);
+  // Saved exactly when it has a saved record, as on the book page.
+  const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
+  const saved = savedRecord !== null;
 
-  useEffect(() => {
-    if (id) isItemSaved("work", id).then(setSaved);
-  }, [id]);
+  // Re-read on every focus: this screen stays mounted under others, so an edit
+  // or removal on the Saved screen would otherwise not show here.
+  // Saved under the id the server returned, in case it differs from the route's.
+  const savedId = data?.openLibraryWorkId ?? id;
+  useFocusEffect(
+    useCallback(() => {
+      if (savedId) getSavedWork(savedId).then(setSavedRecord);
+    }, [savedId])
+  );
 
   const handleToggleSaved = async () => {
     if (!data) return;
-    const nowSaved = await toggleSaved({ type: "work", id: data.openLibraryWorkId, title: data.title });
-    // Keeps the cover on disk so the saved work still shows it offline.
-    if (nowSaved && data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-    setSaved(nowSaved);
+    if (saved) {
+      await unsaveWork(data.openLibraryWorkId);
+      setSavedRecord(null);
+    } else {
+      // Keeps the cover on disk so the saved work still shows it offline.
+      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+      setSavedRecord(await saveWork(data));
+    }
   };
 
   if (isLoading) {
@@ -103,7 +116,15 @@ export default function WorkDetail() {
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
-      {data.genres.length > 0 && (
+      {savedRecord ? (
+        <SavedRecordEditor
+          record={savedRecord}
+          update={(changes) => updateSavedWork(savedRecord.openLibraryWorkId, changes)}
+          onChange={setSavedRecord}
+        />
+      ) : null}
+
+      {!savedRecord && data.genres.length > 0 && (
         <View style={styles.genresSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">Genre</Text>
           <View style={styles.genreTags}>
@@ -125,7 +146,7 @@ export default function WorkDetail() {
         </View>
       )}
 
-      {data.subjects.length > 0 && (
+      {!savedRecord && data.subjects.length > 0 && (
         <View style={styles.subjectsSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">Subjects</Text>
           <View style={styles.subjectTags}>

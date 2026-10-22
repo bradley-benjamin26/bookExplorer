@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
 import { titleCase } from "../titleCase";
@@ -63,18 +62,22 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
 // input first — any still-pending save is also flushed on unmount.
 const NOTES_SAVE_DELAY_MS = 600;
 
-/** Shown on a book's detail page once it's saved, in place of the read-only
+type EditableFields = { subjects: string[]; genres: string[]; notes: string };
+
+/** Shown for a saved book or work once it's saved, in place of the read-only
  * subject/genre tags — lets the user add to or remove from this saved
  * record's own subjects/genres and keep freeform notes. Tag changes are
- * persisted immediately and notes shortly after typing pauses, rather than
- * needing an explicit save step, matching how the rest of this screen
- * behaves. */
-export function SavedBookEditor({
+ * persisted immediately (through `update`, the record kind's own storage
+ * function) and notes shortly after typing pauses, rather than needing an
+ * explicit save step, matching how the rest of the app behaves. */
+export function SavedRecordEditor<R extends EditableFields>({
   record,
+  update,
   onChange,
 }: {
-  record: SavedBookRecord;
-  onChange: (next: SavedBookRecord) => void;
+  record: R;
+  update: (changes: Partial<EditableFields>) => Promise<R | null>;
+  onChange: (next: R) => void;
 }) {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
@@ -95,10 +98,10 @@ export function SavedBookEditor({
   // they've all landed, `record` is caught up and is synced back in below.
   const inFlightWrites = useRef(0);
 
-  const persist = async (changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>) => {
+  const persist = async (changes: Partial<EditableFields>) => {
     inFlightWrites.current += 1;
     try {
-      const next = await updateSavedBook(record.isbn, changes);
+      const next = await update(changes);
       if (next) onChange(next);
     } finally {
       inFlightWrites.current -= 1;

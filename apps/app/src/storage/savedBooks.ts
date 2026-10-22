@@ -105,7 +105,7 @@ export function updateSavedBook(
  * A tombstone of `record`: keys and timestamps stay so a merge still sees the
  * removal, but the user's notes and tags don't outlive it (or reach a backup).
  */
-export function withoutContent(record: SavedBookRecord): SavedBookRecord {
+export function withoutContent<T extends Pick<SavedBookRecord, "subjects" | "genres" | "notes">>(record: T): T {
   return { ...record, subjects: [], genres: [], notes: "" };
 }
 

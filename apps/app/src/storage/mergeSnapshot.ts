@@ -1,10 +1,12 @@
 import type { Library } from "./librarySettings";
 import type { SavedBookRecord } from "./savedBooks";
 import type { SavedItem } from "./savedItems";
+import type { SavedWorkRecord } from "./savedWorks";
 import type { Versioned } from "./schema";
 import type { Snapshot } from "./snapshot";
 
 type Mergeable = Versioned & { deletedAt?: number };
+type Tagged = Mergeable & { subjects: string[]; genres: string[]; notes: string };
 
 /**
  * Which of two copies of one record survives: the newer updatedAt; on a tie a
@@ -19,7 +21,7 @@ function newer<T extends Mergeable>(a: T, b: T): T {
 
 const union = (a: string[], b: string[]) => [...new Set([...a, ...b])];
 
-function mergeBook(a: SavedBookRecord, b: SavedBookRecord): SavedBookRecord {
+function mergeTagged<T extends Tagged>(a: T, b: T): T {
   const winner = newer(a, b);
   if (winner.deletedAt || a.deletedAt || b.deletedAt) return winner;
   // Tags are a set union: one side adding a tag shouldn't drop the other side's.
@@ -49,26 +51,26 @@ function follow<T extends Mergeable>(r: T, lead: Mergeable): T {
 }
 
 /**
- * A book's saved item and its record merge separately, so removing a book on
- * one side and editing its notes on the other could leave one live and one
- * removed. Whichever changed last decides for both (a tombstone on a tie).
+ * A book's (or work's) saved item and its record merge separately, so removing
+ * it on one side and editing its notes on the other could leave one live and
+ * one removed. Whichever changed last decides for both (a tombstone on a tie).
  */
-function reconcile(items: Map<string, SavedItem>, books: Map<string, SavedBookRecord>) {
-  for (const [isbn, record] of books) {
-    const item = items.get(`book:${isbn}`);
+function reconcile<T extends Tagged>(items: Map<string, SavedItem>, type: SavedItem["type"], records: Map<string, T>) {
+  for (const [id, record] of records) {
+    const item = items.get(`${type}:${id}`);
     if (!item || !item.deletedAt === !record.deletedAt) continue;
     const lead = newer<Mergeable>(item, record);
-    items.set(`book:${isbn}`, follow(item, lead));
+    items.set(`${type}:${id}`, follow(item, lead));
     const followed = follow(record, lead);
     // A tombstone drops notes and tags, as removeSavedBook's does.
-    books.set(isbn, followed.deletedAt ? { ...followed, subjects: [], genres: [], notes: "" } : followed);
+    records.set(id, followed.deletedAt ? { ...followed, subjects: [], genres: [], notes: "" } : followed);
   }
 }
 
 /**
  * Union of two snapshots, record by record: newer updatedAt wins, tombstones
- * beat older edits, and a book's tags (subjects/genres) are unioned when both
- * copies are live, then a book's item and record are made to agree on whether
+ * beat older edits, and a book's or work's tags (subjects/genres) are unioned when both
+ * copies are live, then each one's item and record are made to agree on whether
  * it's saved. Pure, so a future cross-device sync can reuse it.
  *
  * Libraries have no tombstone (removeLibrary hard-deletes), so a library
@@ -78,12 +80,15 @@ function reconcile(items: Map<string, SavedItem>, books: Map<string, SavedBookRe
  */
 export function mergeSnapshots(a: Snapshot, b: Snapshot): Snapshot {
   const items = mergeBy<SavedItem>(a.items, b.items, (i) => `${i.type}:${i.id}`, newer);
-  const books = mergeBy<SavedBookRecord>(a.books, b.books, (r) => r.isbn, mergeBook);
-  reconcile(items, books);
+  const books = mergeBy<SavedBookRecord>(a.books, b.books, (r) => r.isbn, mergeTagged);
+  const works = mergeBy<SavedWorkRecord>(a.works, b.works, (r) => r.openLibraryWorkId, mergeTagged);
+  reconcile(items, "book", books);
+  reconcile(items, "work", works);
   return {
     schemaVersion: Math.max(a.schemaVersion, b.schemaVersion),
     items: sorted(items),
     books: sorted(books),
+    works: sorted(works),
     libraries: sorted(mergeBy<Library>(a.libraries, b.libraries, (l) => l.id, newer)),
   };
 }

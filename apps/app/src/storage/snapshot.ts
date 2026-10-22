@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getLibraries, saveLibraries, type Library } from "./librarySettings";
 import { getAllSavedBooks, replaceSavedBooks, type SavedBookRecord } from "./savedBooks";
 import { getAllSavedItems, replaceSavedItems, type SavedItem } from "./savedItems";
+import { getAllSavedWorks, replaceSavedWorks, type SavedWorkRecord } from "./savedWorks";
 import { SCHEMA_VERSION, stamp } from "./schema";
 
 const VERSION_KEY = "book-explorer:schema-version";
@@ -14,6 +15,7 @@ export interface Snapshot {
   schemaVersion: number;
   items: SavedItem[];
   books: SavedBookRecord[];
+  works: SavedWorkRecord[];
   libraries: Library[];
 }
 
@@ -21,23 +23,44 @@ export interface Snapshot {
 const withStamp = <T extends object>(r: T) => stamp({ updatedAt: (r as { savedAt?: number }).savedAt ?? Date.now(), ...r });
 
 export async function getSnapshot(): Promise<Snapshot> {
-  const [items, books, libraries] = await Promise.all([getAllSavedItems(), getAllSavedBooks(), getLibraries()]);
+  const [items, books, works, libraries] = await Promise.all([getAllSavedItems(), getAllSavedBooks(), getAllSavedWorks(), getLibraries()]);
   return {
     schemaVersion: SCHEMA_VERSION,
     items: items.map(withStamp),
     books: books.map(withStamp),
+    works,
     libraries: libraries.map(withStamp),
   };
 }
 
 /** Writes the snapshot as the full dataset, replacing whatever is stored. Merging is the caller's job. */
 export async function applySnapshot(snapshot: Snapshot): Promise<void> {
-  await Promise.all([replaceSavedItems(snapshot.items), replaceSavedBooks(snapshot.books), saveLibraries(snapshot.libraries)]);
+  await Promise.all([
+    replaceSavedItems(snapshot.items),
+    replaceSavedBooks(snapshot.books),
+    replaceSavedWorks(snapshot.works),
+    saveLibraries(snapshot.libraries),
+  ]);
 }
 
 /** One-time upgrade of data saved before versioning; call once at startup. Safe to call repeatedly. */
 export async function migrateStorage(): Promise<void> {
   if (Number(await AsyncStorage.getItem(VERSION_KEY)) >= SCHEMA_VERSION) return;
-  await applySnapshot(await getSnapshot());
+  await applySnapshot(withWorkRecords(await getSnapshot()));
   await AsyncStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+}
+
+/**
+ * v2: each live saved work with no record gets a minimal one, so it can be
+ * edited like a new save. Also applied to imports, since a v1 backup has work
+ * items but no records. Adds nothing once every live work has a record.
+ */
+export function withWorkRecords(snapshot: Snapshot): Snapshot {
+  const have = new Set(snapshot.works.map((w) => w.openLibraryWorkId));
+  const missing: SavedWorkRecord[] = snapshot.items
+    .filter((i) => i.type === "work" && !i.deletedAt && !have.has(i.id))
+    .map((i) =>
+      stamp({ openLibraryWorkId: i.id, title: i.title, authorNames: [], subjects: [], genres: [], notes: "", savedAt: i.updatedAt, updatedAt: i.updatedAt })
+    );
+  return { ...snapshot, works: [...snapshot.works, ...missing] };
 }

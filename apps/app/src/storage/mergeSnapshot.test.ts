@@ -3,6 +3,7 @@ import type { Library } from "./librarySettings";
 import { mergeSnapshots } from "./mergeSnapshot";
 import type { SavedBookRecord } from "./savedBooks";
 import type { SavedItem } from "./savedItems";
+import type { SavedWorkRecord } from "./savedWorks";
 import type { Snapshot } from "./snapshot";
 
 const item = (id: string, updatedAt: number, extra: Partial<SavedItem> = {}): SavedItem => ({
@@ -31,9 +32,22 @@ const book = (isbn: string, updatedAt: number, extra: Partial<SavedBookRecord> =
   ...extra,
 });
 
+const work = (id: string, updatedAt: number, extra: Partial<SavedWorkRecord> = {}): SavedWorkRecord => ({
+  schemaVersion: 2,
+  updatedAt,
+  openLibraryWorkId: id,
+  title: "W",
+  authorNames: [],
+  subjects: [],
+  genres: [],
+  notes: "",
+  savedAt: 1,
+  ...extra,
+});
+
 const library = (id: string, updatedAt: number, name = id): Library => ({ schemaVersion: 1, updatedAt, id, name, isbnUrl: "", titleUrl: "" });
 
-const snap = (parts: Partial<Snapshot>): Snapshot => ({ schemaVersion: 1, items: [], books: [], libraries: [], ...parts });
+const snap = (parts: Partial<Snapshot>): Snapshot => ({ schemaVersion: 1, items: [], books: [], works: [], libraries: [], ...parts });
 
 describe("mergeSnapshots", () => {
   it("unions records only one side has, newest first", () => {
@@ -110,6 +124,36 @@ describe("mergeSnapshots", () => {
   it("leaves a work item alone even if a book record shares its id", () => {
     const merged = mergeSnapshots(snap({ items: [item("1", 40, { type: "work", deletedAt: 40 })] }), snap({ books: [book("1", 30)] }));
     expect(merged.books[0].deletedAt).toBeUndefined();
+  });
+
+  it("merges work conflicts like books: newer wins, live tags union, a tombstone wins a tie", () => {
+    const a = snap({ works: [work("OL1W", 10, { subjects: ["a"], notes: "old" })] });
+    const b = snap({ works: [work("OL1W", 20, { subjects: ["b"], notes: "new" })] });
+    expect(mergeSnapshots(a, b).works).toEqual([work("OL1W", 20, { subjects: ["b", "a"], notes: "new" })]);
+    expect(mergeSnapshots(b, a).works).toEqual(mergeSnapshots(a, b).works);
+    const removed = work("OL1W", 20, { deletedAt: 20 });
+    expect(mergeSnapshots(b, snap({ works: [removed] })).works[0]).toEqual(removed);
+    expect(mergeSnapshots(snap({ works: [removed] }), b).works[0]).toEqual(removed);
+  });
+
+  it("reconciles a work's item and record, whichever changed last", () => {
+    const workItem = (updatedAt: number, extra: Partial<SavedItem> = {}) => item("OL1W", updatedAt, { type: "work", ...extra });
+    // Record edited after the removal: both live.
+    const revived = mergeSnapshots(
+      snap({ items: [workItem(20, { deletedAt: 20 })], works: [work("OL1W", 20, { deletedAt: 20 })] }),
+      snap({ items: [workItem(5)], works: [work("OL1W", 30, { notes: "edited" })] })
+    );
+    expect(revived.items[0]).toEqual(workItem(30));
+    expect(revived.works[0]).toEqual(work("OL1W", 30, { notes: "edited" }));
+    // Item removed after the record's last edit: record tombstoned and blanked.
+    const removed = mergeSnapshots(
+      snap({ items: [workItem(40, { deletedAt: 40 })] }),
+      snap({ items: [workItem(5)], works: [work("OL1W", 30, { notes: "private", genres: ["g"] })] })
+    );
+    expect(removed.works[0]).toMatchObject({ updatedAt: 40, deletedAt: 40, notes: "", subjects: [], genres: [] });
+    // A book item with the same id doesn't touch the work record.
+    const other = mergeSnapshots(snap({ items: [item("OL1W", 40, { deletedAt: 40 })] }), snap({ works: [work("OL1W", 30)] }));
+    expect(other.works[0].deletedAt).toBeUndefined();
   });
 
   it("brings back a library one side removed, since libraries have no tombstone", () => {

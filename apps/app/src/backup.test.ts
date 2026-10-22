@@ -6,7 +6,8 @@ import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems, toggleSaved } from "./storage/savedItems";
-import { getSnapshot } from "./storage/snapshot";
+import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
+import { getSnapshot, migrateStorage } from "./storage/snapshot";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 vi.mock("./api/bookLookup", () => ({ fetchBookWithAlternate: vi.fn() }));
@@ -22,6 +23,8 @@ async function seed() {
   await runCsvImport([{ title: "Dune", isbn: "9780441013593" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
   await updateSavedBook("9780441013593", { notes: "spice" });
   await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://lib.example/?q=", titleUrl: "" });
+  await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
+  await migrateStorage(); // gives OL1W its record
 }
 
 describe("JSON backup", () => {
@@ -46,7 +49,7 @@ describe("JSON backup", () => {
     backup.books[0] = { ...backup.books[0], notes: "from backup", updatedAt: backup.books[0].updatedAt + 1000 };
     await toggleSaved({ type: "author", id: "OL1A", title: "Local only" });
     await importSnapshot(backup, "merge");
-    expect((await getSavedItems()).map((i) => i.id).sort()).toEqual(["9780441013593", "OL1A"]);
+    expect((await getSavedItems()).map((i) => i.id).sort()).toEqual(["9780441013593", "OL1A", "OL1W"]);
     expect((await getSavedBook("9780441013593"))?.notes).toBe("from backup");
   });
 
@@ -69,6 +72,44 @@ describe("JSON backup", () => {
     ];
     for (const text of cases) expect(() => parseSnapshotJson(text), text.slice(0, 60)).toThrow(ImportError);
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
+  });
+
+  it("exports v2 with works, and imports a v1 backup (no works) as having none", async () => {
+    await seed();
+    const v2 = JSON.parse(await exportJson());
+    expect(v2.schemaVersion).toBe(2);
+    expect(v2.works).toMatchObject([{ openLibraryWorkId: "OL1W", title: "Emma" }]);
+    expect(parseSnapshotJson(JSON.stringify(v2)).works).toHaveLength(1);
+
+    const { works: _, ...v1 } = { ...v2, schemaVersion: 1 };
+    const parsed = parseSnapshotJson(JSON.stringify(v1));
+    expect(parsed.works).toEqual([]);
+    // Merging a v1 backup keeps the local work record, edits included.
+    await updateSavedWork("OL1W", { notes: "local" });
+    await importSnapshot({ ...parsed, items: parsed.items.map((i) => ({ ...i, updatedAt: Date.now() + 1000 })) }, "merge");
+    expect((await getSavedWork("OL1W"))?.notes).toBe("local");
+    // Replacing with it gives its saved works minimal records, as the storage migration does.
+    await importSnapshot(parsed, "replace");
+    expect(await getSavedWork("OL1W")).toMatchObject({ title: "Emma", subjects: [], notes: "" });
+  });
+
+  it("rejects a v2 backup without works, or with malformed works", async () => {
+    await seed();
+    const good = JSON.parse(await exportJson());
+    const bad = (mutate: (s: typeof good) => void) => {
+      const copy = structuredClone(good);
+      mutate(copy);
+      return JSON.stringify(copy);
+    };
+    const cases = [
+      bad((s) => delete s.works),
+      bad((s) => (s.works = "nope")),
+      bad((s) => (s.works[0].openLibraryWorkId = "../../evil")),
+      bad((s) => delete s.works[0].updatedAt),
+      bad((s) => (s.works[0].subjects = [1])),
+      bad((s) => (s.works[0].notes = "x".repeat(10_001))),
+    ];
+    for (const text of cases) expect(() => parseSnapshotJson(text)).toThrow(ImportError);
   });
 
   it("strips unknown fields from imported records", async () => {

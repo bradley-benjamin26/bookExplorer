@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
 import { RecommendationsSection } from "../src/components/RecommendationsSection";
-import { SavedBookEditor } from "../src/components/SavedBookEditor";
+import { SavedRecordEditor } from "../src/components/SavedRecordEditor";
 import { routes } from "../src/navigation";
 import {
   generateLibraryId,
@@ -14,7 +14,8 @@ import {
   upsertLibrary,
   type Library,
 } from "../src/storage/librarySettings";
-import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedBook, removeSavedBook, updateSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedWork, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../src/storage/savedWorks";
 import { stamp, type Unversioned } from "../src/storage/schema";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
@@ -155,17 +156,16 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const [expanded, setExpanded] = useState(false);
-  const [record, setRecord] = useState<SavedBookRecord | null>(null);
+  const [record, setRecord] = useState<SavedBookRecord | SavedWorkRecord | null>(null);
 
-  // Only a "book" item (keyed by ISBN) has an editable record — a saved
-  // "work" has nowhere to snapshot subjects/genres from (Open Library's
-  // work-level data has no single edition's worth of metadata to seed it
-  // with), so it's shown but not editable.
-  const editable = item.type === "book";
+  // Books (by ISBN) and works (by work id) each have an editable record.
+  const editable = item.type === "book" || item.type === "work";
+  const update = (changes: Parameters<typeof updateSavedBook>[1]) =>
+    item.type === "work" ? updateSavedWork(item.id, changes) : updateSavedBook(item.id, changes);
 
   const handleToggleExpand = () => {
     if (!expanded && !record) {
-      getSavedBook(item.id).then(setRecord);
+      (item.type === "work" ? getSavedWork(item.id) : getSavedBook(item.id)).then(setRecord);
     }
     setExpanded((prev) => !prev);
   };
@@ -204,7 +204,7 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
           <Text style={styles.removeText}>Remove</Text>
         </Pressable>
       </View>
-      {expanded && editable && (record ? <SavedBookEditor record={record} onChange={setRecord} /> : null)}
+      {expanded && editable && (record ? <SavedRecordEditor record={record} update={update} onChange={setRecord} /> : null)}
     </View>
   );
 }
@@ -226,11 +226,14 @@ export default function Saved() {
   const authors = items.filter((i) => i.type === "author");
 
   const handleRemove = async (item: SavedItem) => {
-    await removeSaved(item.type, item.id);
-    // A book's editable record (tags, notes) lives under its own key — left
-    // behind, the book page would still show it as saved, and saving it
+    // A book's or work's editable record (tags, notes) lives under its own key — left
+    // behind, its page would still show it as saved, and saving it
     // again would resurrect the old notes instead of starting fresh.
-    if (item.type === "book") await removeSavedBook(item.id);
+    if (item.type === "work") await unsaveWork(item.id);
+    else {
+      await removeSaved(item.type, item.id);
+      if (item.type === "book") await removeSavedBook(item.id);
+    }
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
   };
 

@@ -20,7 +20,7 @@ const book = (title: string, subjects: string[], extra: Partial<SavedBookRecord>
   savedAt: 1,
   ...extra,
 });
-const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = []): Snapshot => ({ schemaVersion: 1, items, books, libraries: [] });
+const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = []): Snapshot => ({ schemaVersion: 1, items, books, works: [], libraries: [] });
 const work = (id: string, authorId = "OLxA"): WorkRef => ({ openLibraryWorkId: id, title: `Title ${id}`, authors: [{ openLibraryId: authorId, name: authorId }], coverUrl: null });
 const subject = (slug: string, books: WorkRef[]): Subject => ({ slug, name: slug, workCount: books.length, wikidataId: null, description: null, relatedConcepts: [], books });
 // Treats every saved term as public (as if every book's API detail were cached).
