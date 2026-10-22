@@ -1,7 +1,51 @@
+import { DatabaseSync } from "node:sqlite";
+
 type Entry<T> = { value: T; expiresAt: number };
 
 export interface CacheEntryOptions {
   ttlMs: number;
+}
+
+// Bump when a cached value's shape changes so old persisted rows are ignored.
+const CACHE_SCHEMA_VERSION = 1;
+const PURGE_INTERVAL_MS = 1000 * 60 * 60;
+
+// Optional second tier shared by every TtlCache that has a namespace. Off
+// (undefined) unless initPersistentCache succeeds, so dev behaviour is unchanged.
+let db: DatabaseSync | undefined;
+let purgeTimer: NodeJS.Timeout | undefined;
+
+function purgeExpired(): void {
+  try {
+    db?.prepare("DELETE FROM cache WHERE expires_at <= ?").run(Date.now());
+  } catch {
+    // Persistence is best-effort; the memory tier keeps working.
+  }
+}
+
+export function initPersistentCache(path: string): void {
+  closePersistentCache();
+  try {
+    db = new DatabaseSync(path);
+    db.exec("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, expires_at INTEGER NOT NULL)");
+    purgeExpired();
+    purgeTimer = setInterval(purgeExpired, PURGE_INTERVAL_MS);
+    purgeTimer.unref();
+  } catch (err) {
+    console.error("Persistent cache unavailable, using memory only:", err);
+    closePersistentCache();
+  }
+}
+
+export function closePersistentCache(): void {
+  clearInterval(purgeTimer);
+  purgeTimer = undefined;
+  try {
+    db?.close();
+  } catch {
+    // already closed
+  }
+  db = undefined;
 }
 
 export class TtlCache<T> {
@@ -21,8 +65,41 @@ export class TtlCache<T> {
   // insertion order, so that's just its first key).
   constructor(
     private ttlMs: number,
-    private maxEntries = 1000
+    private maxEntries = 1000,
+    // Enables the persistent tier for this cache (keys are prefixed with it).
+    private namespace?: string
   ) {}
+
+  private dbKey(key: string): string {
+    return `${CACHE_SCHEMA_VERSION}:${this.namespace}:${key}`;
+  }
+
+  private readPersisted(key: string): { value: T; ttlMs: number } | undefined {
+    if (!db || !this.namespace) return undefined;
+    try {
+      const row = db.prepare("SELECT v, expires_at FROM cache WHERE k = ?").get(this.dbKey(key)) as
+        | { v: string; expires_at: number }
+        | undefined;
+      const ttlMs = row ? row.expires_at - Date.now() : 0;
+      return row && ttlMs > 0 ? { value: JSON.parse(row.v) as T, ttlMs } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private writePersisted(key: string, value: T, ttlMs: number): void {
+    const json = JSON.stringify(value);
+    if (!db || !this.namespace || json === undefined) return;
+    try {
+      db.prepare("INSERT OR REPLACE INTO cache (k, v, expires_at) VALUES (?, ?, ?)").run(
+        this.dbKey(key),
+        json,
+        Date.now() + ttlMs
+      );
+    } catch {
+      // Memory tier still holds the value.
+    }
+  }
 
   get(key: string): T | undefined {
     const entry = this.store.get(key);
@@ -57,10 +134,18 @@ export class TtlCache<T> {
     const inFlight = this.pending.get(key);
     if (inFlight) return inFlight;
 
+    const persisted = this.readPersisted(key);
+    if (persisted) {
+      this.set(key, persisted.value, persisted.ttlMs);
+      return persisted.value;
+    }
+
     const entry: CacheEntryOptions = { ttlMs: this.ttlMs };
     const promise = fetcher(entry)
       .then((value) => {
         this.set(key, value, entry.ttlMs);
+        // entry.ttlMs already carries any DEGRADED_TTL_MS lowering.
+        this.writePersisted(key, value, entry.ttlMs);
         return value;
       })
       .finally(() => {

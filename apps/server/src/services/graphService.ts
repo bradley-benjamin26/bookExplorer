@@ -20,8 +20,8 @@ const MAX_PSEUDONYM_WORKS = 8;
 // already-cached pieces below), so these give repeat views of the same
 // author graph the same speed the Wikidata-derived side already gets from
 // authorService's cache, instead of re-hitting Open Library every time.
-const authorWorksCache = new TtlCache<OpenLibraryAuthorWork[]>(1000 * 60 * 60);
-const pseudonymAuthorCache = new TtlCache<{ openLibraryId: string; name: string } | null>(1000 * 60 * 60 * 24);
+const authorWorksCache = new TtlCache<OpenLibraryAuthorWork[]>(1000 * 60 * 60, 1000, "authorWorks");
+const pseudonymAuthorCache = new TtlCache<{ openLibraryId: string; name: string } | null>(1000 * 60 * 60 * 24, 1000, "pseudonymAuthor");
 
 // Open Library frequently catalogs what's really the same book as several
 // separate "work" records: a leading- or trailing-article variant ("The

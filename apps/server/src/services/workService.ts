@@ -5,7 +5,7 @@ import * as wikidata from "../sources/wikidata.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
-const workCache = new TtlCache<Work | null>(1000 * 60 * 60);
+const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
 /** Shared by the /api/works and /api/graph/work routes so both hit the same cache. */
 export function getWorkDetail(workId: string): Promise<Work | null> {

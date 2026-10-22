@@ -8,7 +8,7 @@ import * as openLibrary from "../sources/openLibrary.js";
 // (a popular query, or someone re-running the same search) without holding
 // stale entries around anywhere near as long as the ISBN/author/work caches
 // do.
-const searchCache = new TtlCache<WorkRef[]>(1000 * 60 * 10);
+const searchCache = new TtlCache<WorkRef[]>(1000 * 60 * 10, 1000, "search");
 
 // Open Library's own search endpoint rejects anything shorter than this with
 // a 422 ("Query too short, must be at least 3 characters") — confirmed live.

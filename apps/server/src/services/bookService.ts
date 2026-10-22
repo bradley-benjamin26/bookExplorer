@@ -8,7 +8,7 @@ import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
-const bookCache = new TtlCache<Book | null>(1000 * 60 * 60);
+const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
 
 // ISBNs are sometimes hyphenated for display (e.g. "978-0-06-325085-7") —
 // Open Library tolerates this, but Hardcover's lookup is an exact match

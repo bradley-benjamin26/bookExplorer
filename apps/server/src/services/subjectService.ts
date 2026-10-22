@@ -7,7 +7,7 @@ import * as wikidata from "../sources/wikidata.js";
 
 const NO_LCSH: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
 
-const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24);
+const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subject");
 
 /**
  * Merges Wikidata's own broader/narrower concepts with LCSH's broader/narrower

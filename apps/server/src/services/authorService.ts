@@ -6,7 +6,7 @@ import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 
 // Wikidata data changes rarely and its SPARQL endpoint is rate-limited, so
 // author lookups are cached longer than book lookups.
-const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24);
+const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24, 1000, "author");
 
 /**
  * Shared by the /api/authors and /api/graph/author routes so both hit the

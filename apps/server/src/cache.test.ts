@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TtlCache } from "./cache.js";
+import { TtlCache, closePersistentCache, initPersistentCache } from "./cache.js";
 
 describe("TtlCache", () => {
   afterEach(() => {
@@ -54,5 +54,60 @@ describe("TtlCache", () => {
     expect(cache.get("k")).toBe(1);
     vi.advanceTimersByTime(2);
     expect(cache.get("k")).toBeUndefined();
+  });
+});
+
+describe("TtlCache persistent tier", () => {
+  afterEach(() => {
+    closePersistentCache();
+    vi.useRealTimers();
+  });
+
+  it("serves from SQLite after the memory tier is gone", async () => {
+    initPersistentCache(":memory:");
+    const fetcher = vi.fn(async () => ({ n: 1 }));
+    await new TtlCache<{ n: number }>(60_000, 1000, "t").wrap("k", fetcher);
+    const fresh = new TtlCache<{ n: number }>(60_000, 1000, "t");
+    expect(await fresh.wrap("k", fetcher)).toEqual({ n: 1 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores expired rows", async () => {
+    vi.useFakeTimers();
+    initPersistentCache(":memory:");
+    const fetcher = vi.fn(async () => 1);
+    await new TtlCache<number>(1_000, 1000, "t").wrap("k", fetcher);
+    vi.advanceTimersByTime(1_001);
+    await new TtlCache<number>(1_000, 1000, "t").wrap("k", fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("persists a lowered (degraded) ttl", async () => {
+    vi.useFakeTimers();
+    initPersistentCache(":memory:");
+    const fetcher = vi.fn(async (entry: { ttlMs: number }) => {
+      entry.ttlMs = 100;
+      return 1;
+    });
+    await new TtlCache<number>(60_000, 1000, "t").wrap("k", fetcher);
+    vi.advanceTimersByTime(101);
+    await new TtlCache<number>(60_000, 1000, "t").wrap("k", fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps namespaces separate", async () => {
+    initPersistentCache(":memory:");
+    await new TtlCache<number>(60_000, 1000, "a").wrap("k", async () => 1);
+    expect(await new TtlCache<number>(60_000, 1000, "b").wrap("k", async () => 2)).toBe(2);
+  });
+
+  it("falls back to memory when the DB is unavailable", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    initPersistentCache("/nonexistent-dir/cache.db");
+    const cache = new TtlCache<number>(60_000, 1000, "t");
+    const fetcher = vi.fn(async () => 1);
+    await cache.wrap("k", fetcher);
+    await cache.wrap("k", fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

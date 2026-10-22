@@ -46,6 +46,10 @@ var). Confirm it's up:
 curl http://localhost:3001/health
 ```
 
+Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
+server's public-API cache in SQLite across restarts (otherwise it is memory-only).
+It stores only public book/author data, never anything about a user's library.
+
 Optionally, set `GOOGLE_BOOKS_API_KEY` to a [Google Books API
 key](https://console.cloud.google.com/apis/library/books.googleapis.com) so book
 descriptions/covers use your own request quota instead of the small pool shared by
