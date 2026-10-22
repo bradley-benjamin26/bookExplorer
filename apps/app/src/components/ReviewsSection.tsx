@@ -26,7 +26,7 @@ function ReviewCard({ review }: { review: Review }) {
       {revealed ? (
         <Text style={styles.text}>{review.text}</Text>
       ) : (
-        <Pressable onPress={() => setRevealed(true)}>
+        <Pressable onPress={() => setRevealed(true)} accessibilityRole="button">
           <Text style={styles.spoilerText}>Contains spoilers — tap to reveal</Text>
         </Pressable>
       )}
@@ -51,11 +51,13 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
         accessibilityState={{ expanded: open }}
       >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {open ? (
           <ChevronUp size={16} color={theme.colors.inkFaint} strokeWidth={2} />
         ) : (
           <ChevronDown size={16} color={theme.colors.inkFaint} strokeWidth={2} />
         )}
+        </View>
       </Pressable>
       {open && (
         <>

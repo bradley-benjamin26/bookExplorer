@@ -13,7 +13,7 @@ export function Footer() {
       <View style={styles.logoBacking}>
         <Image source={{ uri: WIKIDATA_LOGO_URL }} style={styles.logo} resizeMode="contain" />
       </View>
-      <Pressable onPress={() => Linking.openURL(OPEN_LIBRARY_URL)}>
+      <Pressable onPress={() => Linking.openURL(OPEN_LIBRARY_URL)} accessibilityRole="link">
         <Text style={styles.text}>Built using Open Library APIs</Text>
       </Pressable>
     </View>

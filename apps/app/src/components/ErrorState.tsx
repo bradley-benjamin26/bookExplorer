@@ -8,7 +8,7 @@ export function ErrorState({ message }: { message: string }) {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container}>
-      <AlertTriangle size={28} color={theme.colors.danger} strokeWidth={2} opacity={0.7} />
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><AlertTriangle size={28} color={theme.colors.danger} strokeWidth={2} opacity={0.7} /></View>
       <Text style={styles.message}>{message}</Text>
     </View>
   );

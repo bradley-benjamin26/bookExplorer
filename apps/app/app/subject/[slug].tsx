@@ -68,7 +68,7 @@ export default function SubjectDetail() {
             ({ title, items }) =>
               items.length > 0 && (
                 <View key={title} style={styles.conceptSection}>
-                  <Text style={styles.sectionTitle}>{title}</Text>
+                  <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
@@ -89,7 +89,7 @@ export default function SubjectDetail() {
               )
           )}
 
-          <Text style={styles.sectionTitle}>Books</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Books</Text>
         </View>
       }
       renderItem={({ item }) => (

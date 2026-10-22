@@ -43,6 +43,7 @@ function EditionCard({ edition }: { edition: Edition }) {
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => router.push(routes.book(isbn))}
+      accessibilityRole="button"
     >
       {content}
     </Pressable>

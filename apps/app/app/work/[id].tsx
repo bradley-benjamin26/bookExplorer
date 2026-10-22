@@ -88,13 +88,14 @@ export default function WorkDetail() {
 
       {data.genres.length > 0 && (
         <View style={styles.genresSection}>
-          <Text style={styles.sectionTitle}>Genre</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Genre</Text>
           <View style={styles.genreTags}>
             {data.genres.map((genre) => (
               <Pressable
                 key={genre.label}
                 style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
+                accessibilityRole="button"
                 accessibilityLabel={titleCase(genre.label)}
               >
                 <Text style={styles.genreTagText}>
@@ -109,13 +110,14 @@ export default function WorkDetail() {
 
       {data.subjects.length > 0 && (
         <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle}>Subjects</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Subjects</Text>
           <View style={styles.subjectTags}>
             {data.subjects.slice(0, 12).map((subject) => (
               <Pressable
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
+                accessibilityRole="button"
                 accessibilityLabel={titleCase(subject.label)}
               >
                 <Text style={styles.subjectTagText}>
@@ -130,7 +132,7 @@ export default function WorkDetail() {
 
       {data.description && (
         <View style={styles.aboutSection}>
-          <Text style={styles.sectionTitle}>About</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
         </View>
       )}

@@ -66,7 +66,7 @@ export function ExpandableText({
         </Text>
       )}
       {(expanded || truncated) && (
-        <Pressable onPress={() => setExpanded((v) => !v)}>
+        <Pressable onPress={() => setExpanded((v) => !v)} accessibilityRole="button">
           <Text style={viewMoreStyle}>{expanded ? "View less" : "View more"}</Text>
         </Pressable>
       )}

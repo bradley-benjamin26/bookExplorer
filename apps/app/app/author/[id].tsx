@@ -110,7 +110,7 @@ export default function AuthorDetail() {
 
         return (
           <View key={relation} style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
             {items.map((item) => {
               const navigable = relation === "influencedBy" || relation === "influenced";
               const isNavigable = !!item.openLibraryId && navigable;

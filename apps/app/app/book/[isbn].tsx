@@ -151,6 +151,7 @@ export default function BookDetail() {
                     key={genre.label}
                     style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                     onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
+                    accessibilityRole="button"
                     accessibilityLabel={titleCase(genre.label)}
                   >
                     <Text style={styles.genreTagText}>
@@ -174,6 +175,7 @@ export default function BookDetail() {
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
+                accessibilityRole="button"
                 accessibilityLabel={titleCase(subject.label)}
               >
                 <Text style={styles.subjectTagText}>
