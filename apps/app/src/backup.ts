@@ -1,4 +1,4 @@
-import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema } from "@book-explorer/shared";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema, type SnapshotExport } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "./api/bookLookup";
 import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
@@ -6,6 +6,12 @@ import { getSavedBook, saveBookFromApi } from "./storage/savedBooks";
 import { isItemSaved, toggleSaved } from "./storage/savedItems";
 import { SCHEMA_VERSION } from "./storage/schema";
 import { applySnapshot, getSnapshot, type Snapshot } from "./storage/snapshot";
+
+// Fails to compile unless the shared import schema and the stored Snapshot are the same
+// type, so a field added to a stored record can't be silently stripped on import.
+type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
+const schemaMatchesStorage: Same<SnapshotExport, Snapshot> = true;
+void schemaMatchesStorage;
 
 /** A file the user picked can't be imported; the message is shown to them as is. */
 export class ImportError extends Error {}

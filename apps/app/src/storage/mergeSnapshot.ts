@@ -27,21 +27,47 @@ function mergeBook(a: SavedBookRecord, b: SavedBookRecord): SavedBookRecord {
   return { ...winner, subjects: union(first.subjects, second.subjects), genres: union(first.genres, second.genres) };
 }
 
-function mergeBy<T extends Versioned>(a: T[], b: T[], key: (r: T) => string, pick: (x: T, y: T) => T): T[] {
+function mergeBy<T extends Versioned>(a: T[], b: T[], key: (r: T) => string, pick: (x: T, y: T) => T): Map<string, T> {
   const merged = new Map<string, T>();
   for (const r of [...a, ...b]) {
     const k = key(r);
     const existing = merged.get(k);
     merged.set(k, existing ? pick(existing, r) : r);
   }
-  // Newest first (the order the Saved screen lists items in), key as tiebreak for a stable result.
-  return [...merged.values()].sort((x, y) => y.updatedAt - x.updatedAt || (key(x) < key(y) ? -1 : 1));
+  return merged;
+}
+
+// Newest first (the order the Saved screen lists items in), key as tiebreak for a stable result.
+const sorted = <T extends Versioned>(merged: Map<string, T>) =>
+  [...merged.entries()].sort(([kx, x], [ky, y]) => y.updatedAt - x.updatedAt || (kx < ky ? -1 : 1)).map(([, r]) => r);
+
+/** `r` made live or removed to match `lead`, as of lead's updatedAt. */
+function follow<T extends Mergeable>(r: T, lead: Mergeable): T {
+  if (lead.deletedAt) return { ...r, updatedAt: lead.updatedAt, deletedAt: lead.deletedAt };
+  const { deletedAt: _, ...live } = r;
+  return { ...live, updatedAt: lead.updatedAt } as T;
+}
+
+/**
+ * A book's saved item and its record merge separately, so removing a book on
+ * one side and editing its notes on the other could leave one live and one
+ * removed. Whichever changed last decides for both (a tombstone on a tie).
+ */
+function reconcile(items: Map<string, SavedItem>, books: Map<string, SavedBookRecord>) {
+  for (const [isbn, record] of books) {
+    const item = items.get(`book:${isbn}`);
+    if (!item || !item.deletedAt === !record.deletedAt) continue;
+    const lead = newer<Mergeable>(item, record);
+    items.set(`book:${isbn}`, follow(item, lead));
+    books.set(isbn, follow(record, lead));
+  }
 }
 
 /**
  * Union of two snapshots, record by record: newer updatedAt wins, tombstones
  * beat older edits, and a book's tags (subjects/genres) are unioned when both
- * copies are live. Pure, so a future cross-device sync can reuse it.
+ * copies are live, then a book's item and record are made to agree on whether
+ * it's saved. Pure, so a future cross-device sync can reuse it.
  *
  * Libraries have no tombstone (removeLibrary hard-deletes), so a library
  * removed on one side and still present on the other comes back. Accepted:
@@ -49,10 +75,13 @@ function mergeBy<T extends Versioned>(a: T[], b: T[], key: (r: T) => string, pic
  * than silently losing one the user still wanted.
  */
 export function mergeSnapshots(a: Snapshot, b: Snapshot): Snapshot {
+  const items = mergeBy<SavedItem>(a.items, b.items, (i) => `${i.type}:${i.id}`, newer);
+  const books = mergeBy<SavedBookRecord>(a.books, b.books, (r) => r.isbn, mergeBook);
+  reconcile(items, books);
   return {
     schemaVersion: Math.max(a.schemaVersion, b.schemaVersion),
-    items: mergeBy<SavedItem>(a.items, b.items, (i) => `${i.type}:${i.id}`, newer),
-    books: mergeBy<SavedBookRecord>(a.books, b.books, (r) => r.isbn, mergeBook),
-    libraries: mergeBy<Library>(a.libraries, b.libraries, (l) => l.id, newer),
+    items: sorted(items),
+    books: sorted(books),
+    libraries: sorted(mergeBy<Library>(a.libraries, b.libraries, (l) => l.id, newer)),
   };
 }

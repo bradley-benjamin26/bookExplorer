@@ -84,6 +84,34 @@ describe("mergeSnapshots", () => {
     expect(merged.items).toHaveLength(2);
   });
 
+  it("revives the item when the book's record was edited after the removal", () => {
+    // A removed the book at 20 (item + record); B edited the record's notes at 30.
+    const a = snap({ items: [item("1", 20, { deletedAt: 20 })], books: [book("1", 20, { deletedAt: 20 })] });
+    const b = snap({ items: [item("1", 5)], books: [book("1", 30, { notes: "edited" })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.items[0]).toEqual(item("1", 30));
+      expect(merged.books[0]).toMatchObject({ notes: "edited", updatedAt: 30 });
+      expect(merged.books[0].deletedAt).toBeUndefined();
+    }
+  });
+
+  it("removes the record when the item was removed after the record's last edit", () => {
+    const a = snap({ items: [item("1", 40, { deletedAt: 40 })] });
+    const b = snap({ items: [item("1", 5)], books: [book("1", 30)] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.items[0].deletedAt).toBe(40);
+      expect(merged.books[0]).toMatchObject({ updatedAt: 40, deletedAt: 40 });
+    }
+    // Equal timestamps: the removal wins.
+    const tie = mergeSnapshots(snap({ items: [item("1", 30, { deletedAt: 30 })] }), b);
+    expect(tie.books[0].deletedAt).toBe(30);
+  });
+
+  it("leaves a work item alone even if a book record shares its id", () => {
+    const merged = mergeSnapshots(snap({ items: [item("1", 40, { type: "work", deletedAt: 40 })] }), snap({ books: [book("1", 30)] }));
+    expect(merged.books[0].deletedAt).toBeUndefined();
+  });
+
   it("brings back a library one side removed, since libraries have no tombstone", () => {
     const merged = mergeSnapshots(snap({ libraries: [library("a", 10, "A1")] }), snap({ libraries: [library("a", 20, "A2"), library("b", 5)] }));
     expect(merged.libraries.map((l) => l.name)).toEqual(["A2", "b"]);

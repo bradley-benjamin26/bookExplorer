@@ -55,13 +55,21 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
 
   const runCsv = async (rows: CsvBookRow[], from: CsvImportProgress) => {
     stopRequested.current = false;
+    let last = from;
     setCsv({ rows, progress: from, running: true });
-    const progress = await runCsvImport(rows, from, {
-      onProgress: (p) => setCsv({ rows, progress: p, running: true }),
-      isStopped: () => stopRequested.current,
-    });
-    setCsv({ rows, progress, running: false });
-    onImported();
+    try {
+      last = await runCsvImport(rows, from, {
+        onProgress: (p) => {
+          last = p;
+          setCsv({ rows, progress: p, running: true });
+        },
+        isStopped: () => stopRequested.current,
+      });
+    } finally {
+      // Even after a throw, so the Resume button and backup import come back.
+      setCsv({ rows, progress: last, running: false });
+      onImported();
+    }
   };
 
   const pickCsv = () =>
@@ -96,9 +104,12 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
         >
           Export CSV
         </Button>
-        <Button variant="pill" onPress={pickBackup} accessibilityLabel="Import backup from a JSON file">
-          Import backup
-        </Button>
+        {/* One import at a time: a backup merge/replace mid-CSV would race the CSV's saves. */}
+        {!csv?.running && (
+          <Button variant="pill" onPress={pickBackup} accessibilityLabel="Import backup from a JSON file">
+            Import backup
+          </Button>
+        )}
         {!csv?.running && (
           <Button variant="pill" onPress={pickCsv} accessibilityLabel="Import books from a Goodreads or StoryGraph CSV file">
             Import Goodreads / StoryGraph CSV
@@ -106,7 +117,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
         )}
       </View>
 
-      {pendingBackup && (
+      {pendingBackup && !csv?.running && (
         <View style={styles.panel}>
           <Text style={styles.bodyText}>
             Backup has {pendingBackup.items.filter((i) => !i.deletedAt).length} saved items. Merge keeps the newer copy of

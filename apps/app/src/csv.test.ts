@@ -79,4 +79,10 @@ describe("booksToCsv", () => {
     });
     expect(readBookCsv(csv)).toEqual([{ title: 'Dune, "the" novel', isbn: "9780441013593" }]);
   });
+
+  it("neutralizes cells a spreadsheet would run as formulas", () => {
+    const evil = { ...record, title: '=HYPERLINK("http://x")', authorNames: ["+1", "@SUM(A1)"], notes: "-2", subjects: ["\tx"], genres: [] };
+    const [, row] = parseCsv(booksToCsv([evil]));
+    expect([row[0], row[1], row[2], row[5], row[6]]).toEqual(["'=HYPERLINK(\"http://x\")", "'+1", "'@SUM(A1)", "'\tx", "'-2"]);
+  });
 });

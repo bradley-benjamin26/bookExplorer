@@ -42,6 +42,10 @@ const EXPORT_HEADER = ["Title", "Author", "Additional Authors", "ISBN", "ISBN13"
 
 const goodreadsDate = (ms: number) => new Date(ms).toISOString().slice(0, 10).replaceAll("-", "/");
 
+// A cell starting with one of these runs as a formula when the CSV is opened in a
+// spreadsheet; a leading ' makes it plain text (OWASP's CSV injection advice).
+const noFormula = (f: string) => (/^[=+\-@\t\r]/.test(f) ? `'${f}` : f);
+
 /** Live saved books as a Goodreads-style CSV: tags (subjects + genres) go in Bookshelves. */
 export function booksToCsv(books: SavedBookRecord[]): string {
   const rows = books
@@ -55,7 +59,7 @@ export function booksToCsv(books: SavedBookRecord[]): string {
       [...new Set([...b.subjects, ...b.genres])].join(", "),
       b.notes,
       goodreadsDate(b.savedAt),
-    ]);
+    ].map(noFormula));
   return toCsv([EXPORT_HEADER, ...rows]);
 }
 

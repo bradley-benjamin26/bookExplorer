@@ -34,6 +34,15 @@ function LibraryCard({
   const [isbnUrl, setIsbnUrl] = useState(library.isbnUrl);
   const [titleUrl, setTitleUrl] = useState(library.titleUrl);
   const [saved, setSaved] = useState(false);
+  // The stored library changed under the card (a save, or an import): show the stored values,
+  // so pressing Save can't write the card's stale ones over an import.
+  const [shownUpdatedAt, setShownUpdatedAt] = useState(library.updatedAt);
+  if (library.updatedAt !== shownUpdatedAt) {
+    setShownUpdatedAt(library.updatedAt);
+    setName(library.name);
+    setIsbnUrl(library.isbnUrl);
+    setTitleUrl(library.titleUrl);
+  }
 
   const markDirty = () => setSaved(false);
 
