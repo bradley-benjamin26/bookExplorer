@@ -20,6 +20,7 @@ export function ShareButton({ title, href, publicUrl }: { title: string; href: H
       variant="pill"
       // A dismissed share sheet rejects on web (AbortError); nothing to report.
       onPress={() => shareText(title, shareMessage(title, href, publicUrl)).catch(() => {})}
+      style={{ marginTop: 8 }}
       accessibilityLabel={`Share ${title}`}
     >
       Share
