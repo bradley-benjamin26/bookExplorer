@@ -15,6 +15,7 @@ import {
 } from "../backup";
 import { pickFileText, shareFile } from "../backupFiles";
 import type { CsvBookRow } from "../csv";
+import { prefetchMissingSaved } from "../useSavedPrefetch";
 import type { Snapshot } from "../storage/snapshot";
 import { useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
@@ -58,6 +59,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
       setPendingBackup(null);
       setMessage(mode === "merge" ? "Backup merged into your library." : "Your library was replaced with the backup.");
       onImported();
+      void prefetchMissingSaved(queryClient);
     });
 
   const runCsv = async (rows: CsvBookRow[], from: CsvImportProgress) => {
@@ -81,6 +83,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
       // Even after a throw, so the Resume button and backup import come back.
       setCsv({ rows, progress: last, running: false });
       onImported();
+      void prefetchMissingSaved(queryClient);
     }
   };
 

@@ -14,6 +14,7 @@ import { HeaderActions } from "../src/components/HeaderActions";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
+import { useSavedPrefetch } from "../src/useSavedPrefetch";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
@@ -61,6 +62,7 @@ const inHeader = (buttons: ReactNode) => () => <View style={styles.headerRight}>
 
 function ThemedShell() {
   const theme = useTheme();
+  useSavedPrefetch(); // rendered only after migrateStorage has finished
 
   return (
     <View style={[styles.shell, { backgroundColor: theme.colors.shellBackground }]}>
