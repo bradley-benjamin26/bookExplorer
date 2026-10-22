@@ -7,7 +7,9 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -71,6 +73,7 @@ export default function AuthorDetail() {
       >
         {saved ? "Saved" : "Save"}
       </Button>
+      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} publicUrl={openLibraryUrl.author(data.openLibraryId)} />
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
       {data.bioSource === "wikipedia" && data.bioSourceUrl && (

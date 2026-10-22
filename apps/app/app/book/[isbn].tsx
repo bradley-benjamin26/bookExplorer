@@ -14,7 +14,9 @@ import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { addRecentIsbn } from "../../src/storage/history";
 import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { toggleSaved } from "../../src/storage/savedItems";
@@ -133,6 +135,7 @@ export default function BookDetail() {
       >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
+      <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
       {savedRecord && (
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push(routes.saved())}>
           <Text style={styles.editInLibraryLink}>Edit subjects, genres & notes in My Library</Text>

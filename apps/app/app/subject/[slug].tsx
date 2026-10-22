@@ -7,7 +7,9 @@ import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -48,6 +50,8 @@ export default function SubjectDetail() {
           <Text style={styles.name} accessibilityRole="header">{titleCase(data.name)}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           {data.description && <Text style={styles.description}>{data.description}</Text>}
+
+          <ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} publicUrl={openLibraryUrl.subject(data.slug)} />
 
           {!data.wikidataId && (
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>

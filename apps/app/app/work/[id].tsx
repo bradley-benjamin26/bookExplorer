@@ -11,7 +11,9 @@ import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -75,6 +77,7 @@ export default function WorkDetail() {
       >
         {saved ? "Saved" : "Save"}
       </Button>
+      <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
 
       <Button
         variant="primary"
