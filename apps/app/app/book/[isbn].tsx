@@ -20,8 +20,7 @@ import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
 import { addRecentIsbn } from "../../src/storage/history";
-import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
-import { toggleSaved } from "../../src/storage/savedItems";
+import { getSavedBook, saveBook, unsaveBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -60,22 +59,23 @@ export default function BookDetail() {
   // mounted underneath others in the stack, so a book removed (or edited)
   // from the Saved screen would otherwise still show its old saved state
   // when navigating back here.
+  // Saved under the ISBN the server returned, which can be the other (10 vs 13) form of the route's.
+  const savedIsbn = data?.isbn ?? isbn;
   useFocusEffect(
     useCallback(() => {
-      if (isbn) getSavedBook(isbn).then(setSavedRecord);
-    }, [isbn])
+      if (savedIsbn) getSavedBook(savedIsbn).then(setSavedRecord);
+    }, [savedIsbn])
   );
 
   const handleToggleSaved = async () => {
     if (!data) return;
-    const nowSaved = await toggleSaved({ type: "book", id: data.isbn, title: data.title });
-    if (nowSaved) {
+    if (saved) {
+      await unsaveBook(data.isbn);
+      setSavedRecord(null);
+    } else {
       // Keeps the cover on disk so the saved book still shows it offline.
       if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-      setSavedRecord(await saveBookFromApi(data));
-    } else {
-      await removeSavedBook(data.isbn);
-      setSavedRecord(null);
+      setSavedRecord(await saveBook(data));
     }
   };
 

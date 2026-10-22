@@ -97,10 +97,10 @@ describe("mergeSnapshots", () => {
 
   it("removes the record when the item was removed after the record's last edit", () => {
     const a = snap({ items: [item("1", 40, { deletedAt: 40 })] });
-    const b = snap({ items: [item("1", 5)], books: [book("1", 30)] });
+    const b = snap({ items: [item("1", 5)], books: [book("1", 30, { notes: "private", subjects: ["s"] })] });
     for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
       expect(merged.items[0].deletedAt).toBe(40);
-      expect(merged.books[0]).toMatchObject({ updatedAt: 40, deletedAt: 40 });
+      expect(merged.books[0]).toMatchObject({ updatedAt: 40, deletedAt: 40, notes: "", subjects: [], genres: [] });
     }
     // Equal timestamps: the removal wins.
     const tie = mergeSnapshots(snap({ items: [item("1", 30, { deletedAt: 30 })] }), b);

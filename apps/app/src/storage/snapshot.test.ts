@@ -37,6 +37,16 @@ describe("snapshot", () => {
     expect(await getSnapshot()).toEqual(snap);
   });
 
+  it("exports tombstones without the removed book's notes", async () => {
+    await toggleSaved({ type: "book", id: "1", title: "One" });
+    await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify({ ...legacyBook, schemaVersion: 1, updatedAt: 5 }));
+    await removeSaved("book", "1");
+    await removeSavedBook("1");
+    const { books } = await getSnapshot();
+    expect(books[0].deletedAt).toBeGreaterThan(0);
+    expect(books[0].notes).toBe("");
+  });
+
   it("excludes per-device data", async () => {
     await AsyncStorage.setItem("book-explorer:theme-preference", "dark");
     expect(Object.keys(await getSnapshot()).sort()).toEqual(["books", "items", "libraries", "schemaVersion"]);

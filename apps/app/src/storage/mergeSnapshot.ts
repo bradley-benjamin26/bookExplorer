@@ -59,7 +59,9 @@ function reconcile(items: Map<string, SavedItem>, books: Map<string, SavedBookRe
     if (!item || !item.deletedAt === !record.deletedAt) continue;
     const lead = newer<Mergeable>(item, record);
     items.set(`book:${isbn}`, follow(item, lead));
-    books.set(isbn, follow(record, lead));
+    const followed = follow(record, lead);
+    // A tombstone drops notes and tags, as removeSavedBook's does.
+    books.set(isbn, followed.deletedAt ? { ...followed, subjects: [], genres: [], notes: "" } : followed);
   }
 }
 
