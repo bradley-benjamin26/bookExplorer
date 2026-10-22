@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { errorCopy } from "./errorCopy";
 
-// Stands in for the real ApiError (its module pulls in react-native).class ApiError extends Error {
+// Stands in for the real ApiError (its module pulls in react-native).
+class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
   }
