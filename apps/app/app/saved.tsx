@@ -15,7 +15,7 @@ import {
   type Library,
 } from "../src/storage/librarySettings";
 import { getSavedBook, removeSavedBook, updateSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
-import { getSavedWork, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../src/storage/savedWorks";
+import { getSavedWork, unsaveWork, updateSavedWork, type SavedWorkChanges, type SavedWorkRecord } from "../src/storage/savedWorks";
 import { stamp, type Unversioned } from "../src/storage/schema";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
@@ -160,7 +160,7 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
 
   // Books (by ISBN) and works (by work id) each have an editable record.
   const editable = item.type === "book" || item.type === "work";
-  const update = (changes: Parameters<typeof updateSavedBook>[1]) =>
+  const update = (changes: SavedWorkChanges) =>
     item.type === "work" ? updateSavedWork(item.id, changes) : updateSavedBook(item.id, changes);
 
   const handleToggleExpand = () => {

@@ -93,6 +93,15 @@ describe("JSON backup", () => {
     expect(await getSavedWork("OL1W")).toMatchObject({ title: "Emma", subjects: [], notes: "" });
   });
 
+  it("a v1 backup's work item with an unsafe id gets no record, so the next export still imports", async () => {
+    await seed();
+    const { works: _, ...v1 } = { ...JSON.parse(await exportJson()), schemaVersion: 1 };
+    v1.items.push({ schemaVersion: 1, updatedAt: 1, type: "work", id: "../../evil", title: "Evil" });
+    await importSnapshot(parseSnapshotJson(JSON.stringify(v1)), "replace");
+    expect((await getSnapshot()).works.map((w) => w.openLibraryWorkId)).toEqual(["OL1W"]);
+    expect(parseSnapshotJson(await exportJson()).works).toHaveLength(1);
+  });
+
   it("rejects a v2 backup without works, or with malformed works", async () => {
     await seed();
     const good = JSON.parse(await exportJson());

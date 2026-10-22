@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { OPEN_LIBRARY_WORK_ID } from "@book-explorer/shared";
 import { getLibraries, saveLibraries, type Library } from "./librarySettings";
 import { getAllSavedBooks, replaceSavedBooks, type SavedBookRecord } from "./savedBooks";
 import { getAllSavedItems, replaceSavedItems, type SavedItem } from "./savedItems";
@@ -58,7 +59,8 @@ export async function migrateStorage(): Promise<void> {
 export function withWorkRecords(snapshot: Snapshot): Snapshot {
   const have = new Set(snapshot.works.map((w) => w.openLibraryWorkId));
   const missing: SavedWorkRecord[] = snapshot.items
-    .filter((i) => i.type === "work" && !i.deletedAt && !have.has(i.id))
+    // An id the export schema would reject is skipped, or every later backup would fail to import.
+    .filter((i) => i.type === "work" && !i.deletedAt && !have.has(i.id) && OPEN_LIBRARY_WORK_ID.test(i.id))
     .map((i) =>
       stamp({ openLibraryWorkId: i.id, title: i.title, authorNames: [], subjects: [], genres: [], notes: "", savedAt: i.updatedAt, updatedAt: i.updatedAt })
     );

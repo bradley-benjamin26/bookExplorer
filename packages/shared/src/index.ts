@@ -286,11 +286,13 @@ export const SavedBookExportSchema = z.object({
   savedAt: z.number().int().nonnegative(),
 });
 
+/** Open Library's work id form; a saved work's id becomes part of a storage key, so only this. */
+export const OPEN_LIBRARY_WORK_ID = /^OL\d+W$/;
+
 export const SavedWorkExportSchema = z.object({
   ...VersionedFields,
   deletedAt: z.number().int().nonnegative().optional(),
-  // Becomes part of a storage key, so only Open Library's work id form.
-  openLibraryWorkId: z.string().regex(/^OL\d+W$/),
+  openLibraryWorkId: z.string().regex(OPEN_LIBRARY_WORK_ID),
   title: text,
   authorNames: tagList,
   subjects: tagList,

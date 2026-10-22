@@ -30,7 +30,7 @@ describe("snapshot", () => {
     const v1Item = (id: string, extra = {}) => ({ schemaVersion: 1, updatedAt: 100, type: "work", id, title: `T${id}`, ...extra });
     await AsyncStorage.setItem(
       "book-explorer:saved-items",
-      JSON.stringify([v1Item("OL1W"), v1Item("OL2W", { deletedAt: 100 }), { ...v1Item("9"), type: "book" }])
+      JSON.stringify([v1Item("OL1W"), v1Item("OL2W", { deletedAt: 100 }), v1Item("legacy/id"), { ...v1Item("9"), type: "book" }])
     );
     await AsyncStorage.setItem("book-explorer:schema-version", "1");
     await migrateStorage();
