@@ -11,6 +11,7 @@ import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
 import { seriesRoutes } from "./routes/series.js";
 import { pathRoutes } from "./routes/path.js";
+import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
 import { initPersistentCache } from "./cache.js";
 
 // Behind a load balancer or reverse proxy (most hosting platforms), every
@@ -24,6 +25,10 @@ import { initPersistentCache } from "./cache.js";
 const app = Fastify({ logger: true, trustProxy: parseTrustProxy(process.env.TRUST_PROXY) });
 
 await app.register(cors, { origin: true });
+
+// A required source in a cooldown (see httpClient.ts) is a temporary 503 the
+// app can explain, not a generic 500.
+app.setErrorHandler(upstreamErrorHandler);
 
 // A shared secret the app itself sends on every request (see .env.example),
 // checked in constant time so a timing side-channel can't leak it a byte at

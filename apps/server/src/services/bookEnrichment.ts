@@ -2,6 +2,7 @@ import * as openLibrary from "../sources/openLibrary.js";
 import * as hardcover from "../sources/hardcover.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchMetadataByAnyIsbn } from "../sources/loc.js";
+import { UpstreamUnavailableError } from "../httpClient.js";
 import { combineRatings } from "../ratings.js";
 import type { HardcoverBookData } from "../sources/hardcover.js";
 import type { OpenLibraryRatings } from "../sources/openLibrary.js";
@@ -22,7 +23,8 @@ export const DEGRADED_TTL_MS = 1000 * 60 * 5;
  */
 export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, fallback: T) {
   return (err: unknown): T => {
-    console.warn(`[${sourceName}] Optional lookup failed:`, err);
+    // A cooldown was already logged once by httpClient; not once per request.
+    if (!(err instanceof UpstreamUnavailableError)) console.warn(`[${sourceName}] Optional lookup failed:`, err);
     entry.ttlMs = Math.min(entry.ttlMs, DEGRADED_TTL_MS);
     return fallback;
   };

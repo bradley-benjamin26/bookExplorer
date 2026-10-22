@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetUpstreamState } from "../httpClient.js";
 import { fetchBroaderNarrower, findSubjectHeadingUri } from "./locLinkedData.js";
+
+// Mocked network failures must not leave a real cooldown on id.loc.gov for the next test.
+beforeEach(() => resetUpstreamState());
 
 function mockJsonResponse(body: unknown, ok = true) {
   return vi.fn(async () => ({ ok, json: async () => body }));

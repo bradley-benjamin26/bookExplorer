@@ -48,6 +48,14 @@ curl http://localhost:3001/health
 
 Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
 server's public-API cache in SQLite across restarts (otherwise it is memory-only).
+Set it on a deployed server: repeat lookups are then served from disk instead of
+from Open Library. It caches only public API data, never user data.
+
+The server limits its own calls to each upstream host (shared by all users, extra
+calls queue): openlibrary.org 3/s and 4 at a time, Hardcover 1/s and 2 at a time,
+Wikidata 5/s, other hosts 10/s. On a 429 or 503 (honouring `Retry-After`, else 30 s
+doubling to 10 min) or three connection failures in a row, the host is left alone
+and calls to it fail fast; book routes answer 503 with `Retry-After` meanwhile.
 It stores only public book/author data, never anything about a user's library
 (search queries stay in memory). This needs Node 22.13+ (`node:sqlite`); on older
 Node the server logs a warning and stays memory-only.

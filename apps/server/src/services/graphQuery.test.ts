@@ -2,6 +2,7 @@ import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { describe, expect, it, vi } from "vitest";
 import type { PathResult } from "@book-explorer/shared";
 import { findPath, graphNeighbours, summarise, type Neighbours, type PathLimits } from "./graphQuery.js";
+import { UpstreamUnavailableError } from "../httpClient.js";
 import { buildSubjectBooksGraph, buildSubjectGraph, buildWorkGraph } from "./graphService.js";
 
 vi.mock("./graphService.js", () => ({
@@ -299,5 +300,17 @@ describe("graphNeighbours", () => {
   it("does not expand ids that have no graph of their own", async () => {
     expect(await graphNeighbours("author:qid:Q42")).toBeNull();
     expect(await graphNeighbours("editions:OL1W")).toBeNull();
+  });
+});
+
+describe("findPath when Open Library is cooling down", () => {
+  it("ends at once with upstreamUnavailable instead of spending the time budget", async () => {
+    const neighbours: Neighbours = vi.fn().mockRejectedValue(new UpstreamUnavailableError("openlibrary.org", 60_000));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const started = Date.now();
+    const result = await findPath("author:A", "author:B", neighbours, LIMITS);
+    expect(result).toEqual({ found: false, reason: "upstreamUnavailable" });
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(neighbours).toHaveBeenCalledTimes(2);
   });
 });

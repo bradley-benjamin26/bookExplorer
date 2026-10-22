@@ -1,5 +1,6 @@
 import type { Graph, GraphEdge, GraphNode, GraphPath, PathResult } from "@book-explorer/shared";
 import { buildAuthorGraph, buildSubjectBooksGraph, buildWorkGraph } from "./graphService.js";
+import { UpstreamUnavailableError } from "../httpClient.js";
 
 // Measured cold: a subject's book list ~0.5 s, a work ~1 s, an author ~2.5 s.
 // At 4 at a time that's roughly 80-100 expansions in the 25 s budget, so the
@@ -102,6 +103,7 @@ export function findPath(
   let running = 0;
   let capHit = false;
   let depthPruned = false;
+  let upstreamDown = false;
 
   const penalty = (id: string) => {
     if (!/^(subject|genre):/.test(id)) return 0;
@@ -116,6 +118,8 @@ export function findPath(
     if (!hood) {
       expansions++;
       hood = neighbours(nodeId).catch((err) => {
+        // Open Library is in a cooldown: every further expansion would fail fast too.
+        if (err instanceof UpstreamUnavailableError && err.host === "openlibrary.org") upstreamDown = true;
         console.warn(`[graphQuery] Failed to expand ${nodeId}:`, err);
         return null;
       });
@@ -183,6 +187,7 @@ export function findPath(
 
     const pump = () => {
       while (!finished && running < limits.concurrency) {
+        if (upstreamDown) return finish("upstreamUnavailable");
         if (sides[0].seen.size + sides[1].seen.size > limits.maxVisited || expansions >= limits.maxExpansions) {
           capHit = true;
           break;
@@ -200,7 +205,8 @@ export function findPath(
           pump();
         });
       }
-      if (!finished && running === 0) finish(capHit ? "nodeCap" : depthPruned ? "depthCap" : "noPath");
+      if (upstreamDown) finish("upstreamUnavailable");
+      else if (!finished && running === 0) finish(capHit ? "nodeCap" : depthPruned ? "depthCap" : "noPath");
     };
 
     const settle = (s: number, id: string, hood: Neighbourhood | null) => {
