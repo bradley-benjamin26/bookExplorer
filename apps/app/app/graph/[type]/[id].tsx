@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -17,6 +17,7 @@ import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
+import { titleCase } from "../../../src/titleCase";
 
 function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
   return {
@@ -70,7 +71,7 @@ const LABEL_LINE_HEIGHT = 12;
 // labels fade in — below MIN they're fully transparent (too crowded to read,
 // and the loosened layout below hasn't given them room yet), fully opaque by
 // LABEL_FADE_IN_SCALE so a quick pinch past that point doesn't feel laggy.
-const MIN_SCALE = 0.4;
+const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
 const LABEL_FADE_OUT_SCALE = 1.0;
 const LABEL_FADE_IN_SCALE = 1.3;
@@ -216,7 +217,7 @@ function nudgeNodesOffEdges(nodes: PositionedNode[], edges: PositionedEdge[], ce
     let moved = false;
     for (const edge of edges) {
       for (const node of nodes) {
-        if (node.id === edge.source.id || node.id === edge.target.id) continue;
+        if (node.id === edge.source.id || node.id === edge.target.id || node.id === centerId) continue;
         const radius = node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS;
         // Probe the circle's center and the middle of the name below it.
         const lines = wrapLabel(node.label).length;
@@ -233,6 +234,57 @@ function nudgeNodesOffEdges(nodes: PositionedNode[], edges: PositionedEdge[], ce
           moved = true;
           break;
         }
+      }
+    }
+    if (!moved) return;
+  }
+}
+
+// The space a node needs on the canvas: its circle, plus the wrapped name under it.
+function nodeBox(node: PositionedNode, centerId: string): Box {
+  const radius = node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS;
+  const lines = wrapLabel(node.label);
+  const half = Math.max(radius, (Math.max(...lines.map((l) => l.length), 1) * 6.2 + 4) / 2);
+  return {
+    left: node.x - half,
+    right: node.x + half,
+    top: node.y - radius,
+    bottom: node.y + radius + 14 + lines.length * LABEL_LINE_HEIGHT,
+  };
+}
+
+// The force simulation spaces nodes by a circle, but a node is a circle plus a
+// wide name, so crowded graphs (a subject with 50+ neighbors) still end up
+// with nodes sitting on each other's names. This pushes any two overlapping
+// boxes apart along the shallower axis, never moving the center node.
+const NODE_GAP = 8;
+function separateNodes(nodes: PositionedNode[], centerId: string) {
+  for (let pass = 0; pass < 60; pass++) {
+    let moved = false;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        const boxA = nodeBox(a, centerId);
+        const boxB = nodeBox(b, centerId);
+        const overlapX = Math.min(boxA.right, boxB.right) - Math.max(boxA.left, boxB.left) + NODE_GAP;
+        const overlapY = Math.min(boxA.bottom, boxB.bottom) - Math.max(boxA.top, boxB.top) + NODE_GAP;
+        if (overlapX <= 0 || overlapY <= 0) continue;
+
+        const aFixed = a.id === centerId;
+        const bFixed = b.id === centerId;
+        const share = aFixed || bFixed ? 1 : 0.5;
+        // Push along the axis needing the least movement, away from each other.
+        if (overlapX < overlapY) {
+          const dir = a.x <= b.x ? -1 : 1;
+          if (!aFixed) a.x += dir * overlapX * share;
+          if (!bFixed) b.x -= dir * overlapX * share;
+        } else {
+          const dir = a.y <= b.y ? -1 : 1;
+          if (!aFixed) a.y += dir * overlapY * share;
+          if (!bFixed) b.y -= dir * overlapY * share;
+        }
+        moved = true;
       }
     }
     if (!moved) return;
@@ -272,7 +324,11 @@ interface Center {
 /** Runs d3-force synchronously to a resting layout, rather than animating it — the
  * graphs here are small (well under 50 nodes) so a few hundred ticks converge instantly. */
 function layoutGraph(graph: Graph, width: number, height: number) {
-  const nodes = graph.nodes.map((n) => ({ ...n })) as (GraphNode & { x: number; y: number })[];
+  // Subject/genre terms come in mixed case from their sources; person and work names are left as written.
+  const nodes = graph.nodes.map((n) => ({
+    ...n,
+    label: n.type === "subject" || n.type === "genre" ? titleCase(n.label) : n.label,
+  })) as (GraphNode & { x: number; y: number })[];
   // The server can report the same author→work link under more than one
   // relation name (e.g. "wrote" and "notableWork") — drawn as-is that's two
   // parallel lines and two identical pills per pair, so collapse by pair + label.
@@ -299,7 +355,7 @@ function layoutGraph(graph: Graph, width: number, height: number) {
       "link",
       forceLink(links as never[])
         .id((d) => (d as GraphNode).id)
-        .distance(260)
+        .distance(260 * Math.min(2, Math.max(1, Math.sqrt(nodes.length / 20))))
     )
     .force("center", forceCenter(width / 2, height / 2))
     // Padded enough to clear a full 3-line wrapped label below a node (see
@@ -325,7 +381,12 @@ function layoutGraph(graph: Graph, width: number, height: number) {
     (e) => isFinitePoint(e.source) && isFinitePoint(e.target)
   );
 
-  nudgeNodesOffEdges(positionedNodes, positionedEdges, graph.centerId);
+  // Separating nodes can push one onto an edge and vice versa; a few rounds settle both.
+  for (let round = 0; round < 3; round++) {
+    separateNodes(positionedNodes, graph.centerId);
+    nudgeNodesOffEdges(positionedNodes, positionedEdges, graph.centerId);
+  }
+  separateNodes(positionedNodes, graph.centerId);
 
   // A busy graph (20+ nodes, spread apart by the charge/link forces above)
   // routinely lands nodes outside the [0, width] x [0, height] box
@@ -448,15 +509,25 @@ export default function GraphExplorer() {
     // bring that center node into view rather than leaving the transform
     // wherever the previous graph's pan/zoom left it — the content size and
     // node positions are entirely different after a recenter re-layout.
-    // Starts zoomed out just far enough to show the whole graph (never past
-    // MIN_SCALE, never magnified), centered, instead of cropping outer nodes.
+    resetView();
+  }, [data?.centerId, layout?.contentWidth, layout?.contentHeight]);
+
+  // Starts (and, for the reset button, returns to) zoomed out just far enough
+  // to show the whole graph — never past MIN_SCALE, never magnified — centered,
+  // instead of cropping outer nodes.
+  function resetView() {
+    if (!layout) return;
     const fit = Math.min(1, width / layout.contentWidth, canvasHeight / layout.contentHeight);
     const initial = Math.max(MIN_SCALE, fit);
     scale.value = initial;
     translateX.value = (width - layout.contentWidth * initial) / 2;
     translateY.value = (canvasHeight - layout.contentHeight * initial) / 2;
     clampTranslation(initial);
-  }, [data?.centerId, layout?.contentWidth, layout?.contentHeight]);
+  }
+
+  // The buttons zoom about the middle of the viewport, where a pinch or the
+  // wheel would zoom about the fingers/cursor.
+  const zoomByStep = (factor: number) => zoomAbout(scale.value * factor, width / 2, canvasHeight / 2);
 
   // The canvas is transformed from its top-left corner (see styles.graphArea),
   // so a canvas point p lands at translate + scale * p on screen. The canvas
@@ -840,13 +911,42 @@ export default function GraphExplorer() {
           );
         })}
           </Animated.View>
+          <View style={styles.zoomControls}>
+            <Pressable
+              onPress={() => zoomByStep(DOUBLE_TAP_ZOOM_STEP)}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <ZoomIn size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => zoomByStep(1 / DOUBLE_TAP_ZOOM_STEP)}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <ZoomOut size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={resetView}
+              accessibilityRole="button"
+              accessibilityLabel="Reset zoom to fit the whole graph"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <Maximize size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+          </View>
         </View>
       </GestureDetector>
     </View>
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
@@ -885,6 +985,17 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     // routinely larger than this box at 100% scale.
     viewport: { flex: 1, overflow: "hidden" },
     graphArea: { position: "relative", transformOrigin: "top left" },
+    zoomControls: { position: "absolute", right: spacing.md, bottom: spacing.md, gap: spacing.sm },
+    zoomButton: {
+      width: 40,
+      height: 40,
+      borderRadius: radii.sm,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
     pressed: { opacity: 0.6 },
     backButtonText: { fontFamily: fonts.bodySemiBold, color: colors.cover, fontSize: 14 },
   });
