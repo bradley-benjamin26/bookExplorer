@@ -324,10 +324,10 @@ export interface OpenLibrarySearchResult {
  * `getWorkDetail` pipeline a search result feeds into already does that
  * enrichment, so search itself only needs to resolve "what work is this."
  */
-export async function searchWorks(query: string, limit = 20): Promise<OpenLibrarySearchResult[]> {
+export async function searchWorks(query: string, limit = 20, sort?: string): Promise<OpenLibrarySearchResult[]> {
   const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(
     query
-  )}&fields=key,title,author_name,author_key,cover_i&limit=${limit}`;
+  )}&fields=key,title,author_name,author_key,cover_i&limit=${limit}${sort ? `&sort=${sort}` : ""}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library search request failed: ${res.status}`);
 

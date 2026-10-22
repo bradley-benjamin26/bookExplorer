@@ -99,8 +99,8 @@ export function fetchWork(workId: string): Promise<Work> {
   return getJson(`/api/works/${encodeURIComponent(workId)}`, WorkSchema);
 }
 
-export function searchBooks(query: string): Promise<WorkRef[]> {
-  return getJson(`/api/search?q=${encodeURIComponent(query)}`, z.array(WorkRefSchema));
+export function searchBooks(params: Record<string, string>): Promise<WorkRef[]> {
+  return getJson(`/api/search?${new URLSearchParams(params)}`, z.array(WorkRefSchema));
 }
 
 // "genre" and "editions" are both GraphNode types (so they can be

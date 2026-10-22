@@ -12,3 +12,46 @@ export function isOpenLibraryAuthorId(id: string): boolean {
 export function isOpenLibraryWorkId(id: string): boolean {
   return /^OL\d+W$/.test(id);
 }
+
+export const SEARCH_SORTS = ["relevance", "new", "old"] as const;
+
+export interface SearchFilters {
+  author?: string;
+  subject?: string;
+  language?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  sort?: (typeof SEARCH_SORTS)[number];
+}
+
+const MAX_FILTER_TEXT = 100;
+
+/**
+ * Validates the raw /api/search filter params. Returns the typed filters, or
+ * an error message for the 400 (malformed years, unknown sort/language, ...).
+ */
+export function parseSearchFilters(raw: Record<string, string | undefined>): SearchFilters | string {
+  const out: SearchFilters = {};
+  for (const key of ["author", "subject"] as const) {
+    const v = raw[key]?.trim();
+    if (!v) continue;
+    if (v.length > MAX_FILTER_TEXT) return `'${key}' is too long`;
+    out[key] = v;
+  }
+  if (raw.language) {
+    // Open Library uses 3-letter ISO 639-2 codes, e.g. "eng".
+    if (!/^[a-z]{3}$/.test(raw.language)) return "'language' must be a 3-letter code";
+    out.language = raw.language;
+  }
+  for (const key of ["yearFrom", "yearTo"] as const) {
+    if (!raw[key]) continue;
+    if (!/^\d{4}$/.test(raw[key]!)) return `'${key}' must be a 4-digit year`;
+    out[key] = Number(raw[key]);
+  }
+  if (out.yearFrom && out.yearTo && out.yearFrom > out.yearTo) return "'yearFrom' must not be after 'yearTo'";
+  if (raw.sort) {
+    if (!(SEARCH_SORTS as readonly string[]).includes(raw.sort)) return "'sort' must be relevance, new or old";
+    out.sort = raw.sort as SearchFilters["sort"];
+  }
+  return out;
+}
