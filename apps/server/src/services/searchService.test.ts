@@ -1,4 +1,9 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { closePersistentCache, initPersistentCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import { buildQuery, searchBooks } from "./searchService.js";
 
@@ -89,5 +94,21 @@ describe("buildQuery", () => {
   it("builds closed and open year ranges", () => {
     expect(buildQuery("a", { yearFrom: 1900, yearTo: 1950 })).toBe("a first_publish_year:[1900 TO 1950]");
     expect(buildQuery("a", { yearTo: 1950 })).toBe("a first_publish_year:[* TO 1950]");
+  });
+});
+
+describe("search cache", () => {
+  it("never writes a query to the persistent cache", async () => {
+    const path = join(mkdtempSync(join(tmpdir(), "search-cache-")), "cache.db");
+    initPersistentCache(path);
+    try {
+      vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+      await searchBooks("a private query");
+    } finally {
+      closePersistentCache();
+    }
+    const db = new DatabaseSync(path);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM cache").get()).toEqual({ n: 0 });
+    db.close();
   });
 });

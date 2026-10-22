@@ -9,7 +9,8 @@ import type { SearchFilters } from "../validation.js";
 // (a popular query, or someone re-running the same search) without holding
 // stale entries around anywhere near as long as the ISBN/author/work caches
 // do.
-const searchCache = new TtlCache<WorkRef[]>(1000 * 60 * 10, 1000, "search");
+// No namespace, so it never reaches the persistent tier: users' free-text queries stay in memory only.
+const searchCache = new TtlCache<WorkRef[]>(1000 * 60 * 10, 1000);
 
 // Open Library's own search endpoint rejects anything shorter than this with
 // a 422 ("Query too short, must be at least 3 characters") — confirmed live.

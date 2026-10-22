@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TtlCache, closePersistentCache, initPersistentCache } from "./cache.js";
 
@@ -109,5 +111,15 @@ describe("TtlCache persistent tier", () => {
     await cache.wrap("k", fetcher);
     await cache.wrap("k", fetcher);
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("cache module", () => {
+  it("doesn't load node:sqlite until persistence is turned on, so the default server runs on Node 20", () => {
+    // A fresh process: this test process may already have loaded node:sqlite.
+    const script = `await import(${JSON.stringify(fileURLToPath(new URL("./cache.ts", import.meta.url)))});
+console.log(process.moduleLoadList.some((m) => m.includes("sqlite")));`;
+    const out = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { encoding: "utf8" });
+    expect(out.trim()).toBe("false");
   });
 });

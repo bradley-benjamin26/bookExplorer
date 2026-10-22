@@ -1,4 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+import type { DatabaseSync } from "node:sqlite";
 
 type Entry<T> = { value: T; expiresAt: number };
 
@@ -26,7 +27,9 @@ function purgeExpired(): void {
 export function initPersistentCache(path: string): void {
   closePersistentCache();
   try {
-    db = new DatabaseSync(path);
+    // Loaded only here: node:sqlite needs Node 22.5+, and persistence is opt-in, so the default server runs on Node 20.
+    const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
+    db = new sqlite.DatabaseSync(path);
     db.exec("CREATE TABLE IF NOT EXISTS cache (k TEXT PRIMARY KEY, v TEXT NOT NULL, expires_at INTEGER NOT NULL)");
     purgeExpired();
     purgeTimer = setInterval(purgeExpired, PURGE_INTERVAL_MS);
