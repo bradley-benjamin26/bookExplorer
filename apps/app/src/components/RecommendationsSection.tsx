@@ -10,6 +10,8 @@ import {
   FETCH_CONCURRENCY,
   mapWithConcurrency,
   rankRecommendations,
+  reasonHeading,
+  reasonKey,
   type AuthorSeed,
   type Recommendation,
 } from "../recommendations";
@@ -20,7 +22,7 @@ import { WorkListRow } from "./WorkListRow";
 // Subject listings and author graphs change rarely; reuse a day-old copy rather than refetch on every visit.
 const STALE_MS = 24 * 60 * 60 * 1000;
 
-/** "Because you saved X" rows, computed on-device from the saved library. `refreshKey` changing re-reads it. */
+/** Rows grouped by what they share with, computed on-device from the saved library. `refreshKey` changing re-reads it. */
 export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
@@ -55,6 +57,15 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
     for (const record of snapshot.books) {
       if (record.deletedAt) continue;
       const cached = cachedBooks.find((b) => b?.isbn === record.isbn);
+      if (!cached) continue;
+      for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
+      for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
+    }
+    // Saved works: the same, from the cached work detail.
+    const cachedWorks = queryClient.getQueriesData<Work>({ queryKey: ["work"] }).map(([, w]) => w);
+    for (const record of snapshot.works) {
+      if (record.deletedAt) continue;
+      const cached = cachedWorks.find((w) => w?.openLibraryWorkId === record.openLibraryWorkId);
       if (!cached) continue;
       for (const a of cached.authors) seeds.push({ id: a.openLibraryId, name: a.name, seedTitle: record.title });
       for (const t of [...cached.subjects, ...cached.genres]) publicSlugs.add(slugifySubject(t.label));
@@ -97,16 +108,19 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
 
   if (recommendations.length === 0) return null;
 
-  // One group per saved item, in the order of its best recommendation.
-  const groups = new Map<string, Recommendation[]>();
-  for (const r of recommendations) groups.set(r.because, [...(groups.get(r.because) ?? []), r]);
+  // One group per primary reason, in the order of its best recommendation.
+  const groups = new Map<string, { heading: string; recs: Recommendation[] }>();
+  for (const r of recommendations) {
+    const key = reasonKey(r.reason);
+    groups.set(key, { heading: reasonHeading(r.reason), recs: [...(groups.get(key)?.recs ?? []), r] });
+  }
 
   return (
     <View>
-      {[...groups].map(([because, recs]) => (
-        <View key={because}>
+      {[...groups].map(([key, { heading, recs }]) => (
+        <View key={key}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            Because you saved {because}
+            {heading}
           </Text>
           {recs.map((r) => (
             <WorkListRow

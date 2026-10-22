@@ -1,6 +1,6 @@
 import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { buildTasteProfile, mapWithConcurrency, rankRecommendations, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import { buildTasteProfile, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -20,12 +20,15 @@ const book = (title: string, subjects: string[], extra: Partial<SavedBookRecord>
   savedAt: 1,
   ...extra,
 });
-const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = []): Snapshot => ({ schemaVersion: 1, items, books, works: [], libraries: [] });
+const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = [], works: Snapshot["works"] = []): Snapshot => ({ schemaVersion: 1, items, books, works, libraries: [] });
+const savedWork = (title: string, subjects: string[]): Snapshot["works"][number] => ({
+  schemaVersion: 1, updatedAt: 1, openLibraryWorkId: `OL${title}W`, title, authorNames: [], subjects, genres: [], notes: "", savedAt: 1,
+});
 const work = (id: string, authorId = "OLxA"): WorkRef => ({ openLibraryWorkId: id, title: `Title ${id}`, authors: [{ openLibraryId: authorId, name: authorId }], coverUrl: null });
 const subject = (slug: string, books: WorkRef[]): Subject => ({ slug, name: slug, workCount: books.length, wikidataId: null, description: null, relatedConcepts: [], books });
 // Treats every saved term as public (as if every book's API detail were cached).
 const profileOf = (s: Snapshot, seeds: AuthorSeed[]) =>
-  buildTasteProfile(s, seeds, new Set(s.books.flatMap((b) => [...b.subjects, ...b.genres]).map(slugifySubject)));
+  buildTasteProfile(s, seeds, new Set([...s.books, ...s.works].flatMap((b) => [...b.subjects, ...b.genres]).map(slugifySubject)));
 const subjects = (...list: Subject[]) => new Map(list.map((s) => [s.slug, s]));
 
 // Three saved books: "Fiction" on all of them (common, low idf), "Napoleonic Wars" on one (rare, high idf).
@@ -71,6 +74,32 @@ describe("buildTasteProfile", () => {
   });
 });
 
+describe("saved works as seeds", () => {
+  const withWork = snapshot([], [], [savedWork("Hyperion", ["Science fiction", "Read in 2020"])]);
+  it("counts a saved work's API subjects but never its user-typed ones", () => {
+    const profile = buildTasteProfile(withWork, [], new Set(["science_fiction"]));
+    expect(profile.subjects.map((s) => s.slug)).toEqual(["science_fiction"]);
+    expect(profile.subjects[0].seedTitles).toEqual(["Hyperion"]);
+  });
+});
+
+describe("recommendation reasons", () => {
+  const two = snapshot([book("Zed", ["Napoleonic Wars"]), book("Abe", ["Napoleonic Wars"])]);
+  it("groups by the shared subject, not the alphabetically first title", () => {
+    const [rec] = rankRecommendations(profileOf(two, []), subjects(subject("napoleonic_wars", [work("W1")])), new Map());
+    expect(rec.reason).toEqual({ kind: "subject", label: "Napoleonic Wars", seedTitles: ["Abe", "Zed"] });
+    expect(reasonKey(rec.reason)).toBe("subject:Napoleonic Wars");
+    expect(reasonHeading(rec.reason)).toBe("Because you like Napoleonic Wars (2 saved)");
+  });
+  it("is deterministic and words author and influence headings", () => {
+    const a = rankRecommendations(profileOf(two, []), subjects(subject("napoleonic_wars", [work("W2"), work("W1")])), new Map());
+    expect(rankRecommendations(profileOf(two, []), subjects(subject("napoleonic_wars", [work("W2"), work("W1")])), new Map())).toEqual(a);
+    expect(reasonHeading({ kind: "subject", label: "Fantasy", seedTitles: ["A"] })).toBe("Because you like Fantasy");
+    expect(reasonHeading({ kind: "author", label: "Tolkien", seedTitles: [] })).toBe("More by Tolkien");
+    expect(reasonHeading({ kind: "influence", label: "Tolkien", seedTitles: [] })).toBe("Influenced by Tolkien");
+  });
+});
+
 describe("rankRecommendations", () => {
   it("returns nothing for an empty library", () => {
     expect(rankRecommendations(profileOf(snapshot([]), []), results, new Map())).toEqual([]);
@@ -79,8 +108,8 @@ describe("rankRecommendations", () => {
   it("ranks by idf-weighted shared subjects, deterministically, and explains each row", () => {
     const ranked = rankRecommendations(profileOf(library, []), results, new Map());
     expect(ranked.map((r) => r.work.openLibraryWorkId)).toEqual(["W2", "W4", "W3", "W1"]);
-    expect(ranked[0]).toMatchObject({ because: "Sharpe", shares: ["Fiction", "Napoleonic Wars"] });
-    expect(ranked[1]).toMatchObject({ because: "Emma", shares: ["Fiction", "Historical fiction"] });
+    expect(ranked[0]).toMatchObject({ reason: { kind: "subject", label: "Napoleonic Wars", seedTitles: ["Sharpe"] }, shares: ["Fiction", "Napoleonic Wars"] });
+    expect(ranked[1]).toMatchObject({ reason: { kind: "subject", label: "Historical fiction", seedTitles: ["Emma"] }, shares: ["Fiction", "Historical fiction"] });
     // W2 and W4 tie on score; the title tie-break keeps the order the same on every run.
     expect(rankRecommendations(profileOf(library, []), results, new Map())).toEqual(ranked);
   });
@@ -118,7 +147,7 @@ describe("rankRecommendations", () => {
     const ranked = rankRecommendations(profile, subjects(subject("fantasy", [work("W9", "OLmA"), work("W8")])), new Map([["OLtA", graph]]));
     expect(ranked.map((r) => r.work.openLibraryWorkId)).toEqual(["W9", "OLsilW", "W8"]);
     expect(ranked[0].shares).toEqual(["Fantasy", "influence link to Tolkien"]);
-    expect(ranked[1]).toMatchObject({ because: "The Hobbit", shares: ["author Tolkien"] });
+    expect(ranked[1]).toMatchObject({ reason: { kind: "author", label: "Tolkien", seedTitles: ["The Hobbit"] }, shares: ["author Tolkien"] });
   });
 
   it("lets a rating reorder close candidates but not outweigh another shared subject", () => {

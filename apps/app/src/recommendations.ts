@@ -34,10 +34,27 @@ export interface TasteProfile {
 export interface Recommendation {
   work: WorkRef;
   score: number;
-  /** The saved item this mostly comes from: "Because you saved X". */
-  because: string;
-  /** What it has in common with that library, for "shares: ...". */
+  /** The single strongest thing it shares with the library; recommendations are grouped by it. */
+  reason: Reason;
+  /** Everything it has in common with that library, for "shares: ...". */
   shares: string[];
+}
+
+export interface Reason {
+  kind: "subject" | "author" | "influence";
+  /** The subject label, or the author's name. */
+  label: string;
+  /** The saved items that carry it. */
+  seedTitles: string[];
+}
+
+/** One group per primary reason; the same key for the same reason on every run. */
+export const reasonKey = (r: Reason) => `${r.kind}:${r.label}`;
+
+export function reasonHeading({ kind, label, seedTitles }: Reason): string {
+  if (kind === "author") return `More by ${label}`;
+  if (kind === "influence") return `Influenced by ${label}`;
+  return `Because you like ${label}${seedTitles.length > 1 ? ` (${seedTitles.length} saved)` : ""}`;
 }
 
 /**
@@ -46,7 +63,8 @@ export interface Recommendation {
  * book's subjects also hold the user's own tags, which must never be sent anywhere.
  */
 export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[], publicSlugs: Set<string>): TasteProfile {
-  const books = snapshot.books.filter((b) => !b.deletedAt);
+  // Saved works seed subjects like saved books do.
+  const books = [...snapshot.books, ...snapshot.works].filter((b) => !b.deletedAt);
   const terms = new Map<string, { label: string; seedTitles: string[] }>();
   for (const book of books) {
     // A term listed as both subject and genre counts once per book.
@@ -82,7 +100,7 @@ const normalizeTitle = (title: string) => title.trim().toLowerCase().replace(/\s
 
 interface Evidence {
   work: WorkRef;
-  reasons: { share: string; weight: number; seedTitles: string[] }[];
+  reasons: (Reason & { share: string; weight: number })[];
 }
 
 /**
@@ -100,17 +118,17 @@ export function rankRecommendations(
   limit = MAX_RECOMMENDATIONS
 ): Recommendation[] {
   const candidates = new Map<string, Evidence>();
-  const add = (work: WorkRef, share: string, weight: number, seedTitles: string[]) => {
+  const add = (work: WorkRef, kind: Reason["kind"], label: string, share: string, weight: number, seedTitles: string[]) => {
     if (profile.excludedWorkIds.has(work.openLibraryWorkId) || profile.excludedTitles.has(normalizeTitle(work.title))) return;
     const c = candidates.get(work.openLibraryWorkId) ?? { work, reasons: [] };
     // Subject listings carry covers and author ids that graph nodes don't; keep the richer ref.
     if (!c.work.coverUrl && work.coverUrl) c.work = work;
-    if (!c.reasons.some((r) => r.share === share)) c.reasons.push({ share, weight, seedTitles });
+    if (!c.reasons.some((r) => r.share === share)) c.reasons.push({ kind, label, share, weight, seedTitles });
     candidates.set(work.openLibraryWorkId, c);
   };
 
   for (const s of profile.subjects) {
-    for (const work of subjectResults.get(s.slug)?.books ?? []) add(work, s.label, s.weight, s.seedTitles);
+    for (const work of subjectResults.get(s.slug)?.books ?? []) add(work, "subject", s.label, s.label, s.weight, s.seedTitles);
   }
 
   // Authors linked by influence to a saved author, so their works found above count too.
@@ -130,7 +148,7 @@ export function rankRecommendations(
       else if (other.type === "work") {
         const influence = e.relation === "influencedBy";
         const work = { openLibraryWorkId: olid, title: other.label, authors: influence ? [] : [{ openLibraryId: seed.id, name: seed.name }], coverUrl: null };
-        add(work, influence ? `influence link to ${seed.name}` : `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
+        add(work, influence ? "influence" : "author", seed.name, influence ? `influence link to ${seed.name}` : `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
       }
     }
   }
@@ -138,9 +156,9 @@ export function rankRecommendations(
   for (const c of candidates.values()) {
     for (const a of c.work.authors) {
       const seed = seedsById.get(a.openLibraryId);
-      if (seed) add(c.work, `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
+      if (seed) add(c.work, "author", seed.name, `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
       const influenced = influences.get(a.openLibraryId);
-      if (influenced) add(c.work, `influence link to ${influenced.name}`, AUTHOR_WEIGHT, [influenced.seedTitle]);
+      if (influenced) add(c.work, "influence", influenced.name, `influence link to ${influenced.name}`, AUTHOR_WEIGHT, [influenced.seedTitle]);
     }
   }
 
@@ -154,12 +172,10 @@ export function rankRecommendations(
     .slice(0, limit);
 }
 
-/** Credits the saved item behind the most evidence, and lists what it shares with it. */
-function explain(reasons: Evidence["reasons"]): { because: string; shares: string[] } {
-  const bySeed = new Map<string, number>();
-  for (const r of reasons) for (const t of r.seedTitles) bySeed.set(t, (bySeed.get(t) ?? 0) + r.weight);
-  const [because] = [...bySeed].sort((a, b) => b[1] - a[1] || cmp(a[0], b[0]))[0];
-  return { because, shares: reasons.filter((r) => r.seedTitles.includes(because)).map((r) => r.share) };
+/** The primary reason is the heaviest evidence; ties go to more saved items sharing it, then the label. */
+function explain(reasons: Evidence["reasons"]): { reason: Reason; shares: string[] } {
+  const [{ kind, label, seedTitles }] = [...reasons].sort((a, b) => b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.share, b.share));
+  return { reason: { kind, label, seedTitles }, shares: reasons.map((r) => r.share) };
 }
 
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
