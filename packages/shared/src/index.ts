@@ -164,6 +164,7 @@ export const SubjectSchema = z.object({
   name: z.string(),
   workCount: z.number(),
   wikidataId: z.string().nullable(),
+  description: z.string().nullable(),
   relatedConcepts: z.array(SubjectConceptSchema),
   books: z.array(WorkRefSchema),
 });

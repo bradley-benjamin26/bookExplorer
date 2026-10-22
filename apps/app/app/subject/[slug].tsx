@@ -46,6 +46,7 @@ export default function SubjectDetail() {
         <View>
           <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
+          {data.description && <Text style={styles.description}>{data.description}</Text>}
 
           {!data.wikidataId && (
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>
@@ -104,6 +105,7 @@ function createStyles({ colors, kicker }: Theme) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     name: { fontSize: 27, fontWeight: "700", textTransform: "capitalize", letterSpacing: -0.3, color: colors.text },
     workCount: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
+    description: { fontSize: 15, color: colors.textMuted, marginTop: 8 },
     noMatch: { fontSize: 13, color: colors.warning, marginTop: 12, fontStyle: "italic" },
     graphButton: { marginTop: 16 },
     pressed: { opacity: 0.6 },

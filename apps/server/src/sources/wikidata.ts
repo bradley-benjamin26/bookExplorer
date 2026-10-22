@@ -91,6 +91,7 @@ interface WbStatement {
 interface WbEntity {
   claims?: Record<string, WbStatement[]>;
   labels?: Record<string, { value: string }>;
+  descriptions?: Record<string, { value: string }>;
 }
 
 // Keyed on the same (ids, props, languages) triple wbGetEntities is called
@@ -360,4 +361,11 @@ export async function fetchGenres(qid: string): Promise<string[]> {
     const item = resolved.get(genreQid);
     return item ? [item.label] : [];
   });
+}
+
+/** English description (e.g. "genre of literature"), or null when Wikidata has none. */
+export async function fetchDescription(qid: string): Promise<string | null> {
+  if (!isValidQid(qid)) return null;
+  const entities = await wbGetEntities([qid], "descriptions", "en");
+  return entities[qid]?.descriptions?.en?.value ?? null;
 }

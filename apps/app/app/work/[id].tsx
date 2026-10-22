@@ -74,6 +74,14 @@ export default function WorkDetail() {
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
 
+      <Button
+        variant="primary"
+        onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
+        style={styles.graphButton}
+      >
+        View as Graph
+      </Button>
+
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
       {data.genres.length > 0 && (
@@ -117,14 +125,6 @@ export default function WorkDetail() {
           </View>
         </View>
       )}
-
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
-        style={styles.graphButton}
-      >
-        View as Graph
-      </Button>
 
       {data.description && (
         <View style={styles.aboutSection}>
