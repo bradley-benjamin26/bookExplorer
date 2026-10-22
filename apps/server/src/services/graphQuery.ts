@@ -37,27 +37,28 @@ export const graphNeighbours: Neighbours = async (nodeId) => {
   const id = nodeId.slice(sep + 1);
   // QID-only authors/works and the editions summary have no graph of their own.
   if (id.startsWith("qid:")) return null;
-  if (type === "author") return buildAuthorGraph(id);
-  if (type === "work") return buildWorkGraph(id);
-  if (type === "subject") return buildSubjectGraph(id);
-  if (type === "genre") {
-    // A genre opens the same subject browse, but its node id is "genre:", so
-    // the subject graph's centre is renamed for its edges to touch this node.
-    const graph = await buildSubjectGraph(id);
-    if (!graph) return null;
-    const rename = (end: string) => (end === graph.centerId ? nodeId : end);
-    return { nodes: graph.nodes, edges: graph.edges.map((e) => ({ ...e, source: rename(e.source), target: rename(e.target) })) };
-  }
-  return null;
+  // A genre opens the same subject browse as a subject of that slug.
+  const build = { author: buildAuthorGraph, work: buildWorkGraph, subject: buildSubjectGraph, genre: buildSubjectGraph }[type];
+  const graph = await build?.(id);
+  if (!graph) return null;
+  // The centre can come back under another id (a genre's "subject:", a
+  // redirected work), so it's renamed to the id asked for, or the search
+  // would never see its edges touch this node.
+  const rename = (end: string) => (end === graph.centerId ? nodeId : end);
+  return {
+    nodes: graph.nodes.map((n) => (n.id === graph.centerId ? { ...n, id: nodeId } : n)),
+    edges: graph.edges.map((e) => ({ ...e, source: rename(e.source), target: rename(e.target) })),
+  };
 };
 
 type Visit = { dist: number; prev: string | null; edge: GraphEdge | null };
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+// `stopped` lets a search that has already given up stop starting queued items.
+async function mapLimit<T, R>(items: T[], limit: number, stopped: () => boolean, fn: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
   const worker = async () => {
-    while (next < items.length) {
+    while (!stopped() && next < items.length) {
       const i = next++;
       out[i] = await fn(items[i]);
     }
@@ -79,6 +80,13 @@ export async function findPath(from: string, to: string, neighbours: Neighbours,
     { visits: new Map<string, Visit>([[to, { dist: 0, prev: null, edge: null }]]), frontier: [to], depth: 0 },
   ];
   let expansions = 0;
+  let done = false;
+  // An upstream failure for one node makes it a dead end, not a failed search.
+  const expand = (nodeId: string) =>
+    neighbours(nodeId).catch((err) => {
+      console.warn(`[graphQuery] Failed to expand ${nodeId}:`, err);
+      return null;
+    });
 
   let timer: NodeJS.Timeout | undefined;
   const timedOut = new Promise<"timeout">((resolve) => {
@@ -98,7 +106,7 @@ export async function findPath(from: string, to: string, neighbours: Neighbours,
       expansions += side.frontier.length;
 
       const level = side.frontier;
-      const hoods = await Promise.race([mapLimit(level, limits.concurrency, neighbours), timedOut]);
+      const hoods = await Promise.race([mapLimit(level, limits.concurrency, () => done, expand), timedOut]);
       if (hoods === "timeout") return { found: false, reason: "timeout" };
 
       side.depth++;
@@ -126,6 +134,7 @@ export async function findPath(from: string, to: string, neighbours: Neighbours,
       if (meet) return buildPath(meet, fwd.visits, bwd.visits, nodes);
     }
   } finally {
+    done = true;
     clearTimeout(timer);
   }
 }

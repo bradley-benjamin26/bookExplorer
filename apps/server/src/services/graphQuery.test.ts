@@ -1,6 +1,9 @@
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
-import { describe, expect, it } from "vitest";
-import { findPath, type Neighbours, type PathLimits } from "./graphQuery.js";
+import { describe, expect, it, vi } from "vitest";
+import { findPath, graphNeighbours, type Neighbours, type PathLimits } from "./graphQuery.js";
+import { buildWorkGraph } from "./graphService.js";
+
+vi.mock("./graphService.js", () => ({ buildAuthorGraph: vi.fn(), buildSubjectGraph: vi.fn(), buildWorkGraph: vi.fn() }));
 
 const LIMITS: PathLimits = { maxDepth: 4, maxVisited: 300, maxExpansions: 40, timeBudgetMs: 1000, concurrency: 2 };
 
@@ -123,5 +126,58 @@ describe("findPath", () => {
     };
     await findPath("author:A", "author:Z", tracked, LIMITS);
     expect(peak).toBeLessThanOrEqual(LIMITS.concurrency);
+  });
+
+  it("treats a failed expansion as a dead end and finds the path another way", async () => {
+    const graph = fixture([
+      ["author:A", "wrote", "work:Bad"],
+      ["author:A", "wrote", "work:W1"],
+      ["work:W1", "subject", "subject:s"],
+      ["subject:s", "hasBook", "work:T"],
+      ...Array.from({ length: 5 }, (_, i): [string, string, string] => ["work:T", "genre", `genre:${i}`]),
+    ]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failing: Neighbours = (id) => (id === "work:Bad" ? Promise.reject(new Error("upstream down")) : graph(id));
+    const result = await findPath("author:A", "work:T", failing, LIMITS);
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+    expect(result.found && result.nodes.map((n) => n.id)).toEqual(["author:A", "work:W1", "subject:s", "work:T"]);
+  });
+
+  it("starts no queued expansions once the time budget has run out", async () => {
+    const wide = fixture(
+      Array.from({ length: 16 }, (_, i): [string, string, string] => [i % 2 ? "author:A" : "author:Z", "wrote", `work:${i}`])
+    );
+    const slow: Neighbours = async (id) => {
+      const hood = await wide(id);
+      if (id.startsWith("work:")) await new Promise((r) => setTimeout(r, 30));
+      return hood;
+    };
+    const result = await findPath("author:A", "author:Z", slow, { ...LIMITS, timeBudgetMs: 15 });
+    expect(result).toEqual({ found: false, reason: "timeout" });
+    await new Promise((r) => setTimeout(r, 100));
+    // Both authors, then only the first batch of works already running at the deadline.
+    expect(wide.calls.length).toBeLessThanOrEqual(2 + LIMITS.concurrency);
+  });
+});
+
+describe("graphNeighbours", () => {
+  it("renames a centre that came back under another id to the id asked for", async () => {
+    vi.mocked(buildWorkGraph).mockResolvedValue({
+      centerId: "work:OL2W",
+      nodes: [
+        { id: "work:OL2W", type: "work", label: "Dune", navigable: true },
+        { id: "author:OL3A", type: "author", label: "Frank Herbert", navigable: true },
+      ],
+      edges: [{ source: "author:OL3A", target: "work:OL2W", relation: "author" }],
+    });
+    const hood = await graphNeighbours("work:OL1W");
+    expect(hood?.nodes.map((n) => n.id)).toEqual(["work:OL1W", "author:OL3A"]);
+    expect(hood?.edges).toEqual([{ source: "author:OL3A", target: "work:OL1W", relation: "author" }]);
+  });
+
+  it("does not expand ids that have no graph of their own", async () => {
+    expect(await graphNeighbours("author:qid:Q42")).toBeNull();
+    expect(await graphNeighbours("editions:OL1W")).toBeNull();
   });
 });

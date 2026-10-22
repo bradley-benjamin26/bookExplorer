@@ -1,4 +1,4 @@
-import type { GraphNode, PathResult } from "@book-explorer/shared";
+import type { Graph, GraphNode, PathResult } from "@book-explorer/shared";
 
 export const NODE_LABELS: Record<GraphNode["type"], string> = {
   author: "Author",
@@ -52,3 +52,9 @@ export const PATH_NOT_FOUND_MESSAGES: Record<Extract<PathResult, { found: false 
   nodeCap: "The search grew too large before it found a connection.",
   timeout: "The search ran out of time before it found a connection.",
 };
+
+/** A path result as a graph centred on its start, for the graph renderer; throws the reason when none was found. */
+export function pathAsGraph(path: PathResult): Graph {
+  if (!path.found) throw new Error(PATH_NOT_FOUND_MESSAGES[path.reason]);
+  return { centerId: path.nodes[0].id, nodes: path.nodes, edges: path.edges };
+}

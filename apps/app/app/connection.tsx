@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { GraphNode, WorkRef } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { AccessibilityInfo, ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchPath, searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
 import { WorkListRow } from "../src/components/WorkListRow";
@@ -15,7 +15,9 @@ const DEBOUNCE_MS = 400;
 const MIN_QUERY_LENGTH = 3;
 
 export default function Connection() {
-  const { from, label } = useLocalSearchParams<{ from: string; label: string }>();
+  const params = useLocalSearchParams<{ from: string; label?: string }>();
+  const from = params.from;
+  const label = params.label || "this item";
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -44,6 +46,14 @@ export default function Connection() {
     retry: false,
     staleTime: Infinity,
   });
+
+  // iOS VoiceOver ignores accessibilityLiveRegion (Android-only), so the outcome is announced too.
+  useEffect(() => {
+    if (!path.data) return;
+    AccessibilityInfo.announceForAccessibility(
+      path.data.found ? `Connection found in ${path.data.edges.length} steps` : PATH_NOT_FOUND_MESSAGES[path.data.reason]
+    );
+  }, [path.data]);
 
   const sep = (from ?? "").indexOf(":");
   const [fromType, fromId] = [from?.slice(0, sep), from?.slice(sep + 1)];
@@ -113,15 +123,16 @@ export default function Connection() {
           ))}
         </View>
       )}
-      {/* The graph opens centred on the start; the path itself isn't highlighted there. */}
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId))}
-        style={styles.action}
-        accessibilityLabel={`Show ${label} on the graph`}
-      >
-        Show on Graph
-      </Button>
+      {path.data?.found && (
+        <Button
+          variant="primary"
+          onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to }))}
+          style={styles.action}
+          accessibilityLabel="Show this connection on the graph"
+        >
+          Show on Graph
+        </Button>
+      )}
       <Button variant="pill" onPress={() => setTarget(null)} style={styles.action} accessibilityLabel="Choose a different book">
         Choose a Different Book
       </Button>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -13,12 +13,12 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
-import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
+import { fetchGraph, fetchPath, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { NODE_LABELS, RELATION_LABELS } from "../../../src/graphLabels";
+import { NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -415,12 +415,14 @@ function parseNodeId(id: string): Center {
 }
 
 export default function GraphExplorer() {
-  const { type, id, hideTypes, hideRelations } = useLocalSearchParams<{
+  const { type, id, hideTypes, hideRelations, pathTo } = useLocalSearchParams<{
     type: string;
     id: string;
     hideTypes?: string;
     hideRelations?: string;
+    pathTo?: string;
   }>();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -449,14 +451,25 @@ export default function GraphExplorer() {
   const [center, setCenter] = useState<Center | null>(type && id ? { type: type as GraphNode["type"], id } : null);
   const [history, setHistory] = useState<Center[]>([]);
 
+  // Opened from Find Connection: the starting view is just the path, read from
+  // the same cached query that screen ran (a search is costly and rate-limited).
+  // Tapping a node re-centres to a normal graph; stepping back returns here.
+  const showPath = !!pathTo && history.length === 0 && center?.type === type && center?.id === id;
+  const pathFrom = `${type}:${id}`;
   const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
-    queryKey: ["graph", center?.type, center?.id],
+    queryKey: showPath ? ["pathGraph", pathFrom, pathTo] : ["graph", center?.type, center?.id],
     // Never actually "genre" here — routes.graph() (the only way center gets
     // set from outside) and handleNodePress below (the only way it gets set
     // from within) both only ever produce author/work/subject centers, but
     // Center's own `type` stays the full GraphNode type since it's also used
     // for genre *nodes* passing through parseNodeId before that check runs.
-    queryFn: () => fetchGraph(center!.type as GraphCenterType, center!.id),
+    queryFn: showPath
+      ? () =>
+          queryClient
+            .fetchQuery({ queryKey: ["path", pathFrom, pathTo], queryFn: () => fetchPath(pathFrom, pathTo!), staleTime: Infinity })
+            .then(pathAsGraph)
+      : () => fetchGraph(center!.type as GraphCenterType, center!.id),
+    retry: showPath ? false : 3,
     enabled: !!center,
   });
 
