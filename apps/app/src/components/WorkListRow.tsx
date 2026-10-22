@@ -10,11 +10,14 @@ export function WorkListRow({
   work,
   onPress,
   series,
+  note,
 }: {
   work: WorkRef;
   onPress?: () => void;
   /** Set for a row in a series list: shows the position instead of authors and flags the current book. */
   series?: { position: string | null; current: boolean };
+  /** An extra line under the authors, also read out as part of the row's label. */
+  note?: string;
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -24,7 +27,7 @@ export function WorkListRow({
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={seriesRowLabel(work.title, series) ?? `${work.title}, ${authorNames}`}
+      accessibilityLabel={[seriesRowLabel(work.title, series) ?? `${work.title}, ${authorNames}`, note].filter(Boolean).join(". ")}
       accessibilityState={{ disabled: !onPress, selected: series?.current }}
       disabled={!onPress}
     >
@@ -40,6 +43,11 @@ export function WorkListRow({
         <Text style={styles.authors} numberOfLines={1}>
           {series ? [series.position && `Book ${series.position}`, series.current && "You are here"].filter(Boolean).join(" · ") : authorNames}
         </Text>
+        {note ? (
+          <Text style={styles.authors} numberOfLines={1}>
+            {note}
+          </Text>
+        ) : null}
       </View>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
     </Pressable>

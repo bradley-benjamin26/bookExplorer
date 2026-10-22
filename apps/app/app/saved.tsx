@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
+import { RecommendationsSection } from "../src/components/RecommendationsSection";
 import { SavedBookEditor } from "../src/components/SavedBookEditor";
 import { routes } from "../src/navigation";
 import {
@@ -284,6 +285,8 @@ export default function Saved() {
           </View>
         ))
       )}
+
+      <RecommendationsSection refreshKey={items} />
 
       <AppearanceSection />
 
