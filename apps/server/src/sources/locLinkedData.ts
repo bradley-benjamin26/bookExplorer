@@ -29,13 +29,31 @@ interface SkosEntry {
   [SKOS_PREF_LABEL]?: { "@value": string }[];
 }
 
+// LCSH topical headings are conventionally plural ("Safaris", "Automobiles")
+// while the name a book's actually catalogued under elsewhere (Open
+// Library's subject name, a Wikidata label) is often the singular form
+// ("Safari") — confirmed live: Open Library's "Safari" subject has no exact
+// LCSH match, but LCSH's own "Safaris" heading links back to the very same
+// Wikidata item. Trying the plain add/strip-trailing-"s" variant alongside
+// the exact label catches this without a full pluralization library, and
+// without weakening the near-miss guard below: neither variant of "fairy
+// tales" ever equals "fairy tales--adaptations".
+function labelVariants(name: string): string[] {
+  const target = name.toLowerCase().trim();
+  const variants = [target];
+  if (target.endsWith("s")) variants.push(target.slice(0, -1));
+  else variants.push(`${target}s`);
+  return variants;
+}
+
 /**
  * Resolves a subject heading's own label (e.g. "Fairy tales") to its LCSH
  * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact,
- * case-insensitive label match — a left-anchored near-miss like "Fairy
- * tales--Adaptations" is a different, more specific heading and must not be
- * treated as a match. Never throws: any failure (network error, non-ok
- * response, no hits, no exact match) degrades to `null`.
+ * case-insensitive match against the label or its singular/plural variant —
+ * a left-anchored near-miss like "Fairy tales--Adaptations" is a different,
+ * more specific heading and must not be treated as a match. Never throws:
+ * any failure (network error, non-ok response, no hits, no match) degrades
+ * to `null`.
  */
 export async function findSubjectHeadingUri(name: string): Promise<string | null> {
   try {
@@ -43,8 +61,8 @@ export async function findSubjectHeadingUri(name: string): Promise<string | null
     const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
     if (!res.ok) return null;
     const data = (await res.json()) as Suggest2Response;
-    const target = name.toLowerCase().trim();
-    const hit = (data.hits ?? []).find((h) => h.aLabel?.toLowerCase() === target);
+    const targets = labelVariants(name);
+    const hit = (data.hits ?? []).find((h) => targets.includes(h.aLabel?.toLowerCase()));
     return hit?.uri ?? null;
   } catch {
     return null;
