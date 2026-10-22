@@ -2,7 +2,7 @@ import type { Edition } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
-import { fonts, useThemedStyles, type Theme } from "../theme";
+import { useThemedStyles, type Theme } from "../theme";
 
 function EditionCard({ edition }: { edition: Edition }) {
   const styles = useThemedStyles(createStyles);
@@ -63,9 +63,9 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
   );
 }
 
-function createStyles({ colors, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    section: { marginTop: 28, width: "100%" },
+    section: { marginTop: spacing.xxl, width: "100%" },
     // Landed on from the "Editions" graph node (see the graph screen's
     // handleNodePress) — reuses the same yellow the app already uses for a
     // toggled-on pill button, rather than introducing a new highlight color
@@ -74,32 +74,32 @@ function createStyles({ colors, cardStyle }: Theme) {
       backgroundColor: colors.pillActiveBackground,
       borderWidth: 1,
       borderColor: colors.warning,
-      borderRadius: 12,
-      padding: 12,
-      marginHorizontal: -12,
+      borderRadius: radii.sm,
+      padding: spacing.md,
+      marginHorizontal: -spacing.md,
     },
-    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 12 },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     pressed: { opacity: 0.6 },
-    carousel: { gap: 12, paddingRight: 4 },
+    carousel: { gap: spacing.md, paddingRight: 4 },
     card: {
       width: 140,
-      borderRadius: 12,
+      borderRadius: radii.sm,
       padding: 10,
-      backgroundColor: colors.background,
+      backgroundColor: colors.paper,
       ...cardStyle,
     },
-    cover: { width: 120, height: 180, marginBottom: 8, borderRadius: 4, backgroundColor: colors.background },
+    cover: { width: 120, height: 180, marginBottom: spacing.sm, borderRadius: 4, backgroundColor: colors.paper },
     coverPlaceholder: {
       width: 120,
       height: 180,
-      marginBottom: 8,
+      marginBottom: spacing.sm,
       borderRadius: 4,
       backgroundColor: colors.chipBackground,
       alignItems: "center",
       justifyContent: "center",
     },
-    coverPlaceholderText: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint, textAlign: "center" },
-    format: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text, textTransform: "capitalize" },
-    meta: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint, marginTop: 2, lineHeight: 16 },
+    coverPlaceholderText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, textAlign: "center" },
+    format: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink, textTransform: "capitalize" },
+    meta: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, marginTop: 2, lineHeight: 16 },
   });
 }

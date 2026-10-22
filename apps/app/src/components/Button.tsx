@@ -33,7 +33,7 @@ export function Button({
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const labelStyle = [variant === "primary" ? styles.primaryText : styles.pillText, textStyle];
-  const starColor = active ? theme.colors.marginalia : theme.colors.text;
+  const starColor = active ? theme.colors.marginalia : theme.colors.ink;
   return (
     <Pressable
       onPress={onPress}
@@ -60,16 +60,16 @@ export function Button({
   );
 }
 
-function createStyles({ colors, radii, spacing }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     primary: {
-      backgroundColor: colors.primary,
+      backgroundColor: colors.cover,
       borderRadius: radii.sm,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.xl,
       alignItems: "center",
     },
-    primaryText: { color: colors.primaryText, fontSize: 15, fontWeight: "600" },
+    primaryText: { color: colors.paper, fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
     pill: {
       alignSelf: "flex-start",
       paddingVertical: 6,
@@ -79,11 +79,11 @@ function createStyles({ colors, radii, spacing }: Theme) {
     },
     pillActive: { backgroundColor: colors.pillActiveBackground },
     starRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-    pillText: { fontSize: 14, fontWeight: "600", color: colors.text },
+    pillText: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.ink },
     pressed: { opacity: 0.6 },
     // Keyboard/external-switch focus ring (RN Web passes `focused` as a third
     // Pressable style-callback arg; native platforms ignore this since
     // `focused` stays false there).
-    focused: { outlineWidth: 2, outlineColor: colors.link, outlineStyle: "solid" },
+    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
   });
 }

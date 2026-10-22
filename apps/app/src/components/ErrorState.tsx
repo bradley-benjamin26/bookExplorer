@@ -14,9 +14,9 @@ export function ErrorState({ message }: { message: string }) {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
-    message: { textAlign: "center", fontSize: 16, color: colors.danger, lineHeight: 22 },
+    container: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, gap: spacing.md, backgroundColor: colors.paper },
+    message: { textAlign: "center", fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.danger, lineHeight: 24 },
   });
 }

@@ -49,15 +49,15 @@ function ThemedShell() {
   return (
     <View style={[styles.shell, { backgroundColor: theme.colors.shellBackground }]}>
       <StatusBar style={theme.scheme === "dark" ? "light" : "dark"} />
-      <View style={[styles.content, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.content, { backgroundColor: theme.colors.paper }]}>
         <View style={styles.stackArea}>
           <Stack
             screenOptions={{
-              headerTitleStyle: { fontWeight: "600", color: theme.colors.text },
-              headerStyle: { backgroundColor: theme.colors.background },
+              headerTitleStyle: { fontFamily: theme.fonts.displayMedium, color: theme.colors.ink },
+              headerStyle: { backgroundColor: theme.colors.paper },
               headerShadowVisible: false,
-              headerTintColor: theme.colors.link,
-              contentStyle: { backgroundColor: theme.colors.background },
+              headerTintColor: theme.colors.cover,
+              contentStyle: { backgroundColor: theme.colors.paper },
             }}
           >
             <Stack.Screen name="index" options={{ title: "Book Explorer" }} />

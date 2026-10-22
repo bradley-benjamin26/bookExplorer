@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
-import { fonts, useTheme, useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
 
 function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; onChange: (next: string[]) => void }) {
@@ -42,7 +42,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
         <TextInput
           style={styles.input}
           placeholder={`Add a ${label.toLowerCase().replace(/s$/, "")}`}
-          placeholderTextColor={theme.colors.textFaint}
+          placeholderTextColor={theme.colors.inkFaint}
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={handleAdd}
@@ -161,7 +161,7 @@ export function SavedBookEditor({
         <TextInput
           style={styles.notesInput}
           placeholder="Your notes about this book..."
-          placeholderTextColor={theme.colors.textFaint}
+          placeholderTextColor={theme.colors.inkFaint}
           value={notes}
           onChangeText={handleNotesChange}
           onBlur={flushNotes}
@@ -172,36 +172,36 @@ export function SavedBookEditor({
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { width: "100%", marginTop: 24 },
-    section: { marginBottom: 20 },
-    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginBottom: 10 },
-    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
-    tag: { backgroundColor: colors.chipBackground, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
-    tagText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text },
-    addRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+    container: { width: "100%", marginTop: spacing.xl },
+    section: { marginBottom: spacing.lg },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: 10 },
+    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: 10 },
+    tag: { backgroundColor: colors.chipBackground, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 7 },
+    tagText: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    addRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
     input: {
       flex: 1,
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 12,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
       paddingVertical: 9,
       fontSize: 14,
       fontFamily: fonts.body,
-      color: colors.text,
+      color: colors.ink,
     },
     addButton: { alignSelf: "auto" },
     notesInput: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
+      borderRadius: radii.sm,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 15,
+      paddingVertical: spacing.md,
+      fontSize: typeScale.sm,
       fontFamily: fonts.body,
-      color: colors.text,
+      color: colors.ink,
       minHeight: 100,
       textAlignVertical: "top",
     },

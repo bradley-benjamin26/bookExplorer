@@ -1,10 +1,11 @@
 import type { Review } from "@book-explorer/shared";
-import { ChevronDown, ChevronUp } from "lucide-react-native";
+import { ChevronDown, ChevronUp, Star } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { fonts, useTheme, useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 function ReviewCard({ review }: { review: Review }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   // A spoiler review starts hidden behind a tap — same "opt in, don't
   // ambush" reasoning as a spoiler tag on any other reading platform,
@@ -15,7 +16,12 @@ function ReviewCard({ review }: { review: Review }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.reviewer}>{review.reviewerName}</Text>
-        {review.rating != null && <Text style={styles.rating}>★ {review.rating.toFixed(1)}</Text>}
+        {review.rating != null && (
+          <View style={styles.ratingRow}>
+            <Star size={12} color={theme.colors.warning} fill={theme.colors.warning} strokeWidth={2} />
+            <Text style={styles.rating}>{review.rating.toFixed(1)}</Text>
+          </View>
+        )}
       </View>
       {revealed ? (
         <Text style={styles.text}>{review.text}</Text>
@@ -46,9 +52,9 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
       >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
         {open ? (
-          <ChevronUp size={16} color={theme.colors.textFaint} strokeWidth={2} />
+          <ChevronUp size={16} color={theme.colors.inkFaint} strokeWidth={2} />
         ) : (
-          <ChevronDown size={16} color={theme.colors.textFaint} strokeWidth={2} />
+          <ChevronDown size={16} color={theme.colors.inkFaint} strokeWidth={2} />
         )}
       </Pressable>
       {open && (
@@ -63,29 +69,30 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
   );
 }
 
-function createStyles({ colors, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    section: { marginTop: 28, width: "100%" },
+    section: { marginTop: spacing.xxl, width: "100%" },
     header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: spacing.md,
     },
-    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },
     pressed: { opacity: 0.6 },
     card: {
-      borderRadius: 12,
+      borderRadius: radii.sm,
       padding: 14,
-      marginBottom: 12,
-      backgroundColor: colors.background,
+      marginBottom: spacing.md,
+      backgroundColor: colors.paper,
       ...cardStyle,
     },
-    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-    reviewer: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.text },
-    rating: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.warning },
-    text: { fontSize: 14, fontFamily: fonts.body, color: colors.text, lineHeight: 20 },
-    spoilerText: { fontSize: 14, fontFamily: fonts.body, color: colors.link, fontStyle: "italic" },
-    attribution: { fontSize: 12, fontFamily: fonts.body, color: colors.textFaint },
+    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
+    reviewer: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    rating: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.warning },
+    text: { fontSize: 14, fontFamily: fonts.body, color: colors.ink, lineHeight: 22 },
+    spoilerText: { fontSize: 14, fontFamily: fonts.body, color: colors.cover, fontStyle: "italic" },
+    attribution: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint },
   });
 }

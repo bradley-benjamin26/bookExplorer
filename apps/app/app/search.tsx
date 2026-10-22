@@ -5,7 +5,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from "
 import { searchBooks } from "../src/api/client";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { routes } from "../src/navigation";
-import { fonts, useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 // Waits for typing to pause before actually searching — Open Library is hit
 // on every distinct query, so searching on every keystroke would fire a
@@ -52,7 +52,7 @@ export default function Search() {
           <TextInput
             style={styles.input}
             placeholder="Search by title or author"
-            placeholderTextColor={theme.colors.textFaint}
+            placeholderTextColor={theme.colors.inkFaint}
             value={query}
             onChangeText={setQuery}
             autoFocus
@@ -66,7 +66,7 @@ export default function Search() {
           )}
           {isSearchable && isLoading && (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={theme.colors.link} />
+              <ActivityIndicator color={theme.colors.cover} />
             </View>
           )}
           {isSearchable && isError && (
@@ -86,9 +86,9 @@ export default function Search() {
   );
 }
 
-function createStyles({ colors, spacing, radii }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: colors.paper },
     content: { padding: spacing.lg },
     input: {
       borderWidth: 1,
@@ -96,12 +96,12 @@ function createStyles({ colors, spacing, radii }: Theme) {
       borderRadius: radii.sm,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
-      fontSize: 16,
+      fontSize: typeScale.sm,
       fontFamily: fonts.body,
-      color: colors.text,
+      color: colors.ink,
     },
-    hint: { fontSize: 14, fontFamily: fonts.body, color: colors.textFaint, fontStyle: "italic", marginTop: spacing.lg },
+    hint: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
     loadingRow: { marginTop: spacing.xl, alignItems: "center" },
-    errorText: { fontSize: 14, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
+    errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
   });
 }

@@ -50,8 +50,7 @@ async function readRecord(isbn: string): Promise<SavedBookRecord | null> {
 /** Creates the record on first save, from the currently-fetched external data. */
 export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
   return enqueueWrite(storageKey(book.isbn), async () => {
-    const existing = await getSavedBook(book.isbn);
- main
+    const existing = await readRecord(book.isbn);
     if (existing) return existing;
 
     const record: SavedBookRecord = {
@@ -73,22 +72,20 @@ export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
 }
 
 /**
- * Waits for any queued writes first, so a screen re-reading on focus (e.g.
+ * Waits for any queued writes to this book first, so a screen re-reading on focus (e.g.
  * the book page after a removal or edit on the Saved screen) sees their
  * result rather than the record as it was before they landed.
  */
 export function getSavedBook(isbn: string): Promise<SavedBookRecord | null> {
-  return writeQueue.then(() => readRecord(isbn));
+  return enqueueWrite(storageKey(isbn), () => readRecord(isbn));
 }
 
 export function updateSavedBook(
   isbn: string,
   changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>
 ): Promise<SavedBookRecord | null> {
-
   return enqueueWrite(storageKey(isbn), async () => {
-    const existing = await getSavedBook(isbn);
-main
+    const existing = await readRecord(isbn);
     if (!existing) return null;
     const next = { ...existing, ...changes };
     await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));

@@ -14,7 +14,7 @@ import {
 } from "../src/storage/librarySettings";
 import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
-import { fonts, useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
+import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
 
 function LibraryCard({
@@ -51,7 +51,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="e.g. Springfield Public Library"
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         value={name}
         onChangeText={(text) => {
           setName(text);
@@ -67,7 +67,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="https://catalog.mylibrary.org/search?q="
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         autoCapitalize="none"
         autoCorrect={false}
         value={isbnUrl}
@@ -85,7 +85,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="https://catalog.mylibrary.org/search?q="
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         autoCapitalize="none"
         autoCorrect={false}
         value={titleUrl}
@@ -295,7 +295,7 @@ export default function Saved() {
         accessibilityLabel="Add new library"
       >
         <View style={styles.addLibraryIcon}>
-          <Plus size={16} color={theme.colors.link} strokeWidth={2} />
+          <Plus size={16} color={theme.colors.cover} strokeWidth={2} />
         </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
@@ -303,12 +303,18 @@ export default function Saved() {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
-    sectionTitle: { fontSize: 16, fontFamily: fonts.display, color: colors.text, marginTop: 28, marginBottom: 12 },
-    emptyText: { fontSize: 14, fontFamily: fonts.body, color: colors.textFaint, fontStyle: "italic" },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg },
+    sectionTitle: {
+      fontFamily: fonts.displayMedium,
+      fontSize: typeScale.md,
+      color: colors.ink,
+      marginTop: spacing.xxl,
+      marginBottom: spacing.md,
+    },
+    emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
     row: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -317,48 +323,48 @@ function createStyles({ colors }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    rowMain: { flex: 1, paddingRight: 12 },
-    rowText: { fontSize: 16, fontFamily: fonts.body, color: colors.text },
+    rowMain: { flex: 1, paddingRight: spacing.md },
+    rowText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     bookBlock: { borderBottomWidth: 1, borderBottomColor: colors.border },
-    editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.chipBackground, marginRight: 8 },
-    editText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.text },
-    removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.dangerBackground },
-    removeText: { fontSize: 13, fontFamily: fonts.bodySemiBold, color: colors.danger },
+    editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.chipBackground, marginRight: spacing.sm },
+    editText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
+    removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.dangerBackground },
+    removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
     pressed: { opacity: 0.6 },
-    helpText: { fontSize: 13, fontFamily: fonts.body, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
-    themeOptions: { flexDirection: "row", gap: 8 },
+    helpText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20, marginBottom: spacing.md },
+    themeOptions: { flexDirection: "row", gap: spacing.sm },
     themeOption: { alignSelf: "auto" },
-    fieldLabel: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.text, marginBottom: 4 },
-    fieldLabelSpaced: { marginTop: 16 },
+    fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },
+    fieldLabelSpaced: { marginTop: spacing.lg },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
+      borderRadius: radii.sm,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 15,
+      paddingVertical: spacing.md,
       fontFamily: fonts.body,
-      color: colors.text,
+      fontSize: typeScale.sm,
+      color: colors.ink,
     },
-    saveButton: { marginTop: 14 },
+    saveButton: { marginTop: spacing.md },
     libraryCard: {
-      marginTop: 20,
-      padding: 16,
+      marginTop: spacing.lg,
+      padding: spacing.lg,
       borderWidth: 1,
       borderColor: colors.cardBorder,
-      borderRadius: 12,
+      borderRadius: radii.sm,
     },
     libraryCardHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 4,
+      marginBottom: spacing.xs,
     },
     addLibraryRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      marginTop: 20,
+      marginTop: spacing.lg,
       paddingVertical: 10,
     },
     addLibraryIcon: {
@@ -366,10 +372,10 @@ function createStyles({ colors }: Theme) {
       height: 26,
       borderRadius: 13,
       borderWidth: 1,
-      borderColor: colors.link,
+      borderColor: colors.cover,
       alignItems: "center",
       justifyContent: "center",
     },
-    addLibraryText: { fontSize: 16, fontFamily: fonts.bodySemiBold, color: colors.link },
+    addLibraryText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover },
   });
 }

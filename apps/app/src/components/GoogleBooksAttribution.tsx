@@ -16,10 +16,10 @@ export function GoogleBooksAttribution({ label }: { label: string }) {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     row: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-    label: { fontSize: 12, color: colors.link },
+    label: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover },
     logo: { width: 100, height: 17 },
   });
 }

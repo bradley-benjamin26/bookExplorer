@@ -52,7 +52,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       accessibilityLabel={label}
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
+      <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
     </Pressable>
   );
 
@@ -90,9 +90,9 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
             >
               <Text style={styles.findRowText}>Find at {library.name}</Text>
               {expanded ? (
-                <ChevronDown size={18} color={theme.colors.textFaint} strokeWidth={2} />
+                <ChevronDown size={18} color={theme.colors.inkFaint} strokeWidth={2} />
               ) : (
-                <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
+                <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
               )}
             </Pressable>
             {expanded && (
@@ -111,19 +111,19 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     findRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    subRows: { paddingLeft: 16 },
-    findRowText: { fontSize: 16, color: colors.link },
-    findRowHint: { fontSize: 13, color: colors.textFaint, fontStyle: "italic" },
+    subRows: { paddingLeft: spacing.lg },
+    findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
+    findRowHint: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
     pressed: { opacity: 0.6 },
   });
 }

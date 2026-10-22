@@ -1,6 +1,6 @@
 # Book Explorer — Visual Design Plan
 
-Status: planned, not yet implemented. Flagship screens for first pass: **Home** and **BookDetail**.
+Status: implemented across all screens (Home and BookDetail first, then the rest in a follow-up pass). Not yet reviewed visually in light and dark.
 
 ## Brief (why this direction)
 

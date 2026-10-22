@@ -52,26 +52,26 @@ export default function Scan() {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#000" },
     permissionScreen: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      padding: 24,
-      gap: 16,
-      backgroundColor: colors.background,
+      padding: spacing.xl,
+      gap: spacing.lg,
+      backgroundColor: colors.paper,
     },
-    message: { textAlign: "center", fontSize: 16, color: colors.text },
+    message: { textAlign: "center", fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     overlay: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
     scanBox: {
       width: "80%",
       height: 140,
       borderWidth: 2,
       borderColor: "#fff",
-      borderRadius: 12,
+      borderRadius: 10,
     },
-    hint: { color: "#fff", fontSize: 14 },
+    hint: { color: "#fff", fontFamily: fonts.body, fontSize: 14 },
   });
 }

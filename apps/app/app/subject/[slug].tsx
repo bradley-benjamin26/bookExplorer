@@ -24,7 +24,7 @@ export default function SubjectDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
@@ -98,28 +98,34 @@ export default function SubjectDetail() {
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    name: { fontSize: 27, fontWeight: "700", textTransform: "capitalize", letterSpacing: -0.3, color: colors.text },
-    workCount: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
-    description: { fontSize: 15, color: colors.textMuted, marginTop: 8 },
-    noMatch: { fontSize: 13, color: colors.warning, marginTop: 12, fontStyle: "italic" },
-    graphButton: { marginTop: 16 },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    name: {
+      fontFamily: fonts.display,
+      fontSize: typeScale.lg,
+      textTransform: "capitalize",
+      letterSpacing: -0.3,
+      color: colors.ink,
+    },
+    workCount: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
+    description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24, marginTop: spacing.sm },
+    noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
+    graphButton: { marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
-    conceptSection: { marginTop: 24 },
-    sectionTitle: { ...kicker, marginTop: 8, marginBottom: 12 },
-    conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    conceptSection: { marginTop: spacing.xl },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
+    conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     conceptTag: {
       backgroundColor: colors.chipBackgroundAccent,
-      borderRadius: 16,
-      paddingHorizontal: 12,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
       paddingVertical: 7,
       borderWidth: 1,
       borderColor: colors.chipBorderAccent,
     },
-    conceptTagText: { fontSize: 13, color: colors.chipTextAccent },
+    conceptTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextAccent },
   });
 }

@@ -85,7 +85,7 @@ export default function BookDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
@@ -321,7 +321,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.text, textTransform: "capitalize" },
+    formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink, textTransform: "capitalize" },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },

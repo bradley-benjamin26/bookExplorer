@@ -130,7 +130,7 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
     libraryLink: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: colors.cover, marginTop: spacing.sm },
     pressed: { opacity: 0.6 },
-    focused: { outlineWidth: 2, outlineColor: colors.link, outlineStyle: "solid" },
+    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
     scanButton: {
       flexDirection: "row",
       alignItems: "center",

@@ -1,6 +1,7 @@
 import type { Rating } from "@book-explorer/shared";
+import { Star } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 const SOURCE_LABELS: Record<Rating["sources"][number], string> = {
   hardcover: "Hardcover",
@@ -9,6 +10,7 @@ const SOURCE_LABELS: Record<Rating["sources"][number], string> = {
 };
 
 export function RatingBadge({ rating }: { rating: Rating | null }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   if (!rating) return null;
 
@@ -20,7 +22,10 @@ export function RatingBadge({ rating }: { rating: Rating | null }) {
 
   return (
     <View style={styles.row}>
-      <Text style={styles.stars}>★ {rating.average.toFixed(1)}</Text>
+      <View style={styles.starRow}>
+        <Star size={14} color={theme.colors.warning} fill={theme.colors.warning} strokeWidth={2} />
+        <Text style={styles.stars}>{rating.average.toFixed(1)}</Text>
+      </View>
       <Text style={styles.count}>
         ({rating.count.toLocaleString()} rating{rating.count === 1 ? "" : "s"} · {sourceLabel})
       </Text>
@@ -28,10 +33,11 @@ export function RatingBadge({ rating }: { rating: Rating | null }) {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    row: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 6 },
-    stars: { fontSize: 15, fontWeight: "700", color: colors.warning },
-    count: { fontSize: 12, color: colors.textMuted },
+    row: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm, marginTop: spacing.sm },
+    starRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    stars: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.warning },
+    count: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
   });
 }

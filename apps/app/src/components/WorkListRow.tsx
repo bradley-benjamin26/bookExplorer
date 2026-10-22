@@ -29,18 +29,18 @@ export function WorkListRow({ work, onPress }: { work: WorkRef; onPress: () => v
           {authorNames}
         </Text>
       </View>
-      <ChevronRight size={18} color={theme.colors.textFaint} strokeWidth={2} />
+      <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />
     </Pressable>
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     row: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
-      paddingVertical: 12,
+      gap: spacing.md,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
@@ -48,7 +48,7 @@ function createStyles({ colors }: Theme) {
     cover: { width: 44, height: 64, borderRadius: 4 },
     coverPlaceholder: { width: 44, height: 64, borderRadius: 4, backgroundColor: colors.chipBackground },
     info: { flex: 1, justifyContent: "center" },
-    title: { fontSize: 16, fontWeight: "600", color: colors.text },
-    authors: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
+    title: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
+    authors: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },
   });
 }
