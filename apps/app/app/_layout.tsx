@@ -120,6 +120,8 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             />
             <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
+            <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
+            <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
           </Stack>
         </View>
       </View>

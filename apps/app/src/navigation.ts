@@ -27,5 +27,7 @@ export const routes = {
   /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. */
   connection: (from: string, label: string): Href => ({ pathname: "/connection", params: { from, label } }),
   saved: (): Href => "/saved",
+  recommendations: (): Href => "/recommendations",
+  settings: (): Href => "/settings",
   search: (query?: string): Href => ({ pathname: "/search", params: query ? { q: query } : {} }),
 };
