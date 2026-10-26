@@ -174,7 +174,14 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     bookBlock: { borderBottomWidth: 1, borderBottomColor: colors.border },
     editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.chipBackground, marginRight: spacing.sm },
     editText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
-    removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.dangerBackground },
+    removeButton: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: radii.pill,
+      backgroundColor: colors.dangerBackground,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
     pressed: { opacity: 0.6 },
     navRow: {

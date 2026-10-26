@@ -220,7 +220,14 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     saveButton: { marginTop: spacing.md },
     genresSection: { marginTop: spacing.xxl, width: "100%" },
     genreTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: radii.pill, paddingHorizontal: 13, paddingVertical: 7 },
+    genreTag: {
+      backgroundColor: colors.chipBackgroundGenre,
+      borderRadius: radii.pill,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextGenre,
+    },
     genreTagText: {
       fontFamily: fonts.bodySemiBold,
       fontSize: typeScale.xs,
@@ -242,6 +249,8 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextSubject,
     },
     subjectTagText: {
       fontFamily: fonts.bodySemiBold,

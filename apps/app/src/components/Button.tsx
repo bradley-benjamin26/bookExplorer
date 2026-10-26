@@ -36,8 +36,8 @@ export function Button({
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const labelStyle = [variant === "primary" ? styles.primaryText : styles.pillText, textStyle];
-  const starColor = active ? theme.colors.marginalia : theme.colors.ink;
+  const labelStyle = [variant === "primary" ? styles.primaryText : styles.pillText, active && styles.pillActiveText, textStyle];
+  const starColor = active ? theme.colors.primaryText : theme.colors.ink;
   return (
     <Pressable
       onPress={onPress}
@@ -69,21 +69,24 @@ export function Button({
 function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     primary: {
-      backgroundColor: colors.cover,
+      backgroundColor: colors.primary,
       borderRadius: radii.sm,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.xl,
       alignItems: "center",
     },
-    primaryText: { color: colors.paper, fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
+    primaryText: { color: colors.primaryText, fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
     pill: {
       alignSelf: "flex-start",
       paddingVertical: 6,
       paddingHorizontal: 14,
       borderRadius: radii.pill,
       backgroundColor: colors.chipBackground,
+      borderWidth: 1,
+      borderColor: colors.pillBorder,
     },
-    pillActive: { backgroundColor: colors.pillActiveBackground },
+    pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    pillActiveText: { color: colors.primaryText },
     starRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     pillText: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.ink },
     pressed: { opacity: 0.6 },

@@ -49,6 +49,7 @@ function LibraryCard({
         <Text style={styles.fieldLabel}>Library Name</Text>
         <Pressable
           onPress={() => onRemove(library.id)}
+          style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={library.name ? `Remove ${library.name}` : "Remove library"}
@@ -215,6 +216,14 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       marginTop: spacing.xxl,
       marginBottom: spacing.md,
     },
+    removeButton: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: radii.pill,
+      backgroundColor: colors.dangerBackground,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
     pressed: { opacity: 0.6 },
     helpText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20, marginBottom: spacing.md },
@@ -263,6 +272,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       justifyContent: "center",
     },
     addLibraryText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover },
-    advanced: { fontFamily: fonts.bodySemiBold, fontSize: 11, color: colors.inkFaint },
+    advanced: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.inkFaint },
   });
 }

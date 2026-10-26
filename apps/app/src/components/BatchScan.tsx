@@ -226,6 +226,6 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     row: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
     rowText: { flex: 1 },
     rowTitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
-    muted: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
+    muted: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.textMuted },
   });
 }

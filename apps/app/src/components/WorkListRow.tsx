@@ -2,6 +2,7 @@ import type { WorkRef } from "@book-explorer/shared";
 import { ChevronRight } from "lucide-react-native";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { seriesRowLabel } from "../seriesLabel";
+import { CoverPlaceholder } from "./CoverPlaceholder";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 /** A tappable cover/title/author row for a work — shared by any screen that
@@ -34,7 +35,7 @@ export function WorkListRow({
       {work.coverUrl ? (
         <Image source={{ uri: work.coverUrl }} style={styles.cover} resizeMode="contain" />
       ) : (
-        <View style={styles.coverPlaceholder} />
+        <CoverPlaceholder width={44} height={64} />
       )}
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>
@@ -66,7 +67,6 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     },
     pressed: { opacity: 0.6 },
     cover: { width: 44, height: 64, borderRadius: 4 },
-    coverPlaceholder: { width: 44, height: 64, borderRadius: 4, backgroundColor: colors.chipBackground },
     info: { flex: 1, justifyContent: "center" },
     title: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     authors: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },

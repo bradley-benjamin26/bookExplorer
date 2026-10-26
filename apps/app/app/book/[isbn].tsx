@@ -136,8 +136,7 @@ export default function BookDetail() {
         variant="pill"
         active={saved}
         onPress={handleToggleSaved}
-        style={[styles.saveButton, saved && styles.savedPill]}
-        textStyle={[styles.saveText, saved && styles.savedText]}
+        style={styles.saveButton}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
         {saved ? "★ Saved" : "☆ Save"}
@@ -233,7 +232,6 @@ export default function BookDetail() {
             variant="primary"
             onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
             style={styles.graphButton}
-            textStyle={styles.graphButtonText}
           >
             View as Graph
           </Button>
@@ -241,7 +239,6 @@ export default function BookDetail() {
             variant="primary"
             onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
             style={styles.graphButton}
-            textStyle={styles.graphButtonText}
             accessibilityLabel={`Find a connection from ${data.title}`}
             accessibilityHint="Shows how this book links to another book you pick"
           >
@@ -326,10 +323,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       textDecorationLine: "underline",
     },
     saveButton: { marginTop: spacing.md },
-    // Overrides the pill's yellow active fill: marginalia text on it is only 4.07:1 in dark mode.
-    savedPill: { backgroundColor: colors.chipBackground },
-    saveText: { fontFamily: fonts.bodySemiBold, color: colors.ink },
-    savedText: { color: colors.marginalia },
     editInLibraryLink: {
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
@@ -355,7 +348,14 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     // flexShrink lets a long genre list wrap within the row instead of running off the right edge.
     metaColumn: { alignItems: "flex-start", flexShrink: 1 },
     genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: spacing.sm },
-    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: radii.pill, paddingHorizontal: 13, paddingVertical: 7 },
+    genreTag: {
+      backgroundColor: colors.chipBackgroundGenre,
+      borderRadius: radii.pill,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextGenre,
+    },
     genreTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextGenre },
     // A format tag isn't a link to anywhere (there's no "format" browse page
     // the way there is for a genre/subject) — an outlined, neutral style
@@ -384,8 +384,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderBottomColor: colors.border,
     },
     findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
-    graphButton: { width: "100%", marginTop: spacing.lg, backgroundColor: colors.cover },
-    graphButtonText: { fontFamily: fonts.bodySemiBold, color: colors.paper },
+    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
@@ -398,6 +397,8 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextSubject,
     },
     subjectTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });

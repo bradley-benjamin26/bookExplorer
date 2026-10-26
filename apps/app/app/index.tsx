@@ -50,7 +50,7 @@ export default function Home() {
             focused && styles.focused,
           ]}
         >
-          <ScanBarcode size={22} color={theme.colors.paper} />
+          <ScanBarcode size={22} color={theme.colors.primaryText} />
           <Text style={styles.scanText}>Scan a book</Text>
         </Pressable>
 
@@ -142,11 +142,11 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       alignItems: "center",
       justifyContent: "center",
       gap: spacing.md,
-      backgroundColor: colors.cover,
+      backgroundColor: colors.primary,
       borderRadius: radii.sm,
       paddingVertical: spacing.lg,
     },
-    scanText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.paper },
+    scanText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.primaryText },
     searchRow: {
       flexDirection: "row",
       alignItems: "center",
