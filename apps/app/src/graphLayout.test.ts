@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { CENTER_NODE_RADIUS, layoutGraph, NODE_RADIUS, wrapLabel } from "./graphLayout";
+import { CENTER_NODE_RADIUS, labelWidthOf, layoutGraph, NODE_RADIUS, wrapLabel } from "./graphLayout";
 
 describe("wrapLabel", () => {
   it("keeps a short label on one line", () => {
@@ -42,5 +42,11 @@ describe("layoutGraph", () => {
         expect(gap).toBeGreaterThan(radius(nodes[i].id) + radius(nodes[j].id));
       }
     }
+  });
+});
+
+describe("labelWidthOf", () => {
+  it("sizes the widest line for the 13px label font", () => {
+    expect(labelWidthOf(["abcdefghij", "abc"])).toBeCloseTo(77, 5);
   });
 });

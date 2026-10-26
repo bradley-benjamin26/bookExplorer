@@ -69,10 +69,13 @@ export const PILL_HEIGHT = 16;
 const PILL_CHAR_WIDTH = 6.6;
 const PILL_PADDING = 12;
 
+const LABEL_CHAR_WIDTH = 7.3; // ~0.56em of the 13px node label font
+export const labelWidthOf = (lines: string[]) => Math.max(...lines.map((l) => l.length), 1) * LABEL_CHAR_WIDTH + 4;
+
 // What a node occupies on the canvas: its circle plus the wrapped label under it.
 function nodeRects(node: { x: number; y: number; label: string }, radius: number): Box[] {
   const lines = wrapLabel(node.label);
-  const labelWidth = Math.max(...lines.map((l) => l.length), 1) * 6.2 + 4;
+  const labelWidth = labelWidthOf(lines);
   return [
     { left: node.x - radius - 2, right: node.x + radius + 2, top: node.y - radius - 2, bottom: node.y + radius + 2 },
     {
@@ -170,7 +173,7 @@ function nudgeNodesOffEdges(nodes: PositionedNode[], edges: PositionedEdge[], ce
 function nodeBox(node: PositionedNode, centerId: string): Box {
   const radius = node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS;
   const lines = wrapLabel(node.label);
-  const half = Math.max(radius, (Math.max(...lines.map((l) => l.length), 1) * 6.2 + 4) / 2);
+  const half = Math.max(radius, labelWidthOf(lines) / 2);
   return {
     left: node.x - half,
     right: node.x + half,
