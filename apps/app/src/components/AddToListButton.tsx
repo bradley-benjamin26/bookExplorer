@@ -37,9 +37,10 @@ export function CreateListForm({
     setBusy(true);
     try {
       const list = await createList({ name, description, kind: kind ?? chosenKind });
-      await onCreated(list);
+      // Clear first: a failing onCreated must not leave the form able to create a duplicate on retry.
       setName("");
       setDescription("");
+      await onCreated(list);
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -97,7 +98,7 @@ export function AddToListButton({ member }: { member: Omit<ListMember, "addedAt"
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
-  const load = () => getLists(kind).then(setLists);
+  const load = () => getLists(kind).then(setLists).catch(() => setLists([]));
   const show = () => {
     setCreating(false);
     setError("");
@@ -115,9 +116,12 @@ export function AddToListButton({ member }: { member: Omit<ListMember, "addedAt"
     await load();
   };
   const handleCreated = async (list: SavedList) => {
-    await addToList(list.id, member);
-    setCreating(false);
-    await load();
+    try {
+      await addToList(list.id, member);
+    } finally {
+      setCreating(false);
+      await load();
+    }
   };
 
   return (

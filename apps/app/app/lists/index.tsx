@@ -22,7 +22,7 @@ export default function Lists() {
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {
-    getLists().then(setLists);
+    getLists().then(setLists).catch(() => setLists([]));
   }, []);
   useFocusEffect(load);
 

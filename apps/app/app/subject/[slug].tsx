@@ -13,7 +13,7 @@ import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
-import { DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
+import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
 
 export default function SubjectDetail() {
@@ -47,6 +47,7 @@ export default function SubjectDetail() {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
+  const { books, fellBack } = booksForSort(!!sortParams, sorted, data.books);
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
   const narrower = data.relatedConcepts.filter((c) => c.relation === "narrower");
 
@@ -54,7 +55,7 @@ export default function SubjectDetail() {
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.content}
-      data={sortParams ? sorted.data ?? [] : data.books}
+      data={books}
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
@@ -113,6 +114,7 @@ export default function SubjectDetail() {
             ))}
           </View>
           {sortParams && sorted.isLoading && <ActivityIndicator color={theme.colors.cover} style={styles.sortSpinner} />}
+          {fellBack && <Text style={styles.noMatch}>Couldn't load this order, showing the classic list.</Text>}
         </View>
       }
       renderItem={({ item }) => (

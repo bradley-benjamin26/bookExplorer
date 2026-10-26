@@ -3,11 +3,9 @@ import { useCallback, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
-import { routes } from "../../src/navigation";
+import { memberHref, routes } from "../../src/navigation";
 import { deleteList, getList, removeFromList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useThemedStyles, type Theme } from "../../src/theme";
-
-const memberHref = (m: ListMember) => (m.type === "author" ? routes.author(m.id) : m.type === "work" ? routes.work(m.id) : routes.book(m.id));
 
 export default function ListDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,7 +15,7 @@ export default function ListDetail() {
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    getList(id).then(setList);
+    getList(id).then(setList).catch(() => setList(null));
   }, [id]);
   useFocusEffect(load);
 
@@ -32,7 +30,13 @@ export default function ListDetail() {
   };
 
   const doDelete = async () => {
-    await deleteList(id);
+    setError("");
+    try {
+      await deleteList(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     // A deep-linked list has nothing to go back to.
     if (router.canGoBack()) router.back();
     else router.replace(routes.lists());

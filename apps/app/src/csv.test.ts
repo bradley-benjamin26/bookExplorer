@@ -78,12 +78,25 @@ describe("booksToCsv", () => {
     expect(r["Exclusive Shelf"]).toBe("to-read");
   });
 
+  it("a book in several lists joins their slugs with a comma and parses back", () => {
+    const csv = booksToCsv([record], [list("A List"), list("B List")]);
+    expect(csv).toContain('"a-list, b-list"');
+    const [header, row] = parseCsv(csv);
+    expect(row[header.indexOf("Bookshelves")]).toBe("a-list, b-list");
+    expect(readBookCsv(csv)).toEqual([{ title: 'Dune, "the" novel', isbn: "9780441013593" }]);
+  });
+
+  it("drops a list whose name slugs to nothing", () => {
+    const [header, row] = parseCsv(booksToCsv([record], [list("!!!"), list("Keep")]));
+    expect(row[header.indexOf("Bookshelves")]).toBe("keep");
+  });
+
   it("a book in no list exports an empty Bookshelves", () => {
     const [header, row] = parseCsv(booksToCsv([record], []));
     expect(row[header.indexOf("Bookshelves")]).toBe("");
   });
 
-  it('a list named "=HYPERLINK(x)" is neutralised', () => {
+  it('a list named "=HYPERLINK(x)" is neutralised because the slug replaces the name', () => {
     const [header, row] = parseCsv(booksToCsv([record], [list("=HYPERLINK(x)")]));
     expect(row[header.indexOf("Bookshelves")]).toBe("hyperlink-x");
   });
@@ -107,7 +120,7 @@ describe("booksToCsv", () => {
   });
 
   it("neutralizes cells a spreadsheet would run as formulas", () => {
-    const evil = { ...record, title: '=HYPERLINK("http://x")', authorNames: ["+1", "@SUM(A1)"], notes: "-2", subjects: ["\tx"], genres: [] };
+    const evil = { ...record, title: '=HYPERLINK("http://x")', authorNames: ["+1", "@SUM(A1)"], notes: "-2", genres: [] };
     const [, row] = parseCsv(booksToCsv([evil], []));
     expect([row[0], row[1], row[2], row[7]]).toEqual(["'=HYPERLINK(\"http://x\")", "'+1", "'@SUM(A1)", "'-2"]);
   });

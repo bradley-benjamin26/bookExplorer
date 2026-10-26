@@ -13,3 +13,10 @@ export const DEFAULT_SUBJECT_SORT: SubjectSort = "readinglog";
 export function subjectSortParams(subjectName: string, sort: SubjectSort): Record<string, string> | null {
   return sort === "classic" ? null : { subject: subjectName, sort };
 }
+
+/** Books to show for a sorted listing; falls back to the subject's own list when the sorted query errored or came back empty. */
+export function booksForSort<T>(sortedActive: boolean, sorted: { data?: T[]; isError: boolean }, fallback: T[]): { books: T[]; fellBack: boolean } {
+  if (!sortedActive) return { books: fallback, fellBack: false };
+  if (sorted.isError || !sorted.data?.length) return { books: fallback, fellBack: sorted.isError };
+  return { books: sorted.data, fellBack: false };
+}

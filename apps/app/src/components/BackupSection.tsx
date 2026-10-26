@@ -109,7 +109,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
     <View>
       <Text style={styles.sectionTitle} accessibilityRole="header">Export & Import</Text>
       <Text style={styles.helpText}>
-        A backup holds your saved books, authors, tags, notes and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
+        A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
       </Text>
       <View style={styles.buttons}>
         <Button
