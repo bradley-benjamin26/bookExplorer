@@ -18,7 +18,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -283,18 +283,6 @@ interface PositionedEdge {
 }
 
 type LabeledEdge = PositionedEdge & { text: string; pillWidth: number; labelX: number; labelY: number };
-
-// The lines-and-labels a sighted user reads visually (source, connecting
-// line, relation label, target) have no equivalent for a screen reader
-// landing on one node in isolation, so each node's accessible description
-// spells out every edge touching it using the same "source relation target"
-// phrasing the diagram itself uses.
-function describeNodeRelations(nodeId: string, edges: LabeledEdge[]): string {
-  return edges
-    .filter((edge) => edge.source.id === nodeId || edge.target.id === nodeId)
-    .map((edge) => `${edge.source.label} ${RELATION_LABELS[edge.relation] ?? edge.relation} ${edge.target.label}`)
-    .join(". ");
-}
 
 interface Center {
   type: GraphNode["type"];
@@ -960,7 +948,8 @@ export default function GraphExplorer() {
         {orderedNodes.map((node) => {
           const isCenter = node.id === data.centerId;
           const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
-          const relations = describeNodeRelations(node.id, layout.edges);
+          // A screen reader landing on one node in isolation can't see its edges, so spell them out.
+          const relations = nodeRelations(visible!, node.id).join(". ");
           const label = [
             `${node.label}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",

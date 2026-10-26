@@ -46,6 +46,15 @@ export function pathSteps(path: GraphPath): PathStep[] {
   });
 }
 
+/** "source relation target" sentences for each distinct edge touching a node, in edge order. */
+export function nodeRelations(graph: Graph, nodeId: string): string[] {
+  const labels = new Map(graph.nodes.map((n) => [n.id, n.label]));
+  const sentences = graph.edges
+    .filter((e) => (e.source === nodeId || e.target === nodeId) && labels.has(e.source) && labels.has(e.target))
+    .map((e) => `${labels.get(e.source)} ${RELATION_LABELS[e.relation] ?? e.relation} ${labels.get(e.target)}`);
+  return [...new Set(sentences)];
+}
+
 export const PATH_NOT_FOUND_MESSAGES: Record<Extract<PathResult, { found: false }>["reason"], string> = {
   noPath: "No connection found between these two.",
   depthCap: "No connection within a few steps.",
