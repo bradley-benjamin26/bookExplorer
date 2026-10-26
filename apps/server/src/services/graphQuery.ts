@@ -100,6 +100,7 @@ export function findPath(
   }));
   const found: Found[] = [];
   let expansions = 0;
+  const started = Date.now();
   let running = 0;
   let capHit = false;
   let depthPruned = false;
@@ -177,6 +178,8 @@ export function findPath(
     const finish = (reason: Extract<PathResult, { found: false }>["reason"]) => {
       if (finished) return;
       finished = true;
+      const outcome = found.length ? `${found.length} path(s)` : reason;
+      console.info(`[graphQuery] ${from} -> ${to}: ${outcome} after ${expansions} expansions in ${Date.now() - started} ms`);
       clearTimeout(timer);
       signal?.removeEventListener("abort", stop);
       resolve(found.length ? { found: true, paths: found.map((p) => toPath(p, nodes)) } : { found: false, reason });
