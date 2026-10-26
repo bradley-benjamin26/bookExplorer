@@ -34,7 +34,7 @@ export default function Home() {
         <View style={styles.header}>
           <View>
             <Text style={styles.title} accessibilityRole="header">
-              Book Explorer
+              Shelf Thread
             </Text>
             <Text style={styles.subtitle}>find your next read</Text>
           </View>

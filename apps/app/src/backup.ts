@@ -39,9 +39,9 @@ export function parseSnapshotJson(text: string): Snapshot {
     throw new ImportError("That file isn't valid JSON.");
   }
   const result = SnapshotExportSchema.safeParse(json);
-  if (!result.success) throw new ImportError("That file isn't a Book Explorer backup, or it's damaged.");
+  if (!result.success) throw new ImportError("That file isn't a Shelf Thread backup, or it's damaged.");
   if (result.data.schemaVersion > SCHEMA_VERSION) {
-    throw new ImportError("That backup is from a newer version of Book Explorer. Update the app to import it.");
+    throw new ImportError("That backup is from a newer version of Shelf Thread. Update the app to import it.");
   }
   return result.data;
 }

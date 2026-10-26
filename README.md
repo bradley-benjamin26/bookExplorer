@@ -1,4 +1,4 @@
-# Book Explorer
+# Shelf Thread
 
 Scan a book's barcode (or type its ISBN) and explore a linked-data map of it: its
 authors, those authors' influences and relationships, related subjects, and other
