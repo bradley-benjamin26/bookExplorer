@@ -117,6 +117,7 @@ export default function WorkDetail() {
         onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
         style={styles.graphButton}
         accessibilityLabel={`Find a connection from ${data.title}`}
+        accessibilityHint="Shows how this book links to another book you pick"
       >
         Find Connection
       </Button>

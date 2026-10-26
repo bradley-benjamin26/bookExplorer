@@ -17,7 +17,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { legendEntries, NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -365,6 +365,7 @@ export default function GraphExplorer() {
     );
   }
 
+  const legend = legendEntries(data.nodes);
   const orderedNodes = [...layout.nodes].sort((a, b) =>
     a.id === data.centerId ? -1 : b.id === data.centerId ? 1 : 0
   );
@@ -373,20 +374,21 @@ export default function GraphExplorer() {
     <View style={styles.container}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
-        Tap a node to explore it, or swipe through them with a screen reader — activate the highlighted center node
-        for full details.
+        Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
       </Text>
       <View style={styles.legend}>
-        {(Object.keys(NODE_COLORS) as GraphNode["type"][]).map((nodeType) => (
+        {legend.types.map((nodeType) => (
           <View key={nodeType} style={styles.legendItem}>
             <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[nodeType] }]} />
             <Text style={styles.legendLabel}>{NODE_LABELS[nodeType]}</Text>
           </View>
         ))}
-        <View style={styles.legendItem}>
-          <View style={[styles.legendSwatch, styles.legendSwatchFaded]} />
-          <Text style={styles.legendLabel}>Not yet linked</Text>
-        </View>
+        {legend.showUnlinked && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendSwatch, styles.legendSwatchFaded]} />
+            <Text style={styles.legendLabel}>Not yet linked</Text>
+          </View>
+        )}
       </View>
       <View style={styles.toolbar}>
         <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph">
@@ -471,6 +473,7 @@ export default function GraphExplorer() {
       <GestureDetector gesture={composedGesture}>
         <View
           style={[styles.viewport, { width }]}
+          accessibilityHint="Swipe to move between nodes. Activate the highlighted center node for full details."
           onLayout={(e) => {
             const h = Math.round(e.nativeEvent.layout.height);
             if (h > 0 && h !== measuredHeight) setMeasuredHeight(h);
@@ -529,7 +532,7 @@ export default function GraphExplorer() {
                     animatedProps={labelAnimatedProps}
                     x={midX}
                     y={midY + 3}
-                    fontSize={9.5}
+                    fontSize={12}
                     fontFamily={theme.fonts.body}
                     fill={theme.colors.inkFaint}
                     textAnchor="middle"
@@ -578,7 +581,7 @@ export default function GraphExplorer() {
                       <SvgText
                         x={node.x}
                         y={firstLineY + i * LABEL_LINE_HEIGHT}
-                        fontSize={11}
+                        fontSize={13}
                         fontFamily={theme.fonts.bodyMedium}
                         fill={theme.colors.paper}
                         stroke={theme.colors.paper}
@@ -591,7 +594,7 @@ export default function GraphExplorer() {
                       <SvgText
                         x={node.x}
                         y={firstLineY + i * LABEL_LINE_HEIGHT}
-                        fontSize={11}
+                        fontSize={13}
                         fontFamily={theme.fonts.bodyMedium}
                         fill={theme.colors.ink}
                         textAnchor="middle"
@@ -721,7 +724,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     },
     legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
     legendSwatch: { width: 12, height: 12, borderRadius: 6 },
-    legendSwatchFaded: { backgroundColor: colors.graphSubject, opacity: 0.4 },
+    legendSwatchFaded: { backgroundColor: colors.graphSubject, opacity: 0.6, borderWidth: 1, borderColor: colors.inkFaint },
     legendLabel: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
     backButton: {
       flexDirection: "row",

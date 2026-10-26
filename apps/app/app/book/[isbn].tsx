@@ -243,6 +243,7 @@ export default function BookDetail() {
             style={styles.graphButton}
             textStyle={styles.graphButtonText}
             accessibilityLabel={`Find a connection from ${data.title}`}
+            accessibilityHint="Shows how this book links to another book you pick"
           >
             Find Connection
           </Button>

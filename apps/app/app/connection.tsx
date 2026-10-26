@@ -80,6 +80,9 @@ export default function Connection() {
             <Text style={styles.heading} accessibilityRole="header">
               Connect {label} to…
             </Text>
+            <Text style={styles.explainer}>
+              Pick a second book and we'll show how the two are linked: through shared authors, subjects, series or influences.
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Search for a book"
@@ -163,6 +166,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { padding: spacing.lg },
+    explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     input: {
       borderWidth: 1,

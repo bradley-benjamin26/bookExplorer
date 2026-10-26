@@ -8,7 +8,7 @@ export const CENTER_NODE_RADIUS = 34;
 const SIMULATION_TICKS = 300;
 const LABEL_MAX_CHARS_PER_LINE = 16;
 const LABEL_MAX_LINES = 3;
-export const LABEL_LINE_HEIGHT = 12;
+export const LABEL_LINE_HEIGHT = 15;
 
 // SvgText has no built-in wrapping, so a long node label (an author's full
 // name, a multi-word subject) is greedily broken into lines here instead of
@@ -66,7 +66,7 @@ const rectsOverlap = (a: Box, b: Box) =>
   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
 export const PILL_HEIGHT = 16;
-const PILL_CHAR_WIDTH = 5.2;
+const PILL_CHAR_WIDTH = 6.6;
 const PILL_PADDING = 12;
 
 // What a node occupies on the canvas: its circle plus the wrapped label under it.

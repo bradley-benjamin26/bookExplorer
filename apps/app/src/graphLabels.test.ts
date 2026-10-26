@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pathAsGraph, pathSteps } from "./graphLabels";
+import { legendEntries, pathAsGraph, pathSteps } from "./graphLabels";
 
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
@@ -50,5 +50,22 @@ describe("pathAsGraph", () => {
 
   it("throws the not-found reason", () => {
     expect(() => pathAsGraph({ found: false, reason: "timeout" })).toThrow("ran out of time");
+  });
+});
+
+describe("legendEntries", () => {
+  const n = (type: "author" | "work" | "subject" | "genre", navigable = true) => ({ id: `${type}:1`, type, label: type, navigable });
+
+  it("lists the present types in key order and flags unlinked nodes", () => {
+    expect(legendEntries([n("subject", false), n("work"), n("author")])).toEqual({
+      types: ["author", "work", "subject"],
+      showUnlinked: true,
+    });
+  });
+
+  it("omits absent types and the unlinked entry when all are navigable", () => {
+    const { types, showUnlinked } = legendEntries([n("author"), n("work")]);
+    expect(types).not.toContain("genre");
+    expect(showUnlinked).toBe(false);
   });
 });
