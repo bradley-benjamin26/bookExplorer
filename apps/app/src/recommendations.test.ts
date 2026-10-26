@@ -32,11 +32,15 @@ const profileOf = (s: Snapshot, seeds: AuthorSeed[]) =>
   buildTasteProfile(s, seeds, new Set([...s.books, ...s.works].flatMap((b) => [...b.subjects, ...b.genres]).map(slugifySubject)));
 const subjects = (...list: Subject[]) => new Map(list.map((s) => [s.slug, s]));
 
-// Three saved books: "Fiction" on all of them (common, low idf), "Napoleonic Wars" on one (rare, high idf).
+// Six saved books: "Fiction" on five of them (common, low idf), "Napoleonic Wars" and "Historical fiction" on two each (rarer, high idf).
+// A subject only counts when at least MIN_SHARED_SUBJECT saved items carry it.
 const library = snapshot([
   book("Sharpe", ["Fiction", "Napoleonic Wars"], { openLibraryWorkId: "OLsharpeW" }),
   book("Emma", ["Fiction", "Historical fiction"]),
   book("Dune", ["Fiction"]),
+  book("Persuasion", ["Fiction"]),
+  book("Ulysses", ["Fiction"]),
+  book("Waterloo", ["Napoleonic Wars", "Historical fiction"]),
 ]);
 const results = subjects(
   subject("fiction", [work("W1"), work("W2"), work("OLsharpeW"), work("W4")]),
@@ -53,13 +57,18 @@ describe("buildTasteProfile", () => {
 
   it("ignores removed books and caps the subject count", () => {
     const many = Array.from({ length: TOP_SUBJECTS + 3 }, (_, i) => `S${i}`);
-    const profile = profileOf(snapshot([book("A", many), book("Gone", ["Only here"], { deletedAt: 2 })]), []);
+    const profile = profileOf(snapshot([book("A", many), book("B", many), book("Gone", ["Only here"], { deletedAt: 2 })]), []);
     expect(profile.subjects).toHaveLength(TOP_SUBJECTS);
     expect(profile.subjects.some((s) => s.slug === "only_here")).toBe(false);
   });
 
+  it("drops a subject only one saved item carries, so a one-off tag can't head a group", () => {
+    const profile = profileOf(snapshot([book("The Mist", ["Horror", "baggers"]), book("It", ["Horror"])]), []);
+    expect(profile.subjects.map((s) => s.slug)).toEqual(["horror"]);
+  });
+
   it("never uses a term no API response gave, so the user's own tags stay on the device", () => {
-    const tagged = snapshot([book("Sharpe", ["Napoleonic Wars", "Read on holiday"]), book("Emma", ["Read on holiday"])]);
+    const tagged = snapshot([book("Sharpe", ["Napoleonic Wars", "Read on holiday"]), book("Emma", ["Napoleonic Wars", "Read on holiday"])]);
     const profile = buildTasteProfile(tagged, [], new Set(["napoleonic_wars"]));
     expect(profile.subjects.map((s) => s.slug)).toEqual(["napoleonic_wars"]);
   });
@@ -76,7 +85,7 @@ describe("buildTasteProfile", () => {
 });
 
 describe("saved works as seeds", () => {
-  const withWork = snapshot([], [], [savedWork("Hyperion", ["Science fiction", "Read in 2020"])]);
+  const withWork = snapshot([], [], [savedWork("Hyperion", ["Science fiction", "Read in 2020"]), savedWork("Dune", ["Science fiction"])]);
   const cached = (subjects: string[]) =>
     ({ openLibraryWorkId: "OLHyperionW", authors: [{ openLibraryId: "OLsA", name: "Simmons" }], subjects: subjects.map((label) => ({ label })), genres: [] }) as unknown as Work;
   const none = () => undefined;
@@ -128,7 +137,7 @@ describe("recommendation reasons", () => {
   });
   it("breaks reason ties on weight, then saved count, then label", () => {
     // Weight is idf: the rarer subject wins even with fewer saved books.
-    const rare = rankRecommendations(profileOf(snapshot([book("A", ["Common", "Rare"]), book("B", ["Common"]), book("C", ["Common"])]), []), subjects(subject("common", [work("W1")]), subject("rare", [work("W1")])), new Map());
+    const rare = rankRecommendations(profileOf(snapshot([book("A", ["Common", "Rare"]), book("B", ["Common", "Rare"]), book("C", ["Common"]), book("D", ["Common"])]), []), subjects(subject("common", [work("W1")]), subject("rare", [work("W1")])), new Map());
     expect(rare[0].reason.label).toBe("Rare");
     // Equal weights: more saved items wins, then the label.
     const reasons = (labels: [string, string[]][]) =>
@@ -152,8 +161,8 @@ describe("rankRecommendations", () => {
   it("ranks by idf-weighted shared subjects, deterministically, and explains each row", () => {
     const ranked = rankRecommendations(profileOf(library, []), results, new Map());
     expect(ranked.map((r) => r.work.openLibraryWorkId)).toEqual(["W2", "W4", "W3", "W1"]);
-    expect(ranked[0]).toMatchObject({ reason: { kind: "subject", label: "Napoleonic Wars", seedTitles: ["Sharpe"] }, shares: ["Fiction", "Napoleonic Wars"] });
-    expect(ranked[1]).toMatchObject({ reason: { kind: "subject", label: "Historical fiction", seedTitles: ["Emma"] }, shares: ["Fiction", "Historical fiction"] });
+    expect(ranked[0]).toMatchObject({ reason: { kind: "subject", label: "Napoleonic Wars", seedTitles: ["Sharpe", "Waterloo"] }, shares: ["Fiction", "Napoleonic Wars"] });
+    expect(ranked[1]).toMatchObject({ reason: { kind: "subject", label: "Historical fiction", seedTitles: ["Emma", "Waterloo"] }, shares: ["Fiction", "Historical fiction"] });
     // W2 and W4 tie on score; the title tie-break keeps the order the same on every run.
     expect(rankRecommendations(profileOf(library, []), results, new Map())).toEqual(ranked);
   });
@@ -166,7 +175,7 @@ describe("rankRecommendations", () => {
   });
 
   it("excludes a saved book with no work id by its title", () => {
-    const noWorkId = snapshot([book("Sharpe's Eagle", ["Napoleonic Wars"])]);
+    const noWorkId = snapshot([book("Sharpe's Eagle", ["Napoleonic Wars"]), book("Sharpe's Rifles", ["Napoleonic Wars"])]);
     const listing = subjects(subject("napoleonic_wars", [{ ...work("W5"), title: "  sharpe's  EAGLE" }, work("W6")]));
     expect(rankRecommendations(profileOf(noWorkId, []), listing, new Map()).map((r) => r.work.openLibraryWorkId)).toEqual(["W6"]);
   });
@@ -187,7 +196,7 @@ describe("rankRecommendations", () => {
         { source: "author:OLtA", target: "work:qid:Q1", relation: "notableWork" },
       ],
     };
-    const profile = profileOf(snapshot([book("The Hobbit", ["Fantasy"])]), [seed]);
+    const profile = profileOf(snapshot([book("The Hobbit", ["Fantasy"]), book("The Fellowship", ["Fantasy"])]), [seed]);
     const ranked = rankRecommendations(profile, subjects(subject("fantasy", [work("W9", "OLmA"), work("W8")])), new Map([["OLtA", graph]]));
     expect(ranked.map((r) => r.work.openLibraryWorkId)).toEqual(["W9", "OLsilW", "W8"]);
     expect(ranked[0].shares).toEqual(["Fantasy", "influence link to Tolkien"]);

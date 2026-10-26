@@ -1,7 +1,9 @@
 import type { AuthorRef } from "@book-explorer/shared";
 import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
 
-export const USER_AGENT = "BookExplorer/0.1 (contact: bbradle1@umd.edu)";
+// Upstream APIs (Open Library asks for this) use the contact address to reach us instead of blocking us.
+const CONTACT_EMAIL = process.env.USER_EMAIL?.trim();
+export const USER_AGENT = CONTACT_EMAIL ? `BookExplorer/0.1 (contact: ${CONTACT_EMAIL})` : "BookExplorer/0.1";
 
 // Open Library appends auto-generated metadata to some descriptions/notes
 // after a "----------" divider line — most commonly "Also contained in:" or

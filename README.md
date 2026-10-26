@@ -51,6 +51,11 @@ server's public-API cache in SQLite across restarts (otherwise it is memory-only
 Set it on a deployed server: repeat lookups are then served from disk instead of
 from Open Library. It caches only public API data, never user data.
 
+Set `USER_EMAIL` (in `apps/server/.env`) to your contact address. It is sent in the
+`User-Agent` header to Open Library, Wikidata, Wikipedia and the Library of Congress
+so they can reach you instead of blocking the server. Without it the header carries
+only the app name.
+
 The server limits its own calls to each upstream host (shared by all users, extra
 calls queue): openlibrary.org 3/s and 4 at a time, Hardcover 1/s and 2 at a time,
 Wikidata 5/s, other hosts 10/s. On a 429 or 503 (honouring `Retry-After`, else 30 s

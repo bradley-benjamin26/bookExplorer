@@ -83,6 +83,9 @@ export function seedsFromCache(snapshot: Snapshot, cachedBook: (isbn: string) =>
   return { seeds, publicSlugs };
 }
 
+/** A subject must be shared by this many saved items to count, so one-off tags (e.g. "baggers") don't head a group. */
+export const MIN_SHARED_SUBJECT = 2;
+
 /**
  * The live parts of a snapshot reduced to what scoring needs. Author seeds come from the caller, which can resolve ids.
  * Only slugs in `publicSlugs` (terms an API response gave) are used, since a saved
@@ -103,6 +106,7 @@ export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[], pub
     }
   }
   const subjects = [...terms]
+    .filter(([, t]) => t.seedTitles.length >= MIN_SHARED_SUBJECT)
     .map(([slug, t]) => ({ slug, label: t.label, seedTitles: t.seedTitles.sort(), weight: Math.log(1 + books.length / t.seedTitles.length) }))
     .sort((a, b) => b.seedTitles.length - a.seedTitles.length || cmp(a.slug, b.slug))
     .slice(0, TOP_SUBJECTS);
