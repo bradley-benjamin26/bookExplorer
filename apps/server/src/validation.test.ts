@@ -35,6 +35,11 @@ describe("parseSearchFilters", () => {
     });
   });
 
+  it("accepts sort=rating and sort=readinglog", () => {
+    expect(parseSearchFilters({ sort: "rating" })).toEqual({ sort: "rating" });
+    expect(parseSearchFilters({ sort: "readinglog" })).toEqual({ sort: "readinglog" });
+  });
+
   it("rejects repeated (array) params instead of throwing", () => {
     expect(typeof parseSearchFilters({ author: ["a", "b"] })).toBe("string");
   });

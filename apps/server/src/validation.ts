@@ -36,7 +36,7 @@ export function isPathEndpointId(nodeId: string): boolean {
   return false;
 }
 
-export const SEARCH_SORTS = ["relevance", "new", "old"] as const;
+export const SEARCH_SORTS = ["relevance", "new", "old", "rating", "readinglog"] as const;
 
 export interface SearchFilters {
   author?: string;
@@ -78,7 +78,7 @@ export function parseSearchFilters(raw: Record<string, unknown>): SearchFilters 
   }
   if (out.yearFrom && out.yearTo && out.yearFrom > out.yearTo) return "'yearFrom' must not be after 'yearTo'";
   if (r.sort) {
-    if (!(SEARCH_SORTS as readonly string[]).includes(r.sort)) return "'sort' must be relevance, new or old";
+    if (!(SEARCH_SORTS as readonly string[]).includes(r.sort)) return "'sort' must be relevance, new, old, rating or readinglog";
     out.sort = r.sort as SearchFilters["sort"];
   }
   return out;

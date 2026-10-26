@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { fetchSubject } from "../../src/api/client";
+import { fetchSubject, searchBooks } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
@@ -11,6 +12,7 @@ import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
 
 export default function SubjectDetail() {
@@ -22,6 +24,14 @@ export default function SubjectDetail() {
     queryKey: ["subject", slug],
     queryFn: () => fetchSubject(slug),
     enabled: !!slug,
+  });
+
+  const [sort, setSort] = useState(DEFAULT_SUBJECT_SORT);
+  const sortParams = data ? subjectSortParams(data.name, sort) : null;
+  const sorted = useQuery({
+    queryKey: ["search", sortParams],
+    queryFn: () => searchBooks(sortParams!),
+    enabled: !!sortParams,
   });
 
   if (isLoading) {
@@ -43,7 +53,7 @@ export default function SubjectDetail() {
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.content}
-      data={data.books}
+      data={sortParams ? sorted.data ?? [] : data.books}
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
@@ -94,6 +104,14 @@ export default function SubjectDetail() {
           )}
 
           <Text style={styles.sectionTitle} accessibilityRole="header">Books</Text>
+          <View style={styles.conceptTags}>
+            {SUBJECT_SORTS.map((s) => (
+              <Button key={s.value} variant="pill" active={sort === s.value} onPress={() => setSort(s.value)} accessibilityLabel={`Sort by ${s.label.toLowerCase()}`}>
+                {s.label}
+              </Button>
+            ))}
+          </View>
+          {sortParams && sorted.isLoading && <ActivityIndicator color={theme.colors.cover} style={styles.sortSpinner} />}
         </View>
       }
       renderItem={({ item }) => (
@@ -118,6 +136,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24, marginTop: spacing.sm },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
     graphButton: { marginTop: spacing.lg },
+    sortSpinner: { marginTop: spacing.md },
     pressed: { opacity: 0.6 },
     conceptSection: { marginTop: spacing.xl },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
