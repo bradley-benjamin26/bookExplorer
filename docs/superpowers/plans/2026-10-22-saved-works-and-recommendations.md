@@ -1,6 +1,6 @@
 # Plan: Editable Saved Works, Honest Recommendation Headings, Detail Backfill, Upstream Rate Limits
 
-Status: ready to execute after the path finder v2 work has been reviewed. Run
+Status: implemented (see the saved-works, recommendations and prefetch commits on main). Original note: run
 task 4 first, because it is independent and protects later testing. Then run
 1 → 2 → 3, because tasks 2 and 3 build on task 1's work records.
 

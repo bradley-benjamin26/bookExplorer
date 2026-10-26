@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legendEntries, pathAsGraph, pathSteps } from "./graphLabels";
+import { legendEntries, nodeRelations, pathAsGraph, pathSteps } from "./graphLabels";
 
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
@@ -67,5 +67,40 @@ describe("legendEntries", () => {
     const { types, showUnlinked } = legendEntries([n("author"), n("work")]);
     expect(types).not.toContain("genre");
     expect(showUnlinked).toBe(false);
+  });
+});
+
+describe("nodeRelations", () => {
+  const nodes = [
+    { id: "work:OL1W", type: "work" as const, label: "Dune", navigable: true },
+    { id: "author:OL2A", type: "author" as const, label: "Frank Herbert", navigable: true },
+    { id: "author:OL3A", type: "author" as const, label: "Brian Herbert", navigable: true },
+  ];
+  const wrote = { source: "author:OL2A", target: "work:OL1W", relation: "author" };
+  const influenced = { source: "author:OL3A", target: "author:OL2A", relation: "influencedBy" };
+  const graph = (edges: typeof wrote[]) => ({ centerId: "work:OL1W", nodes, edges });
+
+  it("lists a sentence per edge touching the node, in edge order", () => {
+    const g = graph([wrote, influenced]);
+    expect(nodeRelations(g, "author:OL2A")).toEqual([
+      "Frank Herbert wrote Dune",
+      "Brian Herbert influenced by Frank Herbert",
+    ]);
+    expect(nodeRelations(g, "work:OL1W")).toEqual(["Frank Herbert wrote Dune"]);
+  });
+
+  it("falls back to the raw relation name", () => {
+    expect(nodeRelations(graph([{ ...wrote, relation: "mystery" }]), "work:OL1W")).toEqual([
+      "Frank Herbert mystery Dune",
+    ]);
+  });
+
+  it("skips edges to nodes not in the graph", () => {
+    const g = graph([wrote, { source: "author:OL2A", target: "author:GONE", relation: "influencedBy" }]);
+    expect(nodeRelations(g, "author:OL2A")).toEqual(["Frank Herbert wrote Dune"]);
+  });
+
+  it("dedupes repeated edges", () => {
+    expect(nodeRelations(graph([wrote, wrote]), "work:OL1W")).toEqual(["Frank Herbert wrote Dune"]);
   });
 });

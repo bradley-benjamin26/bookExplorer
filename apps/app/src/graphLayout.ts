@@ -233,18 +233,6 @@ export interface PositionedEdge {
 
 export type LabeledEdge = PositionedEdge & { text: string; pillWidth: number; labelX: number; labelY: number };
 
-// The lines-and-labels a sighted user reads visually (source, connecting
-// line, relation label, target) have no equivalent for a screen reader
-// landing on one node in isolation, so each node's accessible description
-// spells out every edge touching it using the same "source relation target"
-// phrasing the diagram itself uses.
-export function describeNodeRelations(nodeId: string, edges: LabeledEdge[]): string {
-  return edges
-    .filter((edge) => edge.source.id === nodeId || edge.target.id === nodeId)
-    .map((edge) => `${edge.source.label} ${RELATION_LABELS[edge.relation] ?? edge.relation} ${edge.target.label}`)
-    .join(". ");
-}
-
 export interface Center {
   type: GraphNode["type"];
   id: string;

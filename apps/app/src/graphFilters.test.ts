@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { applyGraphFilter, filterFromParams, filterToParams, toggle } from "./graphFilters";
+import { applyGraphFilter, filterFromParams, filterToParams, shouldAutoOpenList, toggle } from "./graphFilters";
 
 const n = (id: string, type: "author" | "work" | "subject") => ({ id, type, label: id, navigable: true });
 const graph: Graph = {
@@ -59,5 +59,17 @@ describe("filter params", () => {
 
   it("toggle adds then removes", () => {
     expect(toggle(toggle([], "a"), "a")).toEqual([]);
+  });
+});
+
+describe("shouldAutoOpenList", () => {
+  it.each([
+    ["ios", true, false, true],
+    ["android", true, false, true],
+    ["web", true, false, false], // RN Web always reports a screen reader
+    ["ios", false, false, false],
+    ["ios", true, true, false], // the user already picked a view
+  ])("%s, reader %s, chosen %s -> %s", (os, reader, chosen, expected) => {
+    expect(shouldAutoOpenList(os, reader, chosen)).toBe(expected);
   });
 });

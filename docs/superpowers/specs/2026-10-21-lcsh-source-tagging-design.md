@@ -1,6 +1,6 @@
 # LCSH as a supplementary, source-tagged source — design spec
 
-Status: approved design, not yet implemented.
+Status: implemented (PR #7, `locLinkedData.ts` + `SourceBadge`). The task checkboxes in the matching plan were not ticked as work landed.
 
 ## Why
 
