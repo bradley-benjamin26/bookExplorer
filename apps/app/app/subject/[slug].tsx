@@ -6,7 +6,6 @@ import { fetchSubject } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
-import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
@@ -86,7 +85,6 @@ export default function SubjectDetail() {
                       >
                         <Text style={styles.conceptTagText}>
                           {titleCase(concept.label)}
-                          <SourceBadge sources={concept.sources} />
                         </Text>
                       </Pressable>
                     ))}

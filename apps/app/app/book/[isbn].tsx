@@ -15,7 +15,6 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
-import { SourceBadge } from "../../src/components/SourceBadge";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -175,13 +174,25 @@ export default function BookDetail() {
                   >
                     <Text style={styles.genreTagText}>
                       {titleCase(genre.label)}
-                      <SourceBadge sources={genre.sources} />
                     </Text>
                   </Pressable>
                 ))}
               </View>
             </View>
           )}
+        </View>
+      )}
+
+      {data.awards.length > 0 && (
+        <View style={styles.subjectsSection}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
+          <View style={styles.genreTags}>
+            {data.awards.map((award) => (
+              <View key={award} style={styles.genreTag}>
+                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
 
@@ -199,7 +210,6 @@ export default function BookDetail() {
               >
                 <Text style={styles.subjectTagText}>
                   {titleCase(subject.label)}
-                  <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
             ))}

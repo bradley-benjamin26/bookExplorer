@@ -13,7 +13,6 @@ import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
-import { SourceBadge } from "../../src/components/SourceBadge";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
@@ -143,9 +142,21 @@ export default function WorkDetail() {
               >
                 <Text style={styles.genreTagText}>
                   {titleCase(genre.label)}
-                  <SourceBadge sources={genre.sources} />
                 </Text>
               </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {data.awards.length > 0 && (
+        <View style={styles.genresSection}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
+          <View style={styles.genreTags}>
+            {data.awards.map((award) => (
+              <View key={award} style={styles.genreTag}>
+                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
+              </View>
             ))}
           </View>
         </View>
@@ -165,7 +176,6 @@ export default function WorkDetail() {
               >
                 <Text style={styles.subjectTagText}>
                   {titleCase(subject.label)}
-                  <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
             ))}

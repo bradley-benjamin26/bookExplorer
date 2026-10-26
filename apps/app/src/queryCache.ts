@@ -3,7 +3,7 @@ import type { PersistedClient, PersistQueryClientOptions, Persister } from "@tan
 import { getSavedItems } from "./storage/savedItems";
 
 // Bump when a cached response shape changes; the persisted cache is then dropped on next launch.
-export const CACHE_SCHEMA_VERSION = 1;
+export const CACHE_SCHEMA_VERSION = 2;
 export const CACHE_LIMIT = 50;
 // Total size budget across all stored queries (each is its own AsyncStorage value, so no single value nears
 // Android's ~2 MB read limit). Characters, not bytes, so this leaves room for non-ASCII text and web's ~5 MB quota.
