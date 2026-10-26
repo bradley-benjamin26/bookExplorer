@@ -24,6 +24,16 @@ const MIN_QUERY_LENGTH = 3;
 // quotes and backslashes need escaping to keep a value from breaking out.
 const quote = (v: string) => `"${v.replace(/["\\]/g, "\\$&")}"`;
 
+// Study guides, summaries and similar companion titles that flood free-text
+// searches. They are demoted below the real book, not dropped.
+const DERIVATIVE_TITLE =
+  /^(summary|study guide|analysis|workbook|sparknotes|cliffsnotes|quicklet|conversations on)\b|\b(summary|study guide|workbook|analysis) (of|for|on)\b/i;
+
+/** True for study guides, summaries and similar companion titles; exported for tests. */
+export function isDerivativeTitle(title: string): boolean {
+  return DERIVATIVE_TITLE.test(title);
+}
+
 /** Builds the Open Library `q` string; exported for tests. */
 export function buildQuery(text: string, f: SearchFilters): string {
   // Free text stays unquoted, as before: it is the user's own search.
@@ -48,11 +58,16 @@ export function searchBooks(query: string, filters: SearchFilters = {}): Promise
   // Every filter is in q or sort, so this key differs per filter.
   return searchCache.wrap(`${q.toLowerCase()}|${sort ?? ""}`, async () => {
     const results = await openLibrary.searchWorks(q, 20, sort);
-    return results.map((r) => ({
+    const mapped = results.map((r) => ({
       openLibraryWorkId: r.workId,
       title: r.title,
       authors: r.authors,
       coverUrl: r.coverUrl,
     }));
+    // Stable partition: relevance order is kept within each group.
+    return [
+      ...mapped.filter((w) => !isDerivativeTitle(w.title)),
+      ...mapped.filter((w) => isDerivativeTitle(w.title)),
+    ];
   });
 }
