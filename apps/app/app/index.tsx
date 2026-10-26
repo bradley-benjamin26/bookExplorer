@@ -4,7 +4,7 @@ import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { routes } from "../src/navigation";
-import { getRecentIsbns } from "../src/storage/history";
+import { getRecentBooks, type RecentBook } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 export default function Home() {
@@ -12,11 +12,11 @@ export default function Home() {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState("");
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<RecentBook[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      getRecentIsbns().then(setRecent);
+      getRecentBooks().then(setRecent);
     }, [])
   );
 
@@ -82,18 +82,29 @@ export default function Home() {
             </Text>
             <FlatList
               data={recent}
-              keyExtractor={(item) => item}
+              keyExtractor={(item) => item.isbn}
               renderItem={({ item }) => (
                 <Pressable
                   style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
-                  onPress={() => router.push(routes.book(item))}
+                  onPress={() => router.push(routes.book(item.isbn))}
                   accessibilityRole="button"
-                  accessibilityLabel={item}
+                  accessibilityLabel={
+                    item.title
+                      ? item.authorNames.length > 0
+                        ? `${item.title}, ${item.authorNames.join(", ")}`
+                        : item.title
+                      : item.isbn
+                  }
                 >
                   <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <View style={styles.node} />
                   </View>
-                  <Text style={styles.recentItemText}>{item}</Text>
+                  <View style={styles.recentText}>
+                    <Text style={styles.recentItemText}>{item.title ?? item.isbn}</Text>
+                    {item.authorNames.length > 0 && (
+                      <Text style={styles.recentAuthor}>{item.authorNames.join(", ")}</Text>
+                    )}
+                  </View>
                   <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <ChevronRight size={18} color={theme.colors.inkFaint} />
                   </View>
@@ -159,6 +170,8 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       borderBottomColor: colors.border,
     },
     node: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.thread },
-    recentItemText: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
+    recentText: { flex: 1 },
+    recentItemText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
+    recentAuthor: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
   });
 }

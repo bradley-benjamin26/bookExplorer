@@ -18,7 +18,7 @@ import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
-import { addRecentIsbn } from "../../src/storage/history";
+import { addRecentBook } from "../../src/storage/history";
 import { getSavedBook, saveBook, unsaveBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -51,7 +51,7 @@ export default function BookDetail() {
   const saved = savedRecord !== null;
 
   useEffect(() => {
-    if (data) addRecentIsbn(data.isbn);
+    if (data) addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) });
   }, [data]);
 
   // Re-read on every focus, not just on first load — this screen stays
