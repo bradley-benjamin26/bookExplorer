@@ -106,5 +106,5 @@ export async function fetchMoreByAuthor(
   return works
     ?.filter((w) => w.workId !== excludeWorkId)
     .slice(0, MORE_BY_AUTHOR_CAP)
-    .map((w) => ({ openLibraryWorkId: w.workId, title: w.title, authors: [author], coverUrl: w.coverUrl }));
+    .map((w) => ({ openLibraryWorkId: w.workId, title: w.title, authors: w.authors.length ? w.authors : [author], coverUrl: w.coverUrl }));
 }

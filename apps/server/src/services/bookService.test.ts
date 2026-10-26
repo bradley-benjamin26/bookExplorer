@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import { getBookDetail } from "./bookService.js";
+import { getWorkDetail } from "./workService.js";
 
 vi.mock("../sources/openLibrary.js", () => ({ lookupByIsbn: vi.fn() }));
+vi.mock("./workService.js", () => ({ getWorkDetail: vi.fn() }));
 vi.mock("../sources/googleBooks.js", () => ({ lookupByIsbn: vi.fn() }));
 vi.mock("../sources/wikidata.js", () => ({ fetchGenres: vi.fn() }));
 vi.mock("../sources/wikipedia.js", () => ({ fetchWikipediaExtract: vi.fn() }));
@@ -37,5 +39,25 @@ describe("getBookDetail description", () => {
 
     expect(googleBooks.lookupByIsbn).toHaveBeenCalled();
     expect(book?.description).toBe("A real synopsis.");
+  });
+});
+
+describe("getBookDetail authors", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("falls back to the work's authors when the edition lists none", async () => {
+    vi.mocked(openLibrary.lookupByIsbn).mockResolvedValue({
+      title: "Atomic Habits",
+      authors: [],
+      subjects: [],
+      coverUrl: "ol.jpg",
+      description: null,
+      workId: "OL1W",
+    } as never);
+    vi.mocked(getWorkDetail).mockResolvedValue({ authors: [{ openLibraryId: "OL9A", name: "James Clear" }] } as never);
+
+    const book = await getBookDetail("9780000000002");
+
+    expect(book?.authors).toEqual([{ openLibraryId: "OL9A", name: "James Clear" }]);
   });
 });

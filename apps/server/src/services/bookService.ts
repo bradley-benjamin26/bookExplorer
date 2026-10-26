@@ -6,6 +6,7 @@ import * as googleBooks from "../sources/googleBooks.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
+import { getWorkDetail } from "./workService.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
@@ -23,6 +24,12 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
 
+    // Some editions list no authors; the work usually does (shares the work page's cache).
+    const authors =
+      ol.authors.length || !ol.workId
+        ? ol.authors
+        : (await getWorkDetail(ol.workId).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
+
     // LOC subject/genre headings, Hardcover, and Open Library's own ratings
     // — same shared pipeline a work page uses (see bookEnrichment.ts),
     // started here, alongside everything else below, since none of it
@@ -38,7 +45,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // that's already fully usable without it (unlike the author-relations
     // case, a failure here is caught rather than left to fail the whole
     // request — scanning a barcode shouldn't break over a title search).
-    const firstAuthorName = ol.authors[0]?.name ?? null;
+    const firstAuthorName = authors[0]?.name ?? null;
     const workQid = await findWorkQid(ol.title, firstAuthorName, entry);
     const [wikipedia, wikidataGenres] = workQid
       ? await Promise.all([
@@ -86,7 +93,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const result: Book = {
       isbn,
       title: ol.title,
-      authors: ol.authors,
+      authors,
       subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
       awards: olTerms.awards,
       genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
