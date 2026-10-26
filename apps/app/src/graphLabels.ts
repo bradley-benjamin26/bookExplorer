@@ -62,7 +62,7 @@ export const PATH_NOT_FOUND_MESSAGES: Record<Extract<PathResult, { found: false 
   noPath: "No connection found between these two.",
   depthCap: "No connection within a few steps.",
   nodeCap: "The search grew too large before it found a connection.",
-  timeout: "The search ran out of time before it found a connection.",
+  timeout: "The search ran out of time before it found a connection. Trying again usually gets further.",
   upstreamUnavailable: "Book data is temporarily unavailable, so the search stopped. Try again in a few minutes.",
 };
 

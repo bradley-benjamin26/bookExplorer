@@ -51,8 +51,9 @@ export default function Connection() {
 
   // iOS VoiceOver ignores accessibilityLiveRegion (Android-only), so progress and the outcome are announced too.
   useEffect(() => {
-    if (path.isLoading) AccessibilityInfo.announceForAccessibility(SEARCHING_MESSAGE);
-  }, [path.isLoading]);
+    if (path.isFetching) AccessibilityInfo.announceForAccessibility(SEARCHING_MESSAGE);
+  }, [path.isFetching]);
+  // Keyed on the update time, not the data: a retry that times out again returns equal data, which keeps the same reference.
   useEffect(() => {
     if (!path.data) return;
     const { data } = path;
@@ -61,7 +62,7 @@ export default function Connection() {
         ? `${data.paths.length === 1 ? "1 connection" : `${data.paths.length} connections`} found. Best match: ${data.paths[0].summary}`
         : PATH_NOT_FOUND_MESSAGES[data.reason]
     );
-  }, [path.data]);
+  }, [path.dataUpdatedAt]);
 
   const sep = (from ?? "").indexOf(":");
   const [fromType, fromId] = [from?.slice(0, sep), from?.slice(sep + 1)];
@@ -103,15 +104,20 @@ export default function Connection() {
       <Text style={styles.heading} accessibilityRole="header">
         {label} to {target.title}
       </Text>
-      {path.isLoading && (
+      {path.isFetching && (
         <View style={styles.loading} accessibilityLabel={SEARCHING_MESSAGE} accessibilityLiveRegion="polite" accessible>
           <ActivityIndicator color={theme.colors.cover} />
           <Text style={styles.hint}>{SEARCHING_MESSAGE}</Text>
         </View>
       )}
-      {path.isError && <Text style={styles.errorText} accessibilityLiveRegion="polite">{path.error.message}</Text>}
-      {path.data && !path.data.found && (
+      {!path.isFetching && path.isError && <Text style={styles.errorText} accessibilityLiveRegion="polite">{path.error.message}</Text>}
+      {!path.isFetching && !path.isError && path.data && !path.data.found && (
         <Text style={styles.hint} accessibilityLiveRegion="polite">{PATH_NOT_FOUND_MESSAGES[path.data.reason]}</Text>
+      )}
+      {!path.isFetching && path.data && !path.data.found && path.data.reason === "timeout" && (
+        <Button variant="primary" onPress={() => path.refetch()} style={styles.action} accessibilityLabel="Try the search again">
+          Try Again
+        </Button>
       )}
       {path.data?.found && (
         <View accessibilityLiveRegion="polite">
