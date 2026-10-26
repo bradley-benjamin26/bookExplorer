@@ -19,7 +19,7 @@ import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
 import { NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
-import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
+import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
@@ -474,10 +474,16 @@ export default function GraphExplorer() {
   // Screen-reader users can't use the canvas, so open the list for them, but never override the user's own toggle.
   useEffect(() => {
     if (listChosen) return;
-    const apply = (on: boolean) => on && setShowList(true);
+    let cancelled = false;
+    const apply = (on: boolean) => {
+      if (!cancelled && shouldAutoOpenList(Platform.OS, on, listChosen)) setShowList(true);
+    };
     AccessibilityInfo.isScreenReaderEnabled().then(apply);
     const sub = AccessibilityInfo.addEventListener("screenReaderChanged", apply);
-    return () => sub.remove();
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
   }, [listChosen]);
   const updateFilter = (next: GraphFilter) => {
     setFilter(next);
