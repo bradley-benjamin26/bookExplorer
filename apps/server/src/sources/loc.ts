@@ -1,4 +1,4 @@
-import type { TaggedTerm } from "@book-explorer/shared";
+import { subjectKey, type TaggedTerm } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { tryEachIsbn } from "../isbnFallback.js";
 import { USER_AGENT } from "./openLibrary.js";
@@ -129,7 +129,7 @@ export function mergeTaggedTerms(...lists: { source: TaggedTerm["sources"][numbe
   const merged = new Map<string, TaggedTerm>();
   for (const { source, labels } of lists) {
     for (const label of labels) {
-      const key = label.trim().toLowerCase();
+      const key = subjectKey(label);
       if (!key) continue;
       const existing = merged.get(key);
       if (existing) {

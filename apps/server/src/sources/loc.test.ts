@@ -90,6 +90,12 @@ describe("mergeTaggedTerms", () => {
     ]);
   });
 
+  it('merges "Science Fiction" (lcsh) and "science-fiction" (openLibrary) into one term with both sources', () => {
+    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Science Fiction"] }, { source: "openLibrary", labels: ["science-fiction"] })).toEqual([
+      { label: "Science Fiction", sources: ["lcsh", "openLibrary"] },
+    ]);
+  });
+
   it("returns an empty array when given no lists or only empty lists", () => {
     expect(mergeTaggedTerms()).toEqual([]);
     expect(mergeTaggedTerms({ source: "lcsh", labels: [] }, { source: "openLibrary", labels: [] })).toEqual([]);

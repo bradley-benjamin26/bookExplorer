@@ -41,11 +41,39 @@ export const TaggedTermSchema = z.object({
 });
 export type TaggedTerm = z.infer<typeof TaggedTermSchema>;
 
+const MACHINE_TAG = /^[a-z_]+:\S/i;
+
+/** Splits raw Open Library subject strings into real subjects and readable awards; other machine tags ("nyt:...", "series:...") are dropped. */
+export function splitSubjectTerms(labels: string[]): { subjects: string[]; awards: string[] } {
+  const subjects: string[] = [];
+  const awards = new Map<string, string>();
+  for (const label of labels) {
+    if (!MACHINE_TAG.test(label)) {
+      subjects.push(label);
+      continue;
+    }
+    const m = /^award:(.+)$/i.exec(label);
+    if (!m) continue;
+    const [name, qualifier] = m[1].split("=", 2);
+    const award = name.replace(/_/g, " ").trim() + (qualifier?.trim() ? ` (${qualifier.trim()})` : "");
+    const key = award.toLowerCase();
+    if (!awards.has(key)) awards.set(key, award);
+  }
+  return { subjects, awards: [...awards.values()] };
+}
+
+/** Dedupe key: near-duplicate subjects ("Science-Fiction" / "science fiction", "X, fiction" / "X") share one. */
+export function subjectKey(label: string): string {
+  const plain = label.trim().toLowerCase();
+  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
+}
+
 export const BookSchema = z.object({
   isbn: z.string(),
   title: z.string(),
   authors: z.array(AuthorRefSchema),
   subjects: z.array(TaggedTermSchema),
+  awards: z.array(z.string()).default([]),
   // Distinct from `subjects` (topical — what the book is *about*): a genre
   // is what section of a bookstore or library it'd sit in — "Mystery",
   // "Science fiction", "Memoir". Sourced from LOC's genre/form headings and
@@ -141,6 +169,7 @@ export type Edition = z.infer<typeof EditionSchema>;
 export const WorkSchema = WorkRefSchema.extend({
   description: z.string().nullable(),
   subjects: z.array(TaggedTermSchema),
+  awards: z.array(z.string()).default([]),
   genres: z.array(TaggedTermSchema),
   // A "work" has no ISBN of its own (that's an edition-level concept) — this
   // is the first ISBN found among its editions, best-effort, so work pages

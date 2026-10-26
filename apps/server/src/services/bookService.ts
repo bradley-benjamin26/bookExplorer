@@ -1,5 +1,5 @@
 import type { Book } from "@book-explorer/shared";
-import { normalizeIsbn } from "@book-explorer/shared";
+import { normalizeIsbn, splitSubjectTerms } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
@@ -82,11 +82,13 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       blendHardcoverAndOpenLibraryRating(hc, olRatings) ??
       (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks" as const] } : null);
 
+    const olTerms = splitSubjectTerms(ol.subjects);
     const result: Book = {
       isbn,
       title: ol.title,
       authors: ol.authors,
-      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: ol.subjects }),
+      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
+      awards: olTerms.awards,
       genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
       description,
       descriptionSource,

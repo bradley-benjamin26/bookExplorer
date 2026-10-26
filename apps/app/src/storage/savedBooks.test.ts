@@ -11,6 +11,7 @@ const book: Book = {
   title: "Pride and Prejudice",
   authors: [{ openLibraryId: "OL21594A", name: "Jane Austen" }],
   subjects: [{ label: "Courtship", sources: ["openLibrary"] }],
+  awards: [],
   genres: [{ label: "Romance", sources: ["openLibrary"] }],
   description: null,
   descriptionSource: null,

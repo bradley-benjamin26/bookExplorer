@@ -14,6 +14,7 @@ const work: Work = {
   coverUrl: null,
   description: null,
   subjects: [{ label: "Courtship", sources: ["openLibrary"] }],
+  awards: [],
   genres: [{ label: "Romance", sources: ["openLibrary"] }],
   isbn: null,
   editions: [],
