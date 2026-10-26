@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { ChevronDown, ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
@@ -8,7 +9,7 @@ import {
   getConfiguredLibraries,
   type Library,
 } from "../storage/librarySettings";
-import { useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 /**
  * With a single configured library, its ISBN/title links are shown as two
@@ -20,6 +21,7 @@ import { useThemedStyles, type Theme } from "../theme";
  */
 export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title: string }) {
   const router = useRouter();
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -50,9 +52,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       accessibilityLabel={label}
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        ›
-      </Text>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
     </Pressable>
   );
 
@@ -89,9 +89,11 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
               accessibilityState={{ expanded }}
             >
               <Text style={styles.findRowText}>Find at {library.name}</Text>
-              <Text style={styles.findRowChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                {expanded ? "⌄" : "›"}
-              </Text>
+              {expanded ? (
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronDown size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
+              ) : (
+                <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
+              )}
             </Pressable>
             {expanded && (
               <View style={styles.subRows}>
@@ -109,20 +111,19 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     findRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    subRows: { paddingLeft: 16 },
-    findRowText: { fontSize: 16, color: colors.link },
-    findRowChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
-    findRowHint: { fontSize: 13, color: colors.textFaint, fontStyle: "italic" },
+    subRows: { paddingLeft: spacing.lg },
+    findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
+    findRowHint: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
     pressed: { opacity: 0.6 },
   });
 }

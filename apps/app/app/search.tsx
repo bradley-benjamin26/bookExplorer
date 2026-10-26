@@ -1,10 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { searchBooks } from "../src/api/client";
+import { Button } from "../src/components/Button";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { routes } from "../src/navigation";
+import {
+  DEFAULT_SEARCH_FILTERS,
+  getSearchFilters,
+  setSearchFilters,
+  toSearchParams,
+  type SearchFilterChoice,
+  type SearchMode,
+} from "../src/storage/searchFilters";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 // Waits for typing to pause before actually searching — Open Library is hit
@@ -19,6 +28,12 @@ const DEBOUNCE_MS = 400;
 // short-circuit for it (see searchService.ts).
 const MIN_QUERY_LENGTH = 3;
 
+const MODES: { value: SearchMode; label: string }[] = [
+  { value: "title", label: "Title" },
+  { value: "author", label: "Author" },
+  { value: "subject", label: "Subject" },
+];
+
 export default function Search() {
   const { q } = useLocalSearchParams<{ q?: string }>();
   const router = useRouter();
@@ -27,6 +42,17 @@ export default function Search() {
   const [query, setQuery] = useState(q ?? "");
   const [debouncedQuery, setDebouncedQuery] = useState(q ?? "");
 
+  const [filters, setFilters] = useState<SearchFilterChoice>(DEFAULT_SEARCH_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  useEffect(() => {
+    getSearchFilters().then(setFilters);
+  }, []);
+  const updateFilters = (patch: Partial<SearchFilterChoice>) => {
+    const next = { ...filters, ...patch };
+    setFilters(next);
+    setSearchFilters(next).catch(() => {});
+  };
+
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS);
     return () => clearTimeout(handle);
@@ -34,9 +60,10 @@ export default function Search() {
 
   const trimmedQuery = debouncedQuery.trim();
   const isSearchable = trimmedQuery.length >= MIN_QUERY_LENGTH;
+  const params = toSearchParams(trimmedQuery, filters);
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["search", trimmedQuery],
-    queryFn: () => searchBooks(trimmedQuery),
+    queryKey: ["search", params],
+    queryFn: () => searchBooks(params),
     enabled: isSearchable,
   });
 
@@ -51,13 +78,69 @@ export default function Search() {
         <View>
           <TextInput
             style={styles.input}
-            placeholder="Search by title or author"
-            placeholderTextColor={theme.colors.textFaint}
+            placeholder={`Search by ${filters.mode}`}
+            accessibilityLabel={`Search by ${filters.mode}`}
+            placeholderTextColor={theme.colors.inkFaint}
             value={query}
             onChangeText={setQuery}
             autoFocus
             returnKeyType="search"
           />
+          <Pressable
+            onPress={() => setFiltersOpen((o) => !o)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: filtersOpen }}
+            style={styles.filterToggle}
+          >
+            <Text style={styles.filterToggleText}>{filtersOpen ? "Hide filters" : "Filters"}</Text>
+          </Pressable>
+          {filtersOpen && (
+            <View>
+              <View style={styles.chipRow}>
+                {MODES.map((m) => (
+                  <Button
+                    key={m.value}
+                    variant="pill"
+                    active={filters.mode === m.value}
+                    onPress={() => updateFilters({ mode: m.value })}
+                    accessibilityLabel={`Search by ${m.label.toLowerCase()}`}
+                    style={styles.chip}
+                  >
+                    {m.label}
+                  </Button>
+                ))}
+              </View>
+              <View style={styles.chipRow}>
+                <TextInput
+                  style={[styles.input, styles.smallInput]}
+                  placeholder="From year"
+                  placeholderTextColor={theme.colors.inkFaint}
+                  value={filters.yearFrom}
+                  onChangeText={(t) => updateFilters({ yearFrom: t.replace(/\D/g, "").slice(0, 4) })}
+                  keyboardType="number-pad"
+                  accessibilityLabel="First published from year"
+                />
+                <TextInput
+                  style={[styles.input, styles.smallInput]}
+                  placeholder="To year"
+                  placeholderTextColor={theme.colors.inkFaint}
+                  value={filters.yearTo}
+                  onChangeText={(t) => updateFilters({ yearTo: t.replace(/\D/g, "").slice(0, 4) })}
+                  keyboardType="number-pad"
+                  accessibilityLabel="First published to year"
+                />
+                <TextInput
+                  style={[styles.input, styles.smallInput]}
+                  placeholder="Language (eng)"
+                  placeholderTextColor={theme.colors.inkFaint}
+                  value={filters.language}
+                  onChangeText={(t) => updateFilters({ language: t.replace(/[^a-zA-Z]/g, "").slice(0, 3) })}
+                  autoCapitalize="none"
+                  accessibilityLabel="Language, three-letter code such as eng"
+                />
+              </View>
+            </View>
+          )}
           {trimmedQuery.length === 0 && (
             <Text style={styles.hint}>Search for a book by its title or author's name.</Text>
           )}
@@ -66,7 +149,7 @@ export default function Search() {
           )}
           {isSearchable && isLoading && (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={theme.colors.link} />
+              <ActivityIndicator color={theme.colors.cover} />
             </View>
           )}
           {isSearchable && isError && (
@@ -86,21 +169,27 @@ export default function Search() {
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: colors.text,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      fontSize: typeScale.sm,
+      fontFamily: fonts.body,
+      color: colors.ink,
     },
-    hint: { fontSize: 14, color: colors.textFaint, fontStyle: "italic", marginTop: 16 },
-    loadingRow: { marginTop: 20, alignItems: "center" },
-    errorText: { fontSize: 14, color: colors.danger, marginTop: 16 },
+    filterToggle: { alignSelf: "flex-start", paddingVertical: spacing.sm, marginTop: spacing.sm },
+    filterToggleText: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    chipRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
+    chip: { alignSelf: "auto" },
+    smallInput: { flex: 1, minWidth: 0 },
+    hint: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
+    loadingRow: { marginTop: spacing.xl, alignItems: "center" },
+    errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
   });
 }

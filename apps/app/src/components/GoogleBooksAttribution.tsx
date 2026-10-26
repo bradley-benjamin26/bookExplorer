@@ -9,17 +9,17 @@ const LOGO_URL = "https://books.google.com/googlebooks/images/poweredby.png";
 export function GoogleBooksAttribution({ label }: { label: string }) {
   const styles = useThemedStyles(createStyles);
   return (
-    <Pressable style={styles.row} onPress={() => Linking.openURL("https://books.google.com")}>
+    <Pressable style={styles.row} accessibilityRole="link" onPress={() => Linking.openURL("https://books.google.com")}>
       <Text style={styles.label}>{label}</Text>
       <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
     </Pressable>
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     row: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-    label: { fontSize: 12, color: colors.link },
+    label: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover },
     logo: { width: 100, height: 17 },
   });
 }

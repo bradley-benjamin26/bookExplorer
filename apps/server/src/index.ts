@@ -9,6 +9,10 @@ import { subjectsRoutes } from "./routes/subjects.js";
 import { worksRoutes } from "./routes/works.js";
 import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
+import { seriesRoutes } from "./routes/series.js";
+import { pathRoutes } from "./routes/path.js";
+import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
+import { initPersistentCache } from "./cache.js";
 
 // Behind a load balancer or reverse proxy (most hosting platforms), every
 // request arrives from the proxy's own IP — without trusting its
@@ -21,6 +25,10 @@ import { searchRoutes } from "./routes/search.js";
 const app = Fastify({ logger: true, trustProxy: parseTrustProxy(process.env.TRUST_PROXY) });
 
 await app.register(cors, { origin: true });
+
+// A required source in a cooldown (see httpClient.ts) is a temporary 503 the
+// app can explain, not a generic 500.
+app.setErrorHandler(upstreamErrorHandler);
 
 // A shared secret the app itself sends on every request (see .env.example),
 // checked in constant time so a timing side-channel can't leak it a byte at
@@ -59,6 +67,10 @@ await app.register(subjectsRoutes);
 await app.register(worksRoutes);
 await app.register(graphRoutes);
 await app.register(searchRoutes);
+await app.register(seriesRoutes);
+await app.register(pathRoutes);
+
+if (process.env.CACHE_DB_PATH) initPersistentCache(process.env.CACHE_DB_PATH);
 
 const port = Number(process.env.PORT ?? 3001);
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {

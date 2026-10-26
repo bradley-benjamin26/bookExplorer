@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { updateSavedBook, type SavedBookRecord } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { titleCase } from "../titleCase";
 
 function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; onChange: (next: string[]) => void }) {
   const styles = useThemedStyles(createStyles);
@@ -21,7 +21,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{label}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">{label}</Text>
       {tags.length > 0 && (
         <View style={styles.tagRow}>
           {tags.map((tag) => (
@@ -33,7 +33,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
               accessibilityRole="button"
               accessibilityLabel={`Remove ${tag}`}
             >
-              <Text style={styles.tagText}>{tag} ×</Text>
+              <Text style={styles.tagText}>{titleCase(tag)} ×</Text>
             </Pressable>
           ))}
         </View>
@@ -42,7 +42,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
         <TextInput
           style={styles.input}
           placeholder={`Add a ${label.toLowerCase().replace(/s$/, "")}`}
-          placeholderTextColor={theme.colors.textFaint}
+          placeholderTextColor={theme.colors.inkFaint}
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={handleAdd}
@@ -62,18 +62,22 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
 // input first — any still-pending save is also flushed on unmount.
 const NOTES_SAVE_DELAY_MS = 600;
 
-/** Shown on a book's detail page once it's saved, in place of the read-only
+type EditableFields = { subjects: string[]; genres: string[]; notes: string };
+
+/** Shown for a saved book or work once it's saved, in place of the read-only
  * subject/genre tags — lets the user add to or remove from this saved
  * record's own subjects/genres and keep freeform notes. Tag changes are
- * persisted immediately and notes shortly after typing pauses, rather than
- * needing an explicit save step, matching how the rest of this screen
- * behaves. */
-export function SavedBookEditor({
+ * persisted immediately (through `update`, the record kind's own storage
+ * function) and notes shortly after typing pauses, rather than needing an
+ * explicit save step, matching how the rest of the app behaves. */
+export function SavedRecordEditor<R extends EditableFields>({
   record,
+  update,
   onChange,
 }: {
-  record: SavedBookRecord;
-  onChange: (next: SavedBookRecord) => void;
+  record: R;
+  update: (changes: Partial<EditableFields>) => Promise<R | null>;
+  onChange: (next: R) => void;
 }) {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
@@ -94,10 +98,10 @@ export function SavedBookEditor({
   // they've all landed, `record` is caught up and is synced back in below.
   const inFlightWrites = useRef(0);
 
-  const persist = async (changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>) => {
+  const persist = async (changes: Partial<EditableFields>) => {
     inFlightWrites.current += 1;
     try {
-      const next = await updateSavedBook(record.isbn, changes);
+      const next = await update(changes);
       if (next) onChange(next);
     } finally {
       inFlightWrites.current -= 1;
@@ -157,11 +161,11 @@ export function SavedBookEditor({
         }}
       />
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notes</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Notes</Text>
         <TextInput
           style={styles.notesInput}
           placeholder="Your notes about this book..."
-          placeholderTextColor={theme.colors.textFaint}
+          placeholderTextColor={theme.colors.inkFaint}
           value={notes}
           onChangeText={handleNotesChange}
           onBlur={flushNotes}
@@ -172,34 +176,36 @@ export function SavedBookEditor({
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { width: "100%", marginTop: 24 },
-    section: { marginBottom: 20 },
-    sectionTitle: { ...kicker, marginBottom: 10 },
-    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
-    tag: { backgroundColor: colors.chipBackground, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
-    tagText: { fontSize: 13, fontWeight: "600", color: colors.text },
-    addRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+    container: { width: "100%", marginTop: spacing.xl },
+    section: { marginBottom: spacing.lg },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: 10 },
+    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: 10 },
+    tag: { backgroundColor: colors.chipBackground, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 7 },
+    tagText: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    addRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
     input: {
       flex: 1,
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 12,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
       paddingVertical: 9,
       fontSize: 14,
-      color: colors.text,
+      fontFamily: fonts.body,
+      color: colors.ink,
     },
     addButton: { alignSelf: "auto" },
     notesInput: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
+      borderRadius: radii.sm,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 15,
-      color: colors.text,
+      paddingVertical: spacing.md,
+      fontSize: typeScale.sm,
+      fontFamily: fonts.body,
+      color: colors.ink,
       minHeight: 100,
       textAlignVertical: "top",
     },

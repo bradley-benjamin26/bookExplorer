@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { UpstreamUnavailableError } from "../httpClient.js";
 import { DEGRADED_TTL_MS, optionalSource } from "./bookEnrichment.js";
 
 describe("optionalSource", () => {
@@ -24,5 +25,15 @@ describe("optionalSource", () => {
     const result = await Promise.resolve("ok").catch(optionalSource(entry, "test", "fallback"));
     expect(result).toBe("ok");
     expect(entry.ttlMs).toBe(1000 * 60 * 60);
+  });
+
+  it("omits a source in cooldown with the degraded TTL, without logging per request", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const entry = { ttlMs: 1000 * 60 * 60 };
+    const result = await Promise.reject(new UpstreamUnavailableError("api.hardcover.app", 60_000)).catch(optionalSource(entry, "hardcover", null));
+    expect(result).toBeNull();
+    expect(entry.ttlMs).toBe(DEGRADED_TTL_MS);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

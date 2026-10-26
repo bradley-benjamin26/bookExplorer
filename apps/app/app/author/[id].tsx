@@ -1,12 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
+import { MoreByAuthor } from "../../src/components/WorkListSections";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -22,7 +27,7 @@ export default function AuthorDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["author", id],
     queryFn: () => fetchAuthor(id),
     enabled: !!id,
@@ -43,17 +48,18 @@ export default function AuthorDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
 
-  if (isError || !data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No author found for ${id}`} />;
+  if (!data) {
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No author found for ${id}`} />;
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
       {(data.birthDate || data.deathDate) && (
         <Text style={styles.dates}>
@@ -63,12 +69,14 @@ export default function AuthorDetail() {
       <Button
         variant="pill"
         active={saved}
+        starIcon
         onPress={handleToggleSaved}
         style={styles.saveButton}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
-        {saved ? "★ Saved" : "☆ Save"}
+        {saved ? "Saved" : "Save"}
       </Button>
+      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} publicUrl={openLibraryUrl.author(data.openLibraryId)} />
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
       {data.bioSource === "wikipedia" && data.bioSourceUrl && (
@@ -101,6 +109,16 @@ export default function AuthorDetail() {
       >
         View as Graph
       </Button>
+      <Button
+        variant="primary"
+        onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
+        style={styles.graphButton}
+        accessibilityLabel={`Find a connection from ${data.name}`}
+      >
+        Find Connection
+      </Button>
+
+      <MoreByAuthor title="Works" works={data.moreByAuthor} />
 
       {SECTIONS.map(({ relation, title }) => {
         const items = data.relations.filter((r) => r.relation === relation);
@@ -108,18 +126,14 @@ export default function AuthorDetail() {
 
         return (
           <View key={relation} style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
             {items.map((item) => {
               const navigable = relation === "influencedBy" || relation === "influenced";
               const isNavigable = !!item.openLibraryId && navigable;
               const content = (
                 <View style={styles.relationRow}>
                   <Text style={styles.relationLabel}>{item.label}</Text>
-                  {isNavigable && (
-                    <Text style={styles.relationChevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                      ›
-                    </Text>
-                  )}
+                  {isNavigable && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>}
                 </View>
               );
               return isNavigable ? (
@@ -143,33 +157,32 @@ export default function AuthorDetail() {
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    name: { fontSize: 27, fontWeight: "700", letterSpacing: -0.3, color: colors.text },
-    dates: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
-    saveButton: { marginTop: 14 },
-    bio: { fontSize: 15, color: colors.text, marginTop: 16, lineHeight: 22 },
-    bioSource: { fontSize: 12, color: colors.link, marginTop: 6 },
-    pseudonyms: { fontSize: 13, color: colors.textMuted, marginTop: 10, fontStyle: "italic" },
-    noMatch: { fontSize: 13, color: colors.warning, marginTop: 16, fontStyle: "italic" },
-    openLibraryLink: { alignSelf: "flex-start", marginTop: 16 },
-    openLibraryLinkText: { fontSize: 14, color: colors.link, fontWeight: "600" },
-    graphButton: { marginTop: 20 },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg, alignItems: "flex-start" },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
+    dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
+    saveButton: { marginTop: spacing.md },
+    bio: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, lineHeight: 24 },
+    bioSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
+    pseudonyms: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md, fontStyle: "italic" },
+    noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.lg, fontStyle: "italic" },
+    openLibraryLink: { alignSelf: "flex-start", marginTop: spacing.lg },
+    openLibraryLinkText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.cover },
+    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
-    section: { marginTop: 28 },
-    sectionTitle: { ...kicker, marginBottom: 12 },
+    section: { marginTop: spacing.xxl, width: "100%" },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     relationRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingVertical: 12,
+      paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    relationLabel: { fontSize: 16, color: colors.text },
-    relationChevron: { fontSize: 18, color: colors.textFaint, fontWeight: "600" },
+    relationLabel: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
   });
 }

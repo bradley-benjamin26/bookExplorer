@@ -5,13 +5,17 @@ import {
   AuthorSchema,
   BookSchema,
   GraphSchema,
+  PathResultSchema,
+  SeriesSchema,
   SubjectSchema,
   WorkRefSchema,
   WorkSchema,
   type Author,
   type Book,
   type Graph,
+  type Series,
   type GraphNode,
+  type PathResult,
   type Subject,
   type Work,
   type WorkRef,
@@ -60,9 +64,11 @@ export class ApiError extends Error {
 // a malformed or unexpectedly-shaped response would previously pass through
 // silently and surface later as a confusing render-time bug (or not at all,
 // if the missing field just happened to render as blank).
-async function getJson<T>(path: string, schema: ZodType<T>): Promise<T> {
+// `signal` is React Query's, so leaving a screen cancels its in-flight request.
+async function getJson<T>(path: string, schema: ZodType<T>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: APP_SHARED_SECRET ? { "X-App-Key": APP_SHARED_SECRET } : undefined,
+    signal,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
@@ -99,8 +105,8 @@ export function fetchWork(workId: string): Promise<Work> {
   return getJson(`/api/works/${encodeURIComponent(workId)}`, WorkSchema);
 }
 
-export function searchBooks(query: string): Promise<WorkRef[]> {
-  return getJson(`/api/search?q=${encodeURIComponent(query)}`, z.array(WorkRefSchema));
+export function searchBooks(params: Record<string, string>): Promise<WorkRef[]> {
+  return getJson(`/api/search?${new URLSearchParams(params)}`, z.array(WorkRefSchema));
 }
 
 // "genre" and "editions" are both GraphNode types (so they can be
@@ -115,4 +121,13 @@ export type GraphCenterType = Exclude<GraphNode["type"], "genre" | "editions">;
 
 export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
   return getJson(`/api/graph/${type}/${encodeURIComponent(id)}`, GraphSchema);
+}
+
+export function fetchSeries(qid: string): Promise<Series> {
+  return getJson(`/api/series/${encodeURIComponent(qid)}`, SeriesSchema);
+}
+
+/** Up to three chains, most specific first, between two graph node ids ("work:OL1W", "author:OL2A", ...). */
+export function fetchPath(from: string, to: string, signal?: AbortSignal): Promise<PathResult> {
+  return getJson(`/api/path?${new URLSearchParams({ from, to })}`, PathResultSchema, signal);
 }

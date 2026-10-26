@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Book } from "@book-explorer/shared";
 import AsyncStorage from "../test/asyncStorageMock";
-import { getSavedBook, removeSavedBook, saveBookFromApi, updateSavedBook } from "./savedBooks";
+import { getSavedBook, removeSavedBook, saveBook, saveBookFromApi, unsaveBook, updateSavedBook } from "./savedBooks";
+import { getSavedItems } from "./savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -78,5 +79,39 @@ describe("savedBooks", () => {
     await removeSavedBook(book.isbn);
     expect(await getSavedBook(book.isbn)).toBeNull();
     expect((await saveBookFromApi(book)).notes).toBe("");
+  });
+
+  it("blanks notes and tags when the record is tombstoned", async () => {
+    await saveBookFromApi(book);
+    await updateSavedBook(book.isbn, { notes: "private" });
+    await removeSavedBook(book.isbn);
+    const raw = JSON.parse((await AsyncStorage.getItem(`book-explorer:saved-book:${book.isbn}`))!);
+    expect(raw).toMatchObject({ isbn: book.isbn, notes: "", subjects: [], genres: [] });
+    expect(raw.deletedAt).toBeGreaterThan(0);
+  });
+});
+
+describe("saveBook", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("never unsaves: saving an already-saved book keeps it saved with its notes", async () => {
+    await saveBook(book);
+    await updateSavedBook(book.isbn, { notes: "loved it" });
+    expect((await saveBook(book)).notes).toBe("loved it");
+    expect(await getSavedItems()).toMatchObject([{ type: "book", id: book.isbn }]);
+  });
+
+  it("a book opened by its ISBN-10 reads as saved under the ISBN the server returned", async () => {
+    // The book page looks the record up by data.isbn, the key saveBook stores under, not the route's ISBN.
+    await saveBook(book); // fetched via route ISBN-10 0141439513, server returned the ISBN-13
+    expect(await getSavedBook(book.isbn)).not.toBeNull();
+    expect(await getSavedBook("0141439513")).toBeNull();
+  });
+
+  it("unsaveBook removes both the index entry and the record", async () => {
+    await saveBook(book);
+    await unsaveBook(book.isbn);
+    expect(await getSavedItems()).toEqual([]);
+    expect(await getSavedBook(book.isbn)).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Check, ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -12,10 +13,17 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
-import { fetchGraph, type GraphCenterType } from "../../../src/api/client";
+import { fetchGraph, fetchPath, type GraphCenterType } from "../../../src/api/client";
 import { ErrorState } from "../../../src/components/ErrorState";
+import { Button } from "../../../src/components/Button";
+import { OfflineBanner } from "../../../src/components/OfflineBanner";
+import { ShareButton } from "../../../src/components/ShareButton";
+import { NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
+import { openLibraryUrl } from "../../../src/share";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
+import { titleCase } from "../../../src/titleCase";
 
 function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
   return {
@@ -32,32 +40,6 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
   };
 }
 
-const NODE_LABELS: Record<GraphNode["type"], string> = {
-  author: "Author",
-  work: "Book",
-  subject: "Subject",
-  genre: "Genre",
-  editions: "Editions",
-};
-
-// Each edge already reads correctly as "source <label> target" — direction
-// is baked in when the server builds it (e.g. "influencedBy" always means
-// the source was influenced by the target, regardless of which way that
-// reads on Wikidata) — so the label just needs to name the relationship.
-const RELATION_LABELS: Record<string, string> = {
-  influencedBy: "influenced by",
-  notableWork: "wrote",
-  wrote: "wrote",
-  wroteAs: "wrote (pen name)",
-  author: "wrote",
-  movement: "movement",
-  subject: "about",
-  genre: "is",
-  hasBook: "includes",
-  broader: "broader topic",
-  editions: "has",
-};
-
 const NODE_RADIUS = 26;
 const CENTER_NODE_RADIUS = 34;
 const SIMULATION_TICKS = 300;
@@ -69,7 +51,7 @@ const LABEL_LINE_HEIGHT = 12;
 // labels fade in — below MIN they're fully transparent (too crowded to read,
 // and the loosened layout below hasn't given them room yet), fully opaque by
 // LABEL_FADE_IN_SCALE so a quick pinch past that point doesn't feel laggy.
-const MIN_SCALE = 0.4;
+const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
 const LABEL_FADE_OUT_SCALE = 1.0;
 const LABEL_FADE_IN_SCALE = 1.3;
@@ -78,6 +60,7 @@ const LABEL_FADE_IN_SCALE = 1.3;
 const WHEEL_ZOOM_SPEED = 0.0015;
 const DOUBLE_TAP_ZOOM_STEP = 1.5;
 
+const AnimatedLine = Animated.createAnimatedComponent(Line);
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
 
@@ -108,11 +91,9 @@ function wrapLabel(label: string): string[] {
   return truncated;
 }
 
-// A straight connector drawn all the way to a node's own boundary reads as a
-// clip-art arrow touching a shape; pulling each end back by a small gap lets
-// the node's ring show as a clean break instead, which is most of the
-// difference between a hand-built diagram and a slide-deck connector line.
-const EDGE_GAP = 6;
+// Edges stop 1px inside each node's circle (nodes are painted after edges)
+// so a line visibly meets its node instead of leaving a gap.
+const EDGE_GAP = -1;
 
 function shortenEdge(source: PositionedNode, target: PositionedNode, sourceRadius: number, targetRadius: number) {
   const dx = target.x - source.x;
@@ -128,42 +109,166 @@ function shortenEdge(source: PositionedNode, target: PositionedNode, sourceRadiu
   };
 }
 
-// A relation label is normally placed at its edge's exact midpoint, but in a
-// dense star layout (many edges fanning out from one center) that midpoint
-// can land right on top of an unrelated third node the force simulation
-// happened to settle nearby — not just crossing its line, but sitting over
-// the node and hiding its own label. This slides the label back and forth
-// along the edge, in increasing steps, until it's clear of every node's
-// radius (plus a little breathing room), and gives up and uses the plain
-// midpoint if no nearby offset is actually clear.
-function findClearLabelPoint(
-  source: PositionedNode,
-  target: PositionedNode,
-  nodes: PositionedNode[],
-  centerId: string
-): { x: number; y: number } {
-  const dx = target.x - source.x;
-  const dy = target.y - source.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const ux = dx / length;
-  const uy = dy / length;
+interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
 
-  const isClear = (x: number, y: number) =>
-    nodes.every((node) => {
-      if (node.id === source.id || node.id === target.id) return true;
-      const radius = (node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS) + 14;
-      return Math.hypot(x - node.x, y - node.y) > radius;
+const rectsOverlap = (a: Box, b: Box) =>
+  a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
+const PILL_HEIGHT = 16;
+const PILL_CHAR_WIDTH = 5.2;
+const PILL_PADDING = 12;
+
+// What a node occupies on the canvas: its circle plus the wrapped label under it.
+function nodeRects(node: { x: number; y: number; label: string }, radius: number): Box[] {
+  const lines = wrapLabel(node.label);
+  const labelWidth = Math.max(...lines.map((l) => l.length), 1) * 6.2 + 4;
+  return [
+    { left: node.x - radius - 2, right: node.x + radius + 2, top: node.y - radius - 2, bottom: node.y + radius + 2 },
+    {
+      left: node.x - labelWidth / 2,
+      right: node.x + labelWidth / 2,
+      top: node.y + radius + 2,
+      bottom: node.y + radius + 14 + lines.length * LABEL_LINE_HEIGHT,
+    },
+  ];
+}
+
+// A relation label sits on its edge, but in a dense star layout the edge's
+// midpoint is often right on top of another node or its text, or another
+// edge's label. Slides each label along its edge (nearest-to-middle first)
+// to the first spot that overlaps none of those, and falls back to the
+// midpoint if the whole edge is crowded.
+function placeEdgeLabels(nodes: PositionedNode[], edges: PositionedEdge[], centerId: string) {
+  const obstacles = nodes.flatMap((n) => nodeRects(n, n.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS));
+  const placed: Box[] = [];
+
+  return edges.map((edge) => {
+    const text = RELATION_LABELS[edge.relation] ?? edge.relation;
+    const width = text.length * PILL_CHAR_WIDTH + PILL_PADDING;
+    const at = (t: number) => ({
+      x: edge.source.x + (edge.target.x - edge.source.x) * t,
+      y: edge.source.y + (edge.target.y - edge.source.y) * t,
+    });
+    const boxAt = (p: { x: number; y: number }): Box => ({
+      left: p.x - width / 2,
+      right: p.x + width / 2,
+      top: p.y - PILL_HEIGHT / 2,
+      bottom: p.y + PILL_HEIGHT / 2,
     });
 
-  const midT = 0.5;
-  const candidateOffsets = [0, -0.12, 0.12, -0.22, 0.22, -0.32, 0.32];
-  for (const offset of candidateOffsets) {
-    const t = Math.min(0.85, Math.max(0.15, midT + offset));
-    const x = source.x + ux * length * t;
-    const y = source.y + uy * length * t;
-    if (isClear(x, y)) return { x, y };
+    let chosen = at(0.5);
+    for (let i = 0; i <= 12; i++) {
+      const t = 0.5 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.05;
+      const box = boxAt(at(t));
+      if (![...obstacles, ...placed].some((o) => rectsOverlap(box, o))) {
+        chosen = at(t);
+        break;
+      }
+    }
+    placed.push(boxAt(chosen));
+    return { ...edge, text, pillWidth: width, labelX: chosen.x, labelY: chosen.y };
+  });
+}
+
+// Distance from point (px, py) to the segment a-b, and the unit vector from the segment toward the point.
+function segmentOffset(a: { x: number; y: number }, b: { x: number; y: number }, px: number, py: number) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / (dx * dx + dy * dy || 1)));
+  const ox = px - (a.x + dx * t);
+  const oy = py - (a.y + dy * t);
+  const dist = Math.hypot(ox, oy) || 1;
+  return { dist, ux: ox / dist, uy: oy / dist };
+}
+
+// A star layout routinely puts a nearer node directly on the line to a
+// farther one, so that line runs through the nearer node's circle or name.
+// For each edge, this pushes any other node whose circle or name it crosses
+// sideways until it clears, over a few passes so one nudge can't
+// reintroduce a crossing elsewhere for long.
+const EDGE_CLEARANCE = 10;
+function nudgeNodesOffEdges(nodes: PositionedNode[], edges: PositionedEdge[], centerId: string) {
+  for (let pass = 0; pass < 40; pass++) {
+    let moved = false;
+    for (const edge of edges) {
+      for (const node of nodes) {
+        if (node.id === edge.source.id || node.id === edge.target.id || node.id === centerId) continue;
+        const radius = node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS;
+        // Probe the circle's center and the middle of the name below it.
+        const lines = wrapLabel(node.label).length;
+        const probes = [
+          { x: node.x, y: node.y, need: radius + EDGE_CLEARANCE },
+          { x: node.x, y: node.y + radius + 14 + (lines * LABEL_LINE_HEIGHT) / 2, need: 34 + EDGE_CLEARANCE },
+        ];
+        for (const probe of probes) {
+          const { dist, ux, uy } = segmentOffset(edge.source, edge.target, probe.x, probe.y);
+          if (dist >= probe.need) continue;
+          const push = probe.need - dist + 1;
+          node.x += ux * push;
+          node.y += uy * push;
+          moved = true;
+          break;
+        }
+      }
+    }
+    if (!moved) return;
   }
-  return { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 };
+}
+
+// The space a node needs on the canvas: its circle, plus the wrapped name under it.
+function nodeBox(node: PositionedNode, centerId: string): Box {
+  const radius = node.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS;
+  const lines = wrapLabel(node.label);
+  const half = Math.max(radius, (Math.max(...lines.map((l) => l.length), 1) * 6.2 + 4) / 2);
+  return {
+    left: node.x - half,
+    right: node.x + half,
+    top: node.y - radius,
+    bottom: node.y + radius + 14 + lines.length * LABEL_LINE_HEIGHT,
+  };
+}
+
+// The force simulation spaces nodes by a circle, but a node is a circle plus a
+// wide name, so crowded graphs (a subject with 50+ neighbors) still end up
+// with nodes sitting on each other's names. This pushes any two overlapping
+// boxes apart along the shallower axis, never moving the center node.
+const NODE_GAP = 8;
+function separateNodes(nodes: PositionedNode[], centerId: string) {
+  for (let pass = 0; pass < 60; pass++) {
+    let moved = false;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i];
+        const b = nodes[j];
+        const boxA = nodeBox(a, centerId);
+        const boxB = nodeBox(b, centerId);
+        const overlapX = Math.min(boxA.right, boxB.right) - Math.max(boxA.left, boxB.left) + NODE_GAP;
+        const overlapY = Math.min(boxA.bottom, boxB.bottom) - Math.max(boxA.top, boxB.top) + NODE_GAP;
+        if (overlapX <= 0 || overlapY <= 0) continue;
+
+        const aFixed = a.id === centerId;
+        const bFixed = b.id === centerId;
+        const share = aFixed || bFixed ? 1 : 0.5;
+        // Push along the axis needing the least movement, away from each other.
+        if (overlapX < overlapY) {
+          const dir = a.x <= b.x ? -1 : 1;
+          if (!aFixed) a.x += dir * overlapX * share;
+          if (!bFixed) b.x -= dir * overlapX * share;
+        } else {
+          const dir = a.y <= b.y ? -1 : 1;
+          if (!aFixed) a.y += dir * overlapY * share;
+          if (!bFixed) b.y -= dir * overlapY * share;
+        }
+        moved = true;
+      }
+    }
+    if (!moved) return;
+  }
 }
 
 interface PositionedNode extends GraphNode {
@@ -177,12 +282,14 @@ interface PositionedEdge {
   relation: string;
 }
 
+type LabeledEdge = PositionedEdge & { text: string; pillWidth: number; labelX: number; labelY: number };
+
 // The lines-and-labels a sighted user reads visually (source, connecting
 // line, relation label, target) have no equivalent for a screen reader
 // landing on one node in isolation, so each node's accessible description
 // spells out every edge touching it using the same "source relation target"
 // phrasing the diagram itself uses.
-function describeNodeRelations(nodeId: string, edges: PositionedEdge[]): string {
+function describeNodeRelations(nodeId: string, edges: LabeledEdge[]): string {
   return edges
     .filter((edge) => edge.source.id === nodeId || edge.target.id === nodeId)
     .map((edge) => `${edge.source.label} ${RELATION_LABELS[edge.relation] ?? edge.relation} ${edge.target.label}`)
@@ -197,8 +304,23 @@ interface Center {
 /** Runs d3-force synchronously to a resting layout, rather than animating it — the
  * graphs here are small (well under 50 nodes) so a few hundred ticks converge instantly. */
 function layoutGraph(graph: Graph, width: number, height: number) {
-  const nodes = graph.nodes.map((n) => ({ ...n })) as (GraphNode & { x: number; y: number })[];
-  const links = graph.edges.map((e) => ({ ...e }));
+  // Subject/genre terms come in mixed case from their sources; person and work names are left as written.
+  const nodes = graph.nodes.map((n) => ({
+    ...n,
+    label: n.type === "subject" || n.type === "genre" ? titleCase(n.label) : n.label,
+  })) as (GraphNode & { x: number; y: number })[];
+  // The server can report the same author→work link under more than one
+  // relation name (e.g. "wrote" and "notableWork") — drawn as-is that's two
+  // parallel lines and two identical pills per pair, so collapse by pair + label.
+  const seen = new Set<string>();
+  const links = graph.edges
+    .filter((e) => {
+      const key = [[e.source, e.target].sort().join("|"), RELATION_LABELS[e.relation] ?? e.relation].join("|");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((e) => ({ ...e }));
 
   const simulation = forceSimulation(nodes as never[])
     // Pushed apart harder, and linked further apart, than the tighter
@@ -213,7 +335,7 @@ function layoutGraph(graph: Graph, width: number, height: number) {
       "link",
       forceLink(links as never[])
         .id((d) => (d as GraphNode).id)
-        .distance(260)
+        .distance(260 * Math.min(2, Math.max(1, Math.sqrt(nodes.length / 20))))
     )
     .force("center", forceCenter(width / 2, height / 2))
     // Padded enough to clear a full 3-line wrapped label below a node (see
@@ -239,6 +361,13 @@ function layoutGraph(graph: Graph, width: number, height: number) {
     (e) => isFinitePoint(e.source) && isFinitePoint(e.target)
   );
 
+  // Separating nodes can push one onto an edge and vice versa; a few rounds settle both.
+  for (let round = 0; round < 3; round++) {
+    separateNodes(positionedNodes, graph.centerId);
+    nudgeNodesOffEdges(positionedNodes, positionedEdges, graph.centerId);
+  }
+  separateNodes(positionedNodes, graph.centerId);
+
   // A busy graph (20+ nodes, spread apart by the charge/link forces above)
   // routinely lands nodes outside the [0, width] x [0, height] box
   // forceCenter aims for — those nodes would otherwise be cropped by the
@@ -249,9 +378,11 @@ function layoutGraph(graph: Graph, width: number, height: number) {
   // than the viewport it was originally sized for.
   const labelClearance = 14 + LABEL_MAX_LINES * LABEL_LINE_HEIGHT;
   const allPoints = [...positionedNodes, ...positionedEdges.flatMap((e) => [e.source, e.target])];
-  const minX = allPoints.length ? Math.min(...allPoints.map((n) => n.x - CENTER_NODE_RADIUS)) : 0;
+  // A node's name is wider than its circle, so the horizontal bounds allow for it too.
+  const sideClearance = Math.max(CENTER_NODE_RADIUS, 60);
+  const minX = allPoints.length ? Math.min(...allPoints.map((n) => n.x - sideClearance)) : 0;
   const minY = allPoints.length ? Math.min(...allPoints.map((n) => n.y - CENTER_NODE_RADIUS)) : 0;
-  const maxX = allPoints.length ? Math.max(...allPoints.map((n) => n.x + CENTER_NODE_RADIUS)) : width;
+  const maxX = allPoints.length ? Math.max(...allPoints.map((n) => n.x + sideClearance)) : width;
   const maxY = allPoints.length ? Math.max(...allPoints.map((n) => n.y + CENTER_NODE_RADIUS + labelClearance)) : height;
 
   const offsetX = Math.max(0, -minX);
@@ -270,7 +401,12 @@ function layoutGraph(graph: Graph, width: number, height: number) {
   const contentWidth = Math.max(width, maxX - minX);
   const contentHeight = Math.max(height, maxY - minY);
 
-  return { nodes: positionedNodes, edges: positionedEdges, contentWidth, contentHeight };
+  return {
+    nodes: positionedNodes,
+    edges: placeEdgeLabels(positionedNodes, positionedEdges, graph.centerId),
+    contentWidth,
+    contentHeight,
+  };
 }
 
 function parseNodeId(id: string): Center {
@@ -279,7 +415,15 @@ function parseNodeId(id: string): Center {
 }
 
 export default function GraphExplorer() {
-  const { type, id } = useLocalSearchParams<{ type: string; id: string }>();
+  const { type, id, hideTypes, hideRelations, pathTo, pathIndex } = useLocalSearchParams<{
+    type: string;
+    id: string;
+    hideTypes?: string;
+    hideRelations?: string;
+    pathTo?: string;
+    pathIndex?: string;
+  }>();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -294,7 +438,10 @@ export default function GraphExplorer() {
   // Clamped so a very short viewport (small split-screen window, landscape
   // phone) can't push this negative, which would hand d3-force and <Svg> a
   // degenerate size instead of just a cramped one.
-  const canvasHeight = Math.max(height - 140, 300);
+  // Until the viewport has been measured (below), a rough guess at the space
+  // left over by the header, legend and footer; once it has, the real height.
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+  const canvasHeight = measuredHeight ?? Math.max(height - 140, 300);
 
   // Tapping a node used to push a whole new screen for its graph. It now
   // re-centers this same screen instead — feels like panning around one
@@ -305,21 +452,47 @@ export default function GraphExplorer() {
   const [center, setCenter] = useState<Center | null>(type && id ? { type: type as GraphNode["type"], id } : null);
   const [history, setHistory] = useState<Center[]>([]);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["graph", center?.type, center?.id],
+  // Opened from Find Connection: the starting view is just the path, read from
+  // the same cached query that screen ran (a search is costly and rate-limited).
+  // Tapping a node re-centres to a normal graph; stepping back returns here.
+  const showPath = !!pathTo && history.length === 0 && center?.type === type && center?.id === id;
+  const pathFrom = `${type}:${id}`;
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
+    queryKey: showPath ? ["pathGraph", pathFrom, pathTo, pathIndex] : ["graph", center?.type, center?.id],
     // Never actually "genre" here — routes.graph() (the only way center gets
     // set from outside) and handleNodePress below (the only way it gets set
     // from within) both only ever produce author/work/subject centers, but
     // Center's own `type` stays the full GraphNode type since it's also used
     // for genre *nodes* passing through parseNodeId before that check runs.
-    queryFn: () => fetchGraph(center!.type as GraphCenterType, center!.id),
+    queryFn: showPath
+      ? () =>
+          queryClient
+            .fetchQuery({
+              queryKey: ["path", pathFrom, pathTo],
+              queryFn: ({ signal }) => fetchPath(pathFrom, pathTo!, signal),
+              staleTime: Infinity,
+            })
+            .then((result) => pathAsGraph(result, Number(pathIndex) || 0))
+      : () => fetchGraph(center!.type as GraphCenterType, center!.id),
+    retry: showPath ? false : 3,
     enabled: !!center,
   });
 
+  // Filters live in the route query (so shared links restore them) and are mirrored in state for instant updates.
+  const [filter, setFilter] = useState<GraphFilter>(() => filterFromParams({ hideTypes, hideRelations }));
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [showList, setShowList] = useState(false);
+  const updateFilter = (next: GraphFilter) => {
+    setFilter(next);
+    const p = filterToParams(next);
+    router.setParams({ hideTypes: p.hideTypes, hideRelations: p.hideRelations });
+  };
+  const visible = useMemo(() => (data ? applyGraphFilter(data, filter) : null), [data, filter]);
+
   const layout = useMemo(() => {
-    if (!data) return null;
-    return layoutGraph(data, width, canvasHeight);
-  }, [data, width, canvasHeight]);
+    if (!visible) return null;
+    return layoutGraph(visible, width, canvasHeight);
+  }, [visible, width, canvasHeight]);
 
   // Shared transform for the whole canvas: both the SVG rendering layer and
   // the accessible Pressable overlay are children of one Animated.View (see
@@ -350,20 +523,50 @@ export default function GraphExplorer() {
     // bring that center node into view rather than leaving the transform
     // wherever the previous graph's pan/zoom left it — the content size and
     // node positions are entirely different after a recenter re-layout.
-    scale.value = 1;
-    translateX.value = width / 2 - centerNode.x;
-    translateY.value = canvasHeight / 2 - centerNode.y;
+    resetView();
   }, [data?.centerId, layout?.contentWidth, layout?.contentHeight]);
 
-  const clampTranslation = (s: number) => {
+  // Starts (and, for the reset button, returns to) zoomed out just far enough
+  // to show the whole graph — never past MIN_SCALE, never magnified — centered,
+  // instead of cropping outer nodes.
+  function resetView() {
+    if (!layout) return;
+    const fit = Math.min(1, width / layout.contentWidth, canvasHeight / layout.contentHeight);
+    const initial = Math.max(MIN_SCALE, fit);
+    scale.value = initial;
+    translateX.value = (width - layout.contentWidth * initial) / 2;
+    translateY.value = (canvasHeight - layout.contentHeight * initial) / 2;
+    clampTranslation(initial);
+  }
+
+  // The buttons zoom about the middle of the viewport, where a pinch or the
+  // wheel would zoom about the fingers/cursor.
+  const zoomByStep = (factor: number) => zoomAbout(scale.value * factor, width / 2, canvasHeight / 2);
+
+  // The canvas is transformed from its top-left corner (see styles.graphArea),
+  // so a canvas point p lands at translate + scale * p on screen. The canvas
+  // can't be dragged so far that empty viewport shows beside it (or, when it's
+  // smaller than the viewport, so far that it leaves the viewport).
+  function clampTranslation(s: number) {
     "worklet";
-    // At least half the content stays on-screen in each axis, so a pan/zoom
-    // can never fully lose the canvas off the edge of the viewport.
-    const maxX = Math.max(0, (contentWidth.value * s - viewportWidth.value) / 2);
-    const maxY = Math.max(0, (contentHeight.value * s - viewportHeight.value) / 2);
-    translateX.value = Math.min(maxX, Math.max(-maxX, translateX.value));
-    translateY.value = Math.min(maxY, Math.max(-maxY, translateY.value));
-  };
+    const slackX = viewportWidth.value - contentWidth.value * s;
+    const slackY = viewportHeight.value - contentHeight.value * s;
+    translateX.value = Math.min(Math.max(0, slackX), Math.max(Math.min(0, slackX), translateX.value));
+    translateY.value = Math.min(Math.max(0, slackY), Math.max(Math.min(0, slackY), translateY.value));
+  }
+
+  // Zooms to `next` while keeping the canvas point under (focalX, focalY)
+  // fixed on screen, so zooming goes toward the fingers/cursor instead of
+  // drifting toward the canvas's own center.
+  function zoomAbout(next: number, focalX: number, focalY: number) {
+    "worklet";
+    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+    const ratio = clamped / scale.value;
+    translateX.value = focalX - (focalX - translateX.value) * ratio;
+    translateY.value = focalY - (focalY - translateY.value) * ratio;
+    scale.value = clamped;
+    clampTranslation(clamped);
+  }
 
   const pinchStartScale = useSharedValue(1);
   const panStartX = useSharedValue(0);
@@ -374,8 +577,7 @@ export default function GraphExplorer() {
       pinchStartScale.value = scale.value;
     })
     .onUpdate((e) => {
-      scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale.value * e.scale));
-      clampTranslation(scale.value);
+      zoomAbout(pinchStartScale.value * e.scale, e.focalX, e.focalY);
     });
 
   const panGesture = Gesture.Pan()
@@ -401,18 +603,16 @@ export default function GraphExplorer() {
   // reads the native wheel event directly (ctrl/cmd+scroll or a plain scroll
   // both zoom, matching common web map/canvas conventions). Native platforms
   // have no wheel device and never fire this.
-  const handleWheel = (e: { deltaY: number }) => {
-    const next = scale.value * (1 - e.deltaY * WHEEL_ZOOM_SPEED);
-    scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
-    clampTranslation(scale.value);
+  const handleWheel = (e: { deltaY: number; clientX: number; clientY: number; currentTarget: unknown }) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    zoomAbout(scale.value * (1 - e.deltaY * WHEEL_ZOOM_SPEED), e.clientX - rect.left, e.clientY - rect.top);
   };
 
   const doubleTapGesture = Gesture.Tap()
     .numberOfTaps(2)
-    .onEnd(() => {
+    .onEnd((e) => {
       const next = scale.value >= MAX_SCALE ? MIN_SCALE : scale.value * DOUBLE_TAP_ZOOM_STEP;
-      scale.value = withTiming(Math.min(MAX_SCALE, Math.max(MIN_SCALE, next)));
-      clampTranslation(scale.value);
+      zoomAbout(next, e.x, e.y);
     });
 
   const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
@@ -421,6 +621,19 @@ export default function GraphExplorer() {
     transform: [{ translateX: translateX.value }, { translateY: translateY.value }, { scale: scale.value }],
   }));
 
+  // Edge/pill outlines are drawn in canvas units, so zooming would thicken
+  // them (and thin them when zoomed out) — dividing by scale keeps their
+  // on-screen weight constant.
+  const edgeAnimatedProps = useAnimatedProps(() => ({ strokeWidth: 1.25 / scale.value }));
+  const pillAnimatedProps = useAnimatedProps(() => ({
+    strokeWidth: 1 / scale.value,
+    opacity:
+      scale.value <= LABEL_FADE_OUT_SCALE
+        ? 0
+        : scale.value >= LABEL_FADE_IN_SCALE
+          ? 1
+          : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
+  }));
   const labelAnimatedProps = useAnimatedProps(() => ({
     opacity:
       scale.value <= LABEL_FADE_OUT_SCALE
@@ -433,13 +646,13 @@ export default function GraphExplorer() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
 
-  if (isError || !data || !layout || !center) {
-    return <ErrorState message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
+  if (!data || !layout || !center) {
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
   const handleNodePress = (node: PositionedNode) => {
@@ -493,10 +706,11 @@ export default function GraphExplorer() {
   // Open Library works, say — rather than a fetch failure, so it's shown as
   // its own explicit "nothing here" state rather than an empty canvas with
   // a lone floating circle and no explanation.
-  if (layout.nodes.length <= 1) {
+  if (layout.nodes.length <= 1 && !isFiltered(filter)) {
     const centerLabel = layout.nodes[0]?.label ?? "this";
     return (
       <View style={styles.center}>
+        <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
         <Text style={styles.emptyGraphText}>No linked connections found for {centerLabel} yet.</Text>
       </View>
     );
@@ -508,6 +722,7 @@ export default function GraphExplorer() {
 
   return (
     <View style={styles.container}>
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Tap a node to explore it, or swipe through them with a screen reader — activate the highlighted center node
         for full details.
@@ -524,20 +739,95 @@ export default function GraphExplorer() {
           <Text style={styles.legendLabel}>Not yet linked</Text>
         </View>
       </View>
+      <View style={styles.toolbar}>
+        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph">
+          Filter
+        </Button>
+        <Button
+          variant="pill"
+          onPress={() => setShowList((v) => !v)}
+          accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
+        >
+          {showList ? "Graph" : "List"}
+        </Button>
+        <ShareButton
+          title={`${NODE_LABELS[center.type]} graph`}
+          href={routes.graph(center.type, center.id, filterToParams(filter))}
+          publicUrl={center.type === "work" ? openLibraryUrl.work(center.id) : center.type === "author" ? openLibraryUrl.author(center.id) : openLibraryUrl.subject(center.id)}
+        />
+      </View>
+      <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
+        <View style={styles.sheetBackdrop}>
+          <ScrollView style={styles.sheet} accessibilityViewIsModal>
+            <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
+            <Text style={styles.sheetHeading}>Node types</Text>
+            {[...new Set([...(data.nodes.map((n) => n.type) as string[]), ...filter.hiddenTypes])].map((t) => (
+              <FilterRow
+                key={t}
+                label={NODE_LABELS[t as GraphNode["type"]] ?? t}
+                checked={!filter.hiddenTypes.includes(t)}
+                onPress={() => updateFilter({ ...filter, hiddenTypes: toggle(filter.hiddenTypes, t) })}
+              />
+            ))}
+            <Text style={styles.sheetHeading}>Connections</Text>
+            {[...new Set([...data.edges.map((e) => e.relation), ...filter.hiddenRelations])].map((r) => (
+              <FilterRow
+                key={r}
+                label={RELATION_LABELS[r] ?? r}
+                checked={!filter.hiddenRelations.includes(r)}
+                onPress={() => updateFilter({ ...filter, hiddenRelations: toggle(filter.hiddenRelations, r) })}
+              />
+            ))}
+            <Button variant="pill" onPress={() => setFilterOpen(false)} style={{ marginVertical: 16 }}>
+              Done
+            </Button>
+          </ScrollView>
+        </View>
+      </Modal>
       {history.length > 0 && (
         <Pressable
           onPress={handleBack}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
         >
-          <Text style={styles.backButtonText}>‹ Back</Text>
+          <ChevronLeft size={16} color={theme.colors.cover} strokeWidth={2} />
+          <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
       )}
-      <View
-        style={[styles.viewport, { width, height: canvasHeight }]}
-        {...(Platform.OS === "web" ? { onWheel: handleWheel } : null)}
-      >
-        <GestureDetector gesture={composedGesture}>
+      {showList ? (
+        <ScrollView style={styles.list}>
+          {orderedNodes.map((node) => {
+            const isCenter = node.id === data.centerId;
+            return (
+              <Pressable
+                key={node.id}
+                onPress={() => handleNodePress(node)}
+                disabled={!node.navigable}
+                accessibilityRole="button"
+                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked"]
+                  .filter(Boolean)
+                  .join(". ")}
+                accessibilityHint={node.navigable ? (isCenter ? "Opens full details for this item" : "Re-centers the graph on this item") : undefined}
+                accessibilityState={{ disabled: !node.navigable, selected: isCenter }}
+                style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
+              >
+                <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
+                <Text style={styles.listLabel}>{node.label}</Text>
+                <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : (
+      <GestureDetector gesture={composedGesture}>
+        <View
+          style={[styles.viewport, { width }]}
+          onLayout={(e) => {
+            const h = Math.round(e.nativeEvent.layout.height);
+            if (h > 0 && h !== measuredHeight) setMeasuredHeight(h);
+          }}
+          {...(Platform.OS === "web" ? { onWheel: handleWheel } : null)}
+        >
           <Animated.View
             style={[
               styles.graphArea,
@@ -561,35 +851,38 @@ export default function GraphExplorer() {
                 isTargetCenter ? CENTER_NODE_RADIUS : NODE_RADIUS
               );
               return (
-                <Line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={theme.colors.border} strokeWidth={1.25} />
+                <AnimatedLine
+                  key={i}
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke={theme.colors.thread}
+                  animatedProps={edgeAnimatedProps}
+                />
               );
             })}
             {layout.edges.map((edge, i) => {
-              const label = RELATION_LABELS[edge.relation] ?? edge.relation;
-              const { x: midX, y: midY } = findClearLabelPoint(edge.source, edge.target, layout.nodes, data.centerId);
-              // A label on a straight line only needs a plain background
-              // pill to stay legible — the hand-measured width keeps the
-              // pill snug instead of guessing a fixed size for every label.
-              const pillWidth = label.length * 5.2 + 12;
+              const { text: label, pillWidth, labelX: midX, labelY: midY } = edge;
               return (
                 <Fragment key={i}>
                   <AnimatedRect
-                    animatedProps={labelAnimatedProps}
+                    animatedProps={pillAnimatedProps}
                     x={midX - pillWidth / 2}
-                    y={midY - 8}
+                    y={midY - PILL_HEIGHT / 2}
                     width={pillWidth}
-                    height={16}
-                    rx={8}
-                    fill={theme.colors.background}
-                    stroke={theme.colors.border}
-                    strokeWidth={1}
+                    height={PILL_HEIGHT}
+                    rx={PILL_HEIGHT / 2}
+                    fill={theme.colors.paper}
+                    stroke={theme.colors.thread}
                   />
                   <AnimatedSvgText
                     animatedProps={labelAnimatedProps}
                     x={midX}
                     y={midY + 3}
                     fontSize={9.5}
-                    fill={theme.colors.textMuted}
+                    fontFamily={theme.fonts.body}
+                    fill={theme.colors.inkFaint}
                     textAnchor="middle"
                   >
                     {label}
@@ -609,7 +902,7 @@ export default function GraphExplorer() {
                       stands in for a drop shadow — react-native-svg's cross-
                       platform blur support is unreliable, so this fakes the
                       same "resting on the page" depth without it. */}
-                  <Circle cx={node.x} cy={node.y + 2} r={radius} fill={theme.colors.text} opacity={opacity * 0.08} />
+                  <Circle cx={node.x} cy={node.y + 2} r={radius} fill={theme.colors.ink} opacity={opacity * 0.08} />
                   {isCenter && (
                     <Circle
                       cx={node.x}
@@ -627,20 +920,36 @@ export default function GraphExplorer() {
                     r={radius}
                     fill={NODE_COLORS[node.type]}
                     opacity={opacity}
-                    stroke={theme.colors.background}
+                    stroke={theme.colors.paper}
                     strokeWidth={isCenter ? 2.5 : 1.5}
                   />
                   {lines.map((line, i) => (
-                    <SvgText
-                      key={i}
-                      x={node.x}
-                      y={firstLineY + i * LABEL_LINE_HEIGHT}
-                      fontSize={11}
-                      fill={theme.colors.text}
-                      textAnchor="middle"
-                    >
-                      {line}
-                    </SvgText>
+                    <Fragment key={i}>
+                      {/* Paper-colored outline under the text so a line passing behind a label doesn't strike through it. */}
+                      <SvgText
+                        x={node.x}
+                        y={firstLineY + i * LABEL_LINE_HEIGHT}
+                        fontSize={11}
+                        fontFamily={theme.fonts.bodyMedium}
+                        fill={theme.colors.paper}
+                        stroke={theme.colors.paper}
+                        strokeWidth={3}
+                        strokeLinejoin="round"
+                        textAnchor="middle"
+                      >
+                        {line}
+                      </SvgText>
+                      <SvgText
+                        x={node.x}
+                        y={firstLineY + i * LABEL_LINE_HEIGHT}
+                        fontSize={11}
+                        fontFamily={theme.fonts.bodyMedium}
+                        fill={theme.colors.ink}
+                        textAnchor="middle"
+                      >
+                        {line}
+                      </SvgText>
+                    </Fragment>
                   ))}
                 </Fragment>
               );
@@ -688,37 +997,134 @@ export default function GraphExplorer() {
           );
         })}
           </Animated.View>
-        </GestureDetector>
-      </View>
+          <View style={styles.zoomControls}>
+            <Pressable
+              onPress={() => zoomByStep(DOUBLE_TAP_ZOOM_STEP)}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom in"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <ZoomIn size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => zoomByStep(1 / DOUBLE_TAP_ZOOM_STEP)}
+              accessibilityRole="button"
+              accessibilityLabel="Zoom out"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <ZoomOut size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={resetView}
+              accessibilityRole="button"
+              accessibilityLabel="Reset zoom to fit the whole graph"
+              hitSlop={4}
+              style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+            >
+              <Maximize size={20} color={theme.colors.cover} strokeWidth={2} />
+            </Pressable>
+          </View>
+        </View>
+      </GestureDetector>
+      )}
     </View>
   );
 }
 
-function createStyles({ colors }: Theme) {
+function FilterRow({ label, checked, onPress }: { label: string; checked: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityLabel={label}
+      accessibilityState={{ checked }}
+      style={styles.filterRow}
+    >
+      <View style={[styles.checkbox, checked && styles.checkboxOn]}>{checked && <Check size={14} color="#fff" strokeWidth={3} />}</View>
+      <Text style={styles.listLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    emptyGraphText: { fontSize: 15, color: colors.textMuted, textAlign: "center" },
-    hint: { textAlign: "center", fontSize: 13, color: colors.textMuted, paddingVertical: 10, paddingHorizontal: 20 },
+    container: { flex: 1, backgroundColor: colors.paper },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
+    emptyGraphText: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, textAlign: "center", lineHeight: 28 },
+    hint: {
+      textAlign: "center",
+      fontFamily: fonts.body,
+      fontSize: typeScale.xs,
+      color: colors.inkFaint,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.lg,
+    },
     legend: {
       flexDirection: "row",
       flexWrap: "wrap",
       justifyContent: "center",
-      gap: 16,
-      paddingBottom: 12,
-      paddingHorizontal: 20,
+      gap: spacing.lg,
+      paddingBottom: spacing.md,
+      paddingHorizontal: spacing.lg,
     },
     legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
     legendSwatch: { width: 12, height: 12, borderRadius: 6 },
     legendSwatchFaded: { backgroundColor: colors.graphSubject, opacity: 0.4 },
-    legendLabel: { fontSize: 12, color: colors.textMuted },
-    backButton: { alignSelf: "center", paddingVertical: 4, paddingHorizontal: 12, marginBottom: 8 },
+    legendLabel: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      alignSelf: "center",
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.sm,
+    },
     // overflow: hidden clips the canvas to the visible viewport — now that
     // the canvas is panned/zoomed rather than fitted to the screen, it's
     // routinely larger than this box at 100% scale.
-    viewport: { overflow: "hidden" },
-    graphArea: { position: "relative" },
+    viewport: { flex: 1, overflow: "hidden" },
+    graphArea: { position: "relative", transformOrigin: "top left" },
+    zoomControls: { position: "absolute", right: spacing.md, bottom: spacing.md, gap: spacing.sm },
+    zoomButton: {
+      width: 40,
+      height: 40,
+      borderRadius: radii.sm,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
     pressed: { opacity: 0.6 },
-    backButtonText: { color: colors.link, fontSize: 14, fontWeight: "600" },
+    toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+    sheet: {
+      maxHeight: "70%",
+      backgroundColor: colors.paper,
+      padding: spacing.lg,
+      borderTopLeftRadius: radii.sm,
+      borderTopRightRadius: radii.sm,
+    },
+    sheetTitle: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
+    sheetHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md },
+    filterRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 44 },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.cover,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkboxOn: { backgroundColor: colors.cover },
+    list: { flex: 1, paddingHorizontal: spacing.lg },
+    listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    listLabel: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
+    backButtonText: { fontFamily: fonts.bodySemiBold, color: colors.cover, fontSize: 14 },
   });
 }

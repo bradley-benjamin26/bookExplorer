@@ -13,14 +13,14 @@ export function Footer() {
       <View style={styles.logoBacking}>
         <Image source={{ uri: WIKIDATA_LOGO_URL }} style={styles.logo} resizeMode="contain" />
       </View>
-      <Pressable onPress={() => Linking.openURL(OPEN_LIBRARY_URL)}>
+      <Pressable onPress={() => Linking.openURL(OPEN_LIBRARY_URL)} accessibilityRole="link">
         <Text style={styles.text}>Built using Open Library APIs</Text>
       </Pressable>
     </View>
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     footer: {
       alignItems: "center",
@@ -28,7 +28,7 @@ function createStyles({ colors }: Theme) {
       paddingVertical: 12,
       borderTopWidth: 1,
       borderTopColor: colors.border,
-      backgroundColor: colors.background,
+      backgroundColor: colors.paper,
     },
     logoBacking: {
       backgroundColor: "#ffffff",
@@ -38,6 +38,6 @@ function createStyles({ colors }: Theme) {
       marginBottom: 6,
     },
     logo: { width: 120, height: 24 },
-    text: { fontSize: 12, color: colors.link, textDecorationLine: "underline" },
+    text: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
   });
 }

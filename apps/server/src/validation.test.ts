@@ -1,6 +1,6 @@
 import { isValidIsbn } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId } from "./validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isPathEndpointId, parseSearchFilters } from "./validation.js";
 
 describe("isValidIsbn", () => {
   it("accepts bare and hyphenated ISBN-13s and ISBN-10s", () => {
@@ -25,5 +25,47 @@ describe("Open Library ids", () => {
     expect(isOpenLibraryWorkId("OL66554W")).toBe(true);
     expect(isOpenLibraryWorkId("OL21594A")).toBe(false);
     expect(isOpenLibraryWorkId("../OL1W")).toBe(false);
+  });
+});
+
+describe("parseSearchFilters", () => {
+  it("accepts valid filters", () => {
+    expect(parseSearchFilters({ author: " Tolkien ", language: "eng", yearFrom: "1950", yearTo: "1960", sort: "new" })).toEqual({
+      author: "Tolkien", language: "eng", yearFrom: 1950, yearTo: 1960, sort: "new",
+    });
+  });
+
+  it("rejects repeated (array) params instead of throwing", () => {
+    expect(typeof parseSearchFilters({ author: ["a", "b"] })).toBe("string");
+  });
+
+  it.each([
+    [{ yearFrom: "19x0" }], [{ yearTo: "99" }], [{ yearFrom: "1990", yearTo: "1980" }],
+    [{ language: "english" }], [{ sort: "random" }], [{ author: "a".repeat(101) }],
+  ])("rejects malformed filters %j", (raw) => {
+    expect(typeof parseSearchFilters(raw)).toBe("string");
+  });
+});
+
+describe("isWikidataQid", () => {
+  it("accepts Q followed by digits and rejects anything else", async () => {
+    const { isWikidataQid } = await import("./validation.js");
+    expect(isWikidataQid("Q42")).toBe(true);
+    for (const bad of ["", "42", "Q0", "Q01", "Qabc", "Q42/../x"]) expect(isWikidataQid(bad)).toBe(false);
+  });
+});
+
+describe("isPathEndpointId", () => {
+  it("accepts author, work and subject node ids", () => {
+    expect(isPathEndpointId("author:OL21594A")).toBe(true);
+    expect(isPathEndpointId("work:OL66554W")).toBe(true);
+    expect(isPathEndpointId("subject:science_fiction")).toBe(true);
+  });
+
+  it("rejects other types, mismatched ids and unslugified subjects", () => {
+    expect(isPathEndpointId("genre:fiction")).toBe(false);
+    expect(isPathEndpointId("author:OL1W")).toBe(false);
+    expect(isPathEndpointId("subject:Science Fiction")).toBe(false);
+    expect(isPathEndpointId("OL1W")).toBe(false);
   });
 });

@@ -1,7 +1,9 @@
 import type { AuthorRef } from "@book-explorer/shared";
-import { fetchWithTimeout } from "../httpClient.js";
+import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
 
-export const USER_AGENT = "BookExplorer/0.1 (contact: bbradle1@umd.edu)";
+// Upstream APIs (Open Library asks for this) use the contact address to reach us instead of blocking us.
+const CONTACT_EMAIL = process.env.USER_EMAIL?.trim();
+export const USER_AGENT = CONTACT_EMAIL ? `BookExplorer/0.1 (contact: ${CONTACT_EMAIL})` : "BookExplorer/0.1";
 
 // Open Library appends auto-generated metadata to some descriptions/notes
 // after a "----------" divider line — most commonly "Also contained in:" or
@@ -244,6 +246,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     Promise.all(
       authorIds.map(async (id) => {
         const author = await getAuthor(id).catch((err) => {
+          if (err instanceof UpstreamUnavailableError) throw err;
           console.warn(`[openLibrary] Failed to resolve author name for ${id}:`, err);
           return null;
         });
@@ -258,6 +261,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     // editions list on the work page, so a failure here shouldn't take down
     // the rest of an otherwise-good response.
     getWorkEditions(workId).catch((err) => {
+      if (err instanceof UpstreamUnavailableError) throw err;
       console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
       return [] as OpenLibraryEdition[];
     }),
@@ -324,10 +328,10 @@ export interface OpenLibrarySearchResult {
  * `getWorkDetail` pipeline a search result feeds into already does that
  * enrichment, so search itself only needs to resolve "what work is this."
  */
-export async function searchWorks(query: string, limit = 20): Promise<OpenLibrarySearchResult[]> {
+export async function searchWorks(query: string, limit = 20, sort?: string): Promise<OpenLibrarySearchResult[]> {
   const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(
     query
-  )}&fields=key,title,author_name,author_key,cover_i&limit=${limit}`;
+  )}&fields=key,title,author_name,author_key,cover_i&limit=${limit}${sort ? `&sort=${sort}` : ""}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library search request failed: ${res.status}`);
 
@@ -394,6 +398,7 @@ export async function getSubject(slug: string, limit = 20): Promise<OpenLibraryS
 export interface OpenLibraryAuthorWork {
   workId: string;
   title: string;
+  coverUrl: string | null;
 }
 
 /**
@@ -419,16 +424,20 @@ export interface OpenLibraryAuthorWork {
 export async function getAuthorWorks(openLibraryId: string, limit = 15): Promise<OpenLibraryAuthorWork[]> {
   const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(
     `author_key:${openLibraryId}`
-  )}&fields=title,key,language&limit=${Math.max(limit * 2, 40)}`;
+  )}&fields=title,key,language,cover_i&limit=${Math.max(limit * 2, 40)}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return [];
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
-  const data = (await res.json()) as { docs?: { key: string; title: string; language?: string[] }[] };
+  const data = (await res.json()) as { docs?: { key: string; title: string; language?: string[]; cover_i?: number }[] };
   return (data.docs ?? [])
     .filter((d) => d.key && d.title && (!d.language || d.language.includes("eng")))
     .slice(0, limit)
-    .map((d) => ({ workId: d.key.replace("/works/", ""), title: d.title }));
+    .map((d) => ({
+      workId: d.key.replace("/works/", ""),
+      title: d.title,
+      coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null,
+    }));
 }
 
 interface AuthorSearchResult {
@@ -474,6 +483,7 @@ async function resolveEditionExtras(editionKey: string | undefined): Promise<{ w
     const workKey = edition.works?.[0]?.key;
     return { workId: workKey ? workKey.replace("/works/", "") : null, format: edition.physical_format ?? null };
   } catch (err) {
+    if (err instanceof UpstreamUnavailableError) throw err;
     console.warn(`[openLibrary] Failed to resolve work id/format for edition ${editionKey}:`, err);
     return { workId: null, format: null };
   }

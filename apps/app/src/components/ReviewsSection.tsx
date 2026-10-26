@@ -1,9 +1,11 @@
 import type { Review } from "@book-explorer/shared";
+import { ChevronDown, ChevronUp, Star } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 function ReviewCard({ review }: { review: Review }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   // A spoiler review starts hidden behind a tap — same "opt in, don't
   // ambush" reasoning as a spoiler tag on any other reading platform,
@@ -14,12 +16,17 @@ function ReviewCard({ review }: { review: Review }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.reviewer}>{review.reviewerName}</Text>
-        {review.rating != null && <Text style={styles.rating}>★ {review.rating.toFixed(1)}</Text>}
+        {review.rating != null && (
+          <View style={styles.ratingRow}>
+            <Star size={12} color={theme.colors.warning} fill={theme.colors.warning} strokeWidth={2} />
+            <Text style={styles.rating}>{review.rating.toFixed(1)}</Text>
+          </View>
+        )}
       </View>
       {revealed ? (
         <Text style={styles.text}>{review.text}</Text>
       ) : (
-        <Pressable onPress={() => setRevealed(true)}>
+        <Pressable onPress={() => setRevealed(true)} accessibilityRole="button">
           <Text style={styles.spoilerText}>Contains spoilers — tap to reveal</Text>
         </Pressable>
       )}
@@ -28,6 +35,7 @@ function ReviewCard({ review }: { review: Review }) {
 }
 
 export function ReviewsSection({ reviews }: { reviews: Review[] }) {
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   if (reviews.length === 0) return null;
@@ -43,9 +51,13 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
         accessibilityState={{ expanded: open }}
       >
         <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
-        <Text style={styles.chevron} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          {open ? "︿" : "﹀"}
-        </Text>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {open ? (
+            <ChevronUp size={16} color={theme.colors.inkFaint} strokeWidth={2} />
+          ) : (
+            <ChevronDown size={16} color={theme.colors.inkFaint} strokeWidth={2} />
+          )}
+        </View>
       </Pressable>
       {open && (
         <>
@@ -59,30 +71,30 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
   );
 }
 
-function createStyles({ colors, kicker, cardStyle }: Theme) {
+function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    section: { marginTop: 28, width: "100%" },
+    section: { marginTop: spacing.xxl, width: "100%" },
     header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: spacing.md,
     },
-    sectionTitle: { ...kicker },
-    chevron: { fontSize: 14, color: colors.textFaint },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },
     pressed: { opacity: 0.6 },
     card: {
-      borderRadius: 12,
+      borderRadius: radii.sm,
       padding: 14,
-      marginBottom: 12,
-      backgroundColor: colors.background,
+      marginBottom: spacing.md,
+      backgroundColor: colors.paper,
       ...cardStyle,
     },
-    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-    reviewer: { fontSize: 14, fontWeight: "600", color: colors.text },
-    rating: { fontSize: 13, fontWeight: "700", color: colors.warning },
-    text: { fontSize: 14, color: colors.text, lineHeight: 20 },
-    spoilerText: { fontSize: 14, color: colors.link, fontStyle: "italic" },
-    attribution: { fontSize: 12, color: colors.textFaint },
+    cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.sm },
+    reviewer: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    rating: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.warning },
+    text: { fontSize: 14, fontFamily: fonts.body, color: colors.ink, lineHeight: 22 },
+    spoilerText: { fontSize: 14, fontFamily: fonts.body, color: colors.cover, fontStyle: "italic" },
+    attribution: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint },
   });
 }

@@ -1,6 +1,11 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { closePersistentCache, initPersistentCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
-import { searchBooks } from "./searchService.js";
+import { buildQuery, searchBooks } from "./searchService.js";
 
 vi.mock("../sources/openLibrary.js", () => ({
   searchWorks: vi.fn(),
@@ -30,7 +35,7 @@ describe("searchBooks", () => {
   it("trims the query before searching", async () => {
     vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
     await searchBooks("  the martian  ");
-    expect(openLibrary.searchWorks).toHaveBeenCalledWith("the martian");
+    expect(openLibrary.searchWorks).toHaveBeenCalledWith("the martian", 20, undefined);
   });
 
   it("maps an Open Library search result onto the shared WorkRef shape", async () => {
@@ -52,5 +57,58 @@ describe("searchBooks", () => {
     await searchBooks("The Hobbit");
     await searchBooks("  the hobbit  ");
     expect(openLibrary.searchWorks).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches by author filter alone and maps filters into the query", async () => {
+    vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+    await searchBooks("", { author: "Ursula Le Guin", yearFrom: 1970, sort: "new" });
+    expect(openLibrary.searchWorks).toHaveBeenCalledWith('author:"Ursula Le Guin" first_publish_year:[1970 TO *]', 20, "new");
+  });
+
+  it("does not search when only a year range is given", async () => {
+    expect(await searchBooks("", { yearFrom: 1970 })).toEqual([]);
+    expect(openLibrary.searchWorks).not.toHaveBeenCalled();
+  });
+
+  it("searches when a short q is paired with a long-enough author", async () => {
+    vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+    await searchBooks("ab", { author: "Le Guin" });
+    expect(openLibrary.searchWorks).toHaveBeenCalledTimes(1);
+  });
+
+  it("caches separately per filter", async () => {
+    vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+    await searchBooks("dune cachekey");
+    await searchBooks("dune cachekey", { language: "fre" });
+    await searchBooks("dune cachekey", { sort: "old" });
+    await searchBooks("dune cachekey", { yearTo: 1990 });
+    expect(openLibrary.searchWorks).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("buildQuery", () => {
+  it("escapes quotes and backslashes so a value cannot break out", () => {
+    expect(buildQuery("", { author: 'x" OR subject:"y\\' })).toBe('author:"x\\" OR subject:\\"y\\\\"');
+  });
+
+  it("builds closed and open year ranges", () => {
+    expect(buildQuery("a", { yearFrom: 1900, yearTo: 1950 })).toBe("a first_publish_year:[1900 TO 1950]");
+    expect(buildQuery("a", { yearTo: 1950 })).toBe("a first_publish_year:[* TO 1950]");
+  });
+});
+
+describe("search cache", () => {
+  it("never writes a query to the persistent cache", async () => {
+    const path = join(mkdtempSync(join(tmpdir(), "search-cache-")), "cache.db");
+    initPersistentCache(path);
+    try {
+      vi.mocked(openLibrary.searchWorks).mockResolvedValue([]);
+      await searchBooks("a private query");
+    } finally {
+      closePersistentCache();
+    }
+    const db = new DatabaseSync(path);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM cache").get()).toEqual({ n: 0 });
+    db.close();
   });
 });

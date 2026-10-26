@@ -5,17 +5,21 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { fetchSubject } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleCase } from "../../src/titleCase";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["subject", slug],
     queryFn: () => fetchSubject(slug),
     enabled: !!slug,
@@ -24,13 +28,13 @@ export default function SubjectDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
 
-  if (isError || !data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
+  if (!data) {
+    return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
@@ -44,9 +48,12 @@ export default function SubjectDetail() {
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
-          <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
+          <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
+          <Text style={styles.name} accessibilityRole="header">{titleCase(data.name)}</Text>
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           {data.description && <Text style={styles.description}>{data.description}</Text>}
+
+          <ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} publicUrl={openLibraryUrl.subject(data.slug)} />
 
           {!data.wikidataId && (
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>
@@ -67,7 +74,7 @@ export default function SubjectDetail() {
             ({ title, items }) =>
               items.length > 0 && (
                 <View key={title} style={styles.conceptSection}>
-                  <Text style={styles.sectionTitle}>{title}</Text>
+                  <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
@@ -75,10 +82,10 @@ export default function SubjectDetail() {
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
                         accessibilityRole="button"
-                        accessibilityLabel={concept.label}
+                        accessibilityLabel={titleCase(concept.label)}
                       >
                         <Text style={styles.conceptTagText}>
-                          {concept.label}
+                          {titleCase(concept.label)}
                           <SourceBadge sources={concept.sources} />
                         </Text>
                       </Pressable>
@@ -88,7 +95,7 @@ export default function SubjectDetail() {
               )
           )}
 
-          <Text style={styles.sectionTitle}>Books</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Books</Text>
         </View>
       }
       renderItem={({ item }) => (
@@ -98,28 +105,33 @@ export default function SubjectDetail() {
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
-    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-    name: { fontSize: 27, fontWeight: "700", textTransform: "capitalize", letterSpacing: -0.3, color: colors.text },
-    workCount: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
-    description: { fontSize: 15, color: colors.textMuted, marginTop: 8 },
-    noMatch: { fontSize: 13, color: colors.warning, marginTop: 12, fontStyle: "italic" },
-    graphButton: { marginTop: 16 },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg },
+    center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    name: {
+      fontFamily: fonts.display,
+      fontSize: typeScale.lg,
+      letterSpacing: -0.3,
+      color: colors.ink,
+    },
+    workCount: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
+    description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24, marginTop: spacing.sm },
+    noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
+    graphButton: { marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
-    conceptSection: { marginTop: 24 },
-    sectionTitle: { ...kicker, marginTop: 8, marginBottom: 12 },
-    conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    conceptSection: { marginTop: spacing.xl },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
+    conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     conceptTag: {
       backgroundColor: colors.chipBackgroundAccent,
-      borderRadius: 16,
-      paddingHorizontal: 12,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
       paddingVertical: 7,
       borderWidth: 1,
       borderColor: colors.chipBorderAccent,
     },
-    conceptTagText: { fontSize: 13, color: colors.chipTextAccent },
+    conceptTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextAccent },
   });
 }

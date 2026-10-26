@@ -1,9 +1,9 @@
-import type { AuthorRelation, SubjectConcept } from "@book-explorer/shared";
+import type { AuthorRelation, Series, SubjectConcept } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
 interface WbSearchResult {
-  search: { id: string; description?: string }[];
+  search: { id: string; label?: string; description?: string }[];
 }
 
 const AUTHOR_KEYWORDS = ["writer", "author", "novelist", "poet", "playwright", "journalist"];
@@ -18,14 +18,27 @@ export async function searchAuthorQid(name: string): Promise<string | null> {
 // Open Library subject strings are topics/genres, not named works, so results
 // that are clearly about a specific film/book/episode/etc of the same name
 // are rejected rather than guessed at — a wrong disambiguation would surface
-// nonsense "related concepts", which is worse than surfacing none.
+// nonsense "related concepts", which is worse than surfacing none. (Wikidata
+// writes "television series", not "tv series" — verified live, that gap let a
+// 2021 TV show "Ghosts" stand in for the supernatural concept.)
 const CONCEPT_REJECT_KEYWORDS = [
   "film",
   "album",
   "episode",
   "song",
   "tv series",
+  "television",
+  "series",
+  "musical",
+  "band",
+  "recording",
   "video game",
+  "website",
+  "software",
+  "company",
+  "family name",
+  "given name",
+  "fictional",
   " by ",
   "edition of",
   "painting",
@@ -33,13 +46,33 @@ const CONCEPT_REJECT_KEYWORDS = [
   "disambiguation",
 ];
 
-/** Best-effort match of a (often messy) Open Library subject string to a Wikidata concept. */
+// Subject headings are conventionally plural where Wikidata labels concepts
+// singular ("Ghosts" → "ghost"), so either form of the name counts as the
+// same label.
+function nameVariants(name: string): string[] {
+  const target = name.toLowerCase().trim();
+  return [target, target.endsWith("s") ? target.slice(0, -1) : `${target}s`];
+}
+
+/**
+ * Best-effort match of a (often messy) Open Library subject string to a
+ * Wikidata concept, used only when LCSH has no Wikidata link of its own to
+ * trust. The result's label must be the subject's name (or its singular/
+ * plural), not merely something that name-searches near it, and its
+ * description mustn't read as a work of art or a named thing.
+ */
 export async function searchConceptQid(name: string): Promise<string | null> {
-  const body = await wbSearchEntities(name, 8);
-  const match = body.search.find(
-    (r) => !CONCEPT_REJECT_KEYWORDS.some((kw) => r.description?.toLowerCase().includes(kw))
-  );
-  return match?.id ?? null;
+  const variants = nameVariants(name);
+  for (const query of variants) {
+    const body = await wbSearchEntities(query, 8);
+    const match = body.search.find(
+      (r) =>
+        variants.includes(r.label?.toLowerCase().trim() ?? "") &&
+        !CONCEPT_REJECT_KEYWORDS.some((kw) => r.description?.toLowerCase().includes(kw))
+    );
+    if (match) return match.id;
+  }
+  return null;
 }
 
 // Wikidata's search descriptions for literary works are reliably shaped
@@ -86,6 +119,7 @@ export function isValidQid(qid: string): boolean {
 interface WbStatement {
   rank?: string;
   mainsnak?: { datavalue?: { value: unknown } };
+  qualifiers?: Record<string, { datavalue?: { value: unknown } }[]>;
 }
 
 interface WbEntity {
@@ -368,4 +402,60 @@ export async function fetchDescription(qid: string): Promise<string | null> {
   if (!isValidQid(qid)) return null;
   const entities = await wbGetEntities([qid], "descriptions", "en");
   return entities[qid]?.descriptions?.en?.value ?? null;
+}
+
+/** Numeric ordinals sort by value ("2.5" between 2 and 3); anything else ("A", "prequel") sorts after them, alphabetically. */
+export function compareOrdinals(a: string | null, b: string | null): number {
+  const na = a === null ? NaN : Number(a);
+  const nb = b === null ? NaN : Number(b);
+  if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+  if (!Number.isNaN(na)) return -1;
+  if (!Number.isNaN(nb)) return 1;
+  return (a ?? "\uffff").localeCompare(b ?? "\uffff");
+}
+
+/** The series ordinal (P1545) qualifying the work's P179 statement for `seriesQid`, or null when absent/blank. */
+export function seriesOrdinal(entity: WbEntity | undefined, seriesQid: string): string | null {
+  const statement = (entity?.claims?.P179 ?? []).find(
+    (s) => s.rank !== "deprecated" && (s.mainsnak?.datavalue?.value as { id?: string } | undefined)?.id === seriesQid
+  );
+  const raw = statement?.qualifiers?.P1545?.[0]?.datavalue?.value;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+/** The first series (P179) a work belongs to, with its position (P1545); null when it has none. */
+export async function fetchWorkSeries(
+  workQid: string
+): Promise<{ name: string; position: string | null; wikidataId: string } | null> {
+  if (!isValidQid(workQid)) return null;
+  const entities = await wbGetEntities([workQid], "claims");
+  // The same series can be listed twice (duplicate statements), so only the first distinct one is used.
+  const seriesQid = claimItemIds(entities[workQid], "P179")[0];
+  if (!seriesQid) return null;
+  const resolved = await resolveItems([seriesQid]);
+  const name = resolved.get(seriesQid)?.label;
+  return name ? { name, position: seriesOrdinal(entities[workQid], seriesQid), wikidataId: seriesQid } : null;
+}
+
+/** Every item that is part of the series (P179 -> seriesQid), in series order. */
+export async function fetchSeries(seriesQid: string): Promise<Series | null> {
+  if (!isValidQid(seriesQid)) return null;
+  const [memberQids, seriesResolved] = await Promise.all([
+    searchReverseStatementQids("P179", seriesQid, 100),
+    resolveItems([seriesQid]),
+  ]);
+  const name = seriesResolved.get(seriesQid)?.label;
+  if (!name) return null;
+
+  const [entities, resolved] = await Promise.all([wbGetEntities(memberQids, "claims"), resolveItems(memberQids)]);
+  const seen = new Set<string>();
+  const members = [...new Set(memberQids)].flatMap((qid) => {
+    const item = resolved.get(qid);
+    // Two Wikidata items can carry the same Open Library id (e.g. a work and its edition record); list it once.
+    if (!item || (item.openLibraryId && seen.has(item.openLibraryId))) return [];
+    if (item.openLibraryId) seen.add(item.openLibraryId);
+    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId: item.openLibraryId }];
+  });
+  members.sort((a, b) => compareOrdinals(a.position, b.position));
+  return { wikidataId: seriesQid, name, members };
 }

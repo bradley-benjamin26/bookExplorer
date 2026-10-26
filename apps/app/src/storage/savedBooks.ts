@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Book } from "@book-explorer/shared";
+import { ensureSaved, removeSaved } from "./savedItems";
+import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
 // Each saved book gets its own AsyncStorage key, rather than all of them
@@ -10,8 +12,10 @@ import { enqueueWrite } from "./writeQueue";
 // (the Saved screen's list comes from the separate, lightweight
 // `savedItems` index instead), so there's no listing operation to give up
 // by splitting the storage this way.
+const KEY_PREFIX = "book-explorer:saved-book:";
+
 function storageKey(isbn: string): string {
-  return `book-explorer:saved-book:${isbn}`;
+  return `${KEY_PREFIX}${isbn}`;
 }
 
 /**
@@ -23,7 +27,8 @@ function storageKey(isbn: string): string {
  * record is the source of truth a later lookup overrides external data
  * with, not just an addendum to it.
  */
-export interface SavedBookRecord {
+export interface SavedBookRecord extends Versioned {
+  deletedAt?: number; // tombstone, see SavedItem
   isbn: string;
   wikidataId: string | null;
   openLibraryEditionId: string | null;
@@ -50,11 +55,10 @@ async function readRecord(isbn: string): Promise<SavedBookRecord | null> {
 /** Creates the record on first save, from the currently-fetched external data. */
 export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
   return enqueueWrite(storageKey(book.isbn), async () => {
-    const existing = await getSavedBook(book.isbn);
- main
-    if (existing) return existing;
+    const existing = await readRecord(book.isbn);
+    if (existing && !existing.deletedAt) return existing;
 
-    const record: SavedBookRecord = {
+    const record: SavedBookRecord = stamp({
       isbn: book.isbn,
       wikidataId: book.wikidataId,
       openLibraryEditionId: book.openLibraryEditionId,
@@ -66,36 +70,90 @@ export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
       genres: book.genres.map((t) => t.label),
       notes: "",
       savedAt: Date.now(),
-    };
+    });
     await AsyncStorage.setItem(storageKey(book.isbn), JSON.stringify(record));
     return record;
   });
 }
 
 /**
- * Waits for any queued writes first, so a screen re-reading on focus (e.g.
+ * Waits for any queued writes to this book first, so a screen re-reading on focus (e.g.
  * the book page after a removal or edit on the Saved screen) sees their
  * result rather than the record as it was before they landed.
  */
 export function getSavedBook(isbn: string): Promise<SavedBookRecord | null> {
-  return writeQueue.then(() => readRecord(isbn));
+  return enqueueWrite(storageKey(isbn), async () => {
+    const record = await readRecord(isbn);
+    return record?.deletedAt ? null : record;
+  });
 }
 
 export function updateSavedBook(
   isbn: string,
   changes: Partial<Pick<SavedBookRecord, "subjects" | "genres" | "notes">>
 ): Promise<SavedBookRecord | null> {
-
   return enqueueWrite(storageKey(isbn), async () => {
-    const existing = await getSavedBook(isbn);
-main
-    if (!existing) return null;
-    const next = { ...existing, ...changes };
+    const existing = await readRecord(isbn);
+    if (!existing || existing.deletedAt) return null;
+    const next = { ...existing, ...changes, updatedAt: Date.now() };
     await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
     return next;
   });
 }
 
+/**
+ * A tombstone of `record`: keys and timestamps stay so a merge still sees the
+ * removal, but the user's notes and tags don't outlive it (or reach a backup).
+ */
+export function withoutContent<T extends Pick<SavedBookRecord, "subjects" | "genres" | "notes">>(record: T): T {
+  return { ...record, subjects: [], genres: [], notes: "" };
+}
+
 export function removeSavedBook(isbn: string): Promise<void> {
-  return enqueueWrite(storageKey(isbn), () => AsyncStorage.removeItem(storageKey(isbn)));
+  return enqueueWrite(storageKey(isbn), async () => {
+    const existing = await readRecord(isbn);
+    if (!existing || existing.deletedAt) return;
+    const now = Date.now();
+    await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(withoutContent({ ...existing, updatedAt: now, deletedAt: now })));
+  });
+}
+
+/**
+ * Saves a book (record first, then the Saved-screen index) without ever
+ * removing it: saving a book that's already saved keeps its notes and tags.
+ */
+export async function saveBook(book: Book): Promise<SavedBookRecord> {
+  const record = await saveBookFromApi(book);
+  await ensureSaved({ type: "book", id: book.isbn, title: book.title });
+  return record;
+}
+
+/** Removes a saved book from the index and tombstones its record. */
+export async function unsaveBook(isbn: string): Promise<void> {
+  await removeSaved("book", isbn);
+  await removeSavedBook(isbn);
+}
+
+/** Every stored record, tombstones included — for the snapshot. */
+export async function getAllSavedBooks(): Promise<SavedBookRecord[]> {
+  const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY_PREFIX));
+  const records = await Promise.all(keys.map((k) => getSavedBookRaw(k.slice(KEY_PREFIX.length))));
+  return records.filter((r): r is SavedBookRecord => r !== null);
+}
+
+function getSavedBookRaw(isbn: string): Promise<SavedBookRecord | null> {
+  return enqueueWrite(storageKey(isbn), () => readRecord(isbn));
+}
+
+/** Replaces every stored record with the given ones (snapshot import). */
+export async function replaceSavedBooks(records: SavedBookRecord[]): Promise<void> {
+  const keep = new Set(records.map((r) => r.isbn));
+  const existing = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY_PREFIX));
+  await Promise.all([
+    ...existing
+      .map((k) => k.slice(KEY_PREFIX.length))
+      .filter((isbn) => !keep.has(isbn))
+      .map((isbn) => enqueueWrite(storageKey(isbn), () => AsyncStorage.removeItem(storageKey(isbn)))),
+    ...records.map((r) => enqueueWrite(storageKey(r.isbn), () => AsyncStorage.setItem(storageKey(r.isbn), JSON.stringify(r)))),
+  ]);
 }

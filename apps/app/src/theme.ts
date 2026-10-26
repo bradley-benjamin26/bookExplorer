@@ -100,7 +100,7 @@ const darkColors: ThemeColors = {
   shellBackground: "#0a0a0f",
   text: "#EDEAE2",
   textMuted: "#9797a8",
-  textFaint: "#75758a",
+  textFaint: "#8c8ca0",
   border: "#2a2a35",
   cardBorder: "#2e2e3a",
   inputBorder: "#5c5c6c",

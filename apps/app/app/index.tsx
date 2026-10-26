@@ -37,13 +37,6 @@ export default function Home() {
             </Text>
             <Text style={styles.subtitle}>find your next read</Text>
           </View>
-          <Pressable
-            style={({ pressed }) => pressed && styles.pressed}
-            onPress={() => router.push(routes.saved())}
-            hitSlop={8}
-          >
-            <Text style={styles.libraryLink}>My Library</Text>
-          </Pressable>
         </View>
 
         <Pressable
@@ -128,9 +121,8 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     },
     title: { fontFamily: fonts.display, fontSize: typeScale.xl, color: colors.ink },
     subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
-    libraryLink: { fontFamily: fonts.bodySemiBold, fontSize: 15, color: colors.cover, marginTop: spacing.sm },
     pressed: { opacity: 0.6 },
-    focused: { outlineWidth: 2, outlineColor: colors.link, outlineStyle: "solid" },
+    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
     scanButton: {
       flexDirection: "row",
       alignItems: "center",

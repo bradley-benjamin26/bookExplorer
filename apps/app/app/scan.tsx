@@ -1,7 +1,8 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useRouter } from "expo-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
 import { routes } from "../src/navigation";
 import { useThemedStyles, type Theme } from "../src/theme";
@@ -11,6 +12,7 @@ export default function Scan() {
   const styles = useThemedStyles(createStyles);
   const [permission, requestPermission] = useCameraPermissions();
   const hasScanned = useRef(false);
+  const [batch, setBatch] = useState(false);
 
   const handleScanned = (result: BarcodeScanningResult) => {
     if (hasScanned.current) return;
@@ -33,6 +35,8 @@ export default function Scan() {
     );
   }
 
+  if (batch) return <BatchScan onExit={() => setBatch(false)} />;
+
   // The live camera view is deliberately always dark, regardless of the
   // app's own light/dark theme — a bright white scanning overlay would wash
   // out against the camera feed the same way it would in any camera app.
@@ -47,31 +51,34 @@ export default function Scan() {
       <View style={styles.overlay}>
         <View style={styles.scanBox} />
         <Text style={styles.hint}>Align the book's barcode within the frame</Text>
+        <Button variant="pill" onPress={() => setBatch(true)} accessibilityLabel="Scan multiple books">
+          Scan multiple
+        </Button>
       </View>
     </View>
   );
 }
 
-function createStyles({ colors }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#000" },
     permissionScreen: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      padding: 24,
-      gap: 16,
-      backgroundColor: colors.background,
+      padding: spacing.xl,
+      gap: spacing.lg,
+      backgroundColor: colors.paper,
     },
-    message: { textAlign: "center", fontSize: 16, color: colors.text },
+    message: { textAlign: "center", fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     overlay: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
     scanBox: {
       width: "80%",
       height: 140,
       borderWidth: 2,
       borderColor: "#fff",
-      borderRadius: 12,
+      borderRadius: 10,
     },
-    hint: { color: "#fff", fontSize: 14 },
+    hint: { color: "#fff", fontFamily: fonts.body, fontSize: 14 },
   });
 }

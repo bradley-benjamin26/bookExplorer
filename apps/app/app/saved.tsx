@@ -1,8 +1,11 @@
 import { useFocusEffect, useRouter } from "expo-router";
+import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
-import { SavedBookEditor } from "../src/components/SavedBookEditor";
+import { RecommendationsSection } from "../src/components/RecommendationsSection";
+import { SavedRecordEditor } from "../src/components/SavedRecordEditor";
 import { routes } from "../src/navigation";
 import {
   generateLibraryId,
@@ -11,7 +14,9 @@ import {
   upsertLibrary,
   type Library,
 } from "../src/storage/librarySettings";
-import { getSavedBook, removeSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedBook, removeSavedBook, updateSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedWork, unsaveWork, updateSavedWork, type SavedWorkChanges, type SavedWorkRecord } from "../src/storage/savedWorks";
+import { stamp, type Unversioned } from "../src/storage/schema";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
@@ -22,7 +27,7 @@ function LibraryCard({
   onRemove,
 }: {
   library: Library;
-  onSave: (library: Library) => Promise<void>;
+  onSave: (library: Unversioned<Library>) => Promise<void>;
   onRemove: (id: string) => void;
 }) {
   const theme = useTheme();
@@ -31,6 +36,15 @@ function LibraryCard({
   const [isbnUrl, setIsbnUrl] = useState(library.isbnUrl);
   const [titleUrl, setTitleUrl] = useState(library.titleUrl);
   const [saved, setSaved] = useState(false);
+  // The stored library changed under the card (a save, or an import): show the stored values,
+  // so pressing Save can't write the card's stale ones over an import.
+  const [shownUpdatedAt, setShownUpdatedAt] = useState(library.updatedAt);
+  if (library.updatedAt !== shownUpdatedAt) {
+    setShownUpdatedAt(library.updatedAt);
+    setName(library.name);
+    setIsbnUrl(library.isbnUrl);
+    setTitleUrl(library.titleUrl);
+  }
 
   const markDirty = () => setSaved(false);
 
@@ -50,7 +64,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="e.g. Springfield Public Library"
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         value={name}
         onChangeText={(text) => {
           setName(text);
@@ -66,7 +80,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="https://catalog.mylibrary.org/search?q="
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         autoCapitalize="none"
         autoCorrect={false}
         value={isbnUrl}
@@ -84,7 +98,7 @@ function LibraryCard({
       <TextInput
         style={styles.input}
         placeholder="https://catalog.mylibrary.org/search?q="
-        placeholderTextColor={theme.colors.textFaint}
+        placeholderTextColor={theme.colors.inkFaint}
         autoCapitalize="none"
         autoCorrect={false}
         value={titleUrl}
@@ -120,7 +134,7 @@ function AppearanceSection() {
 
   return (
     <View>
-      <Text style={styles.sectionTitle}>Appearance</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Appearance</Text>
       <View style={styles.themeOptions}>
         {THEME_OPTIONS.map((option) => (
           <Button
@@ -142,17 +156,16 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const [expanded, setExpanded] = useState(false);
-  const [record, setRecord] = useState<SavedBookRecord | null>(null);
+  const [record, setRecord] = useState<SavedBookRecord | SavedWorkRecord | null>(null);
 
-  // Only a "book" item (keyed by ISBN) has an editable record — a saved
-  // "work" has nowhere to snapshot subjects/genres from (Open Library's
-  // work-level data has no single edition's worth of metadata to seed it
-  // with), so it's shown but not editable.
-  const editable = item.type === "book";
+  // Books (by ISBN) and works (by work id) each have an editable record.
+  const editable = item.type === "book" || item.type === "work";
+  const update = (changes: SavedWorkChanges) =>
+    item.type === "work" ? updateSavedWork(item.id, changes) : updateSavedBook(item.id, changes);
 
   const handleToggleExpand = () => {
     if (!expanded && !record) {
-      getSavedBook(item.id).then(setRecord);
+      (item.type === "work" ? getSavedWork(item.id) : getSavedBook(item.id)).then(setRecord);
     }
     setExpanded((prev) => !prev);
   };
@@ -191,41 +204,44 @@ function BookRow({ item, onRemove }: { item: SavedItem; onRemove: (item: SavedIt
           <Text style={styles.removeText}>Remove</Text>
         </Pressable>
       </View>
-      {expanded && editable && (record ? <SavedBookEditor record={record} onChange={setRecord} /> : null)}
+      {expanded && editable && (record ? <SavedRecordEditor record={record} update={update} onChange={setRecord} /> : null)}
     </View>
   );
 }
 
 export default function Saved() {
   const router = useRouter();
+  const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [items, setItems] = useState<SavedItem[]>([]);
   const [libraries, setLibraries] = useState<Library[]>([]);
 
-  useFocusEffect(
-    useCallback(() => {
-      getSavedItems().then(setItems);
-      getLibraries().then(setLibraries);
-    }, [])
-  );
+  const load = useCallback(() => {
+    getSavedItems().then(setItems);
+    getLibraries().then(setLibraries);
+  }, []);
+  useFocusEffect(load);
 
   const books = items.filter((i) => i.type === "book" || i.type === "work");
   const authors = items.filter((i) => i.type === "author");
 
   const handleRemove = async (item: SavedItem) => {
-    await removeSaved(item.type, item.id);
-    // A book's editable record (tags, notes) lives under its own key — left
-    // behind, the book page would still show it as saved, and saving it
+    // A book's or work's editable record (tags, notes) lives under its own key — left
+    // behind, its page would still show it as saved, and saving it
     // again would resurrect the old notes instead of starting fresh.
-    if (item.type === "book") await removeSavedBook(item.id);
+    if (item.type === "work") await unsaveWork(item.id);
+    else {
+      await removeSaved(item.type, item.id);
+      if (item.type === "book") await removeSavedBook(item.id);
+    }
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
   };
 
   const handleAddLibrary = () => {
-    setLibraries((prev) => [...prev, { id: generateLibraryId(), name: "", isbnUrl: "", titleUrl: "" }]);
+    setLibraries((prev) => [...prev, stamp({ id: generateLibraryId(), name: "", isbnUrl: "", titleUrl: "" })]);
   };
 
-  const handleSaveLibrary = async (library: Library) => {
+  const handleSaveLibrary = async (library: Unversioned<Library>) => {
     const next = await upsertLibrary(library);
     setLibraries(next);
   };
@@ -237,14 +253,14 @@ export default function Saved() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Saved Books{books.length > 0 ? ` (${books.length})` : ""}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Saved Books{books.length > 0 ? ` (${books.length})` : ""}</Text>
       {books.length === 0 ? (
         <Text style={styles.emptyText}>No saved books yet — tap "Save" on a book page to add one.</Text>
       ) : (
         books.map((item) => <BookRow key={`${item.type}:${item.id}`} item={item} onRemove={handleRemove} />)
       )}
 
-      <Text style={styles.sectionTitle}>Saved Authors{authors.length > 0 ? ` (${authors.length})` : ""}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Saved Authors{authors.length > 0 ? ` (${authors.length})` : ""}</Text>
       {authors.length === 0 ? (
         <Text style={styles.emptyText}>No saved authors yet — tap "Save" on an author page to add one.</Text>
       ) : (
@@ -273,9 +289,11 @@ export default function Saved() {
         ))
       )}
 
+      <RecommendationsSection refreshKey={items} />
+
       <AppearanceSection />
 
-      <Text style={styles.sectionTitle}>Libraries</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Libraries</Text>
       <Text style={styles.helpText}>
         Book pages can link out to a library catalog's search — configure more than one if you use several (a public
         library and a school library, say). ISBN search is more precise, but not every catalog indexes ISBNs well —
@@ -292,21 +310,29 @@ export default function Saved() {
         accessibilityRole="button"
         accessibilityLabel="Add new library"
       >
-        <Text style={styles.addLibraryPlus} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          +
-        </Text>
+        <View style={styles.addLibraryIcon}>
+          <Plus size={16} color={theme.colors.cover} strokeWidth={2} />
+        </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
+
+      <BackupSection onImported={load} />
     </ScrollView>
   );
 }
 
-function createStyles({ colors, kicker }: Theme) {
+function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20 },
-    sectionTitle: { ...kicker, marginTop: 28, marginBottom: 12 },
-    emptyText: { fontSize: 14, color: colors.textFaint, fontStyle: "italic" },
+    container: { flex: 1, backgroundColor: colors.paper },
+    content: { padding: spacing.lg },
+    sectionTitle: {
+      fontFamily: fonts.displayMedium,
+      fontSize: typeScale.md,
+      color: colors.ink,
+      marginTop: spacing.xxl,
+      marginBottom: spacing.md,
+    },
+    emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
     row: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -315,62 +341,59 @@ function createStyles({ colors, kicker }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    rowMain: { flex: 1, paddingRight: 12 },
-    rowText: { fontSize: 16, color: colors.text },
+    rowMain: { flex: 1, paddingRight: spacing.md },
+    rowText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     bookBlock: { borderBottomWidth: 1, borderBottomColor: colors.border },
-    editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.chipBackground, marginRight: 8 },
-    editText: { fontSize: 13, color: colors.text, fontWeight: "600" },
-    removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.dangerBackground },
-    removeText: { fontSize: 13, color: colors.danger, fontWeight: "600" },
+    editButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.chipBackground, marginRight: spacing.sm },
+    editText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
+    removeButton: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill, backgroundColor: colors.dangerBackground },
+    removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
     pressed: { opacity: 0.6 },
-    helpText: { fontSize: 13, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
-    themeOptions: { flexDirection: "row", gap: 8 },
+    helpText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20, marginBottom: spacing.md },
+    themeOptions: { flexDirection: "row", gap: spacing.sm },
     themeOption: { alignSelf: "auto" },
-    fieldLabel: { fontSize: 14, fontWeight: "600", color: colors.text, marginBottom: 4 },
-    fieldLabelSpaced: { marginTop: 16 },
+    fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },
+    fieldLabelSpaced: { marginTop: spacing.lg },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 10,
+      borderRadius: radii.sm,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 15,
-      color: colors.text,
+      paddingVertical: spacing.md,
+      fontFamily: fonts.body,
+      fontSize: typeScale.sm,
+      color: colors.ink,
     },
-    saveButton: { marginTop: 14 },
+    saveButton: { marginTop: spacing.md },
     libraryCard: {
-      marginTop: 20,
-      padding: 16,
+      marginTop: spacing.lg,
+      padding: spacing.lg,
       borderWidth: 1,
       borderColor: colors.cardBorder,
-      borderRadius: 12,
+      borderRadius: radii.sm,
     },
     libraryCardHeader: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 4,
+      marginBottom: spacing.xs,
     },
     addLibraryRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      marginTop: 20,
+      marginTop: spacing.lg,
       paddingVertical: 10,
     },
-    addLibraryPlus: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: colors.link,
+    addLibraryIcon: {
       width: 26,
       height: 26,
-      lineHeight: 26,
-      textAlign: "center",
       borderRadius: 13,
       borderWidth: 1,
-      borderColor: colors.link,
-      overflow: "hidden",
+      borderColor: colors.cover,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    addLibraryText: { fontSize: 16, color: colors.link, fontWeight: "600" },
+    addLibraryText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover },
   });
 }

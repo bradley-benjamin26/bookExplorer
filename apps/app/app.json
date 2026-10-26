@@ -43,7 +43,9 @@
           "cameraPermission": "Book Explorer uses the camera to scan book barcodes."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      "expo-image"
     ],
     "extra": {
       "eas": {

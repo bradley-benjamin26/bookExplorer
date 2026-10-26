@@ -2,10 +2,11 @@ import * as openLibrary from "../sources/openLibrary.js";
 import * as hardcover from "../sources/hardcover.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchMetadataByAnyIsbn } from "../sources/loc.js";
+import { UpstreamUnavailableError } from "../httpClient.js";
 import { combineRatings } from "../ratings.js";
 import type { HardcoverBookData } from "../sources/hardcover.js";
 import type { OpenLibraryRatings } from "../sources/openLibrary.js";
-import type { Rating } from "@book-explorer/shared";
+import type { AuthorRef, Rating, WorkRef } from "@book-explorer/shared";
 import type { CacheEntryOptions } from "../cache.js";
 
 // How long a book/work assembled while one of its optional sources was
@@ -22,7 +23,8 @@ export const DEGRADED_TTL_MS = 1000 * 60 * 5;
  */
 export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, fallback: T) {
   return (err: unknown): T => {
-    console.warn(`[${sourceName}] Optional lookup failed:`, err);
+    // A cooldown was already logged once by httpClient; not once per request.
+    if (!(err instanceof UpstreamUnavailableError)) console.warn(`[${sourceName}] Optional lookup failed:`, err);
     entry.ttlMs = Math.min(entry.ttlMs, DEGRADED_TTL_MS);
     return fallback;
   };
@@ -83,4 +85,26 @@ export async function findWorkQid(
 ): Promise<string | null> {
   if (!firstAuthorName) return null;
   return wikidata.searchWorkQid(title, firstAuthorName).catch(optionalSource<string | null>(entry, "wikidata work search", null));
+}
+
+const MORE_BY_AUTHOR_CAP = 8;
+
+/**
+ * Other works by the same author from Open Library, excluding `excludeWorkId`
+ * (the work being viewed, if any). Optional enrichment: failure yields
+ * undefined (field omitted) and shortens the cache entry's TTL.
+ */
+export async function fetchMoreByAuthor(
+  author: AuthorRef | undefined,
+  excludeWorkId: string | null,
+  entry: CacheEntryOptions
+): Promise<WorkRef[] | undefined> {
+  if (!author) return undefined;
+  const works = await openLibrary
+    .getAuthorWorks(author.openLibraryId, MORE_BY_AUTHOR_CAP + 1)
+    .catch(optionalSource<null>(entry, "openLibrary author works", null));
+  return works
+    ?.filter((w) => w.workId !== excludeWorkId)
+    .slice(0, MORE_BY_AUTHOR_CAP)
+    .map((w) => ({ openLibraryWorkId: w.workId, title: w.title, authors: [author], coverUrl: w.coverUrl }));
 }

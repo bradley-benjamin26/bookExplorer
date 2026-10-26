@@ -1,10 +1,37 @@
 import type { Subject, SubjectConcept } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as locLinkedData from "../sources/locLinkedData.js";
+import type { BroaderNarrower } from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 
-const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24);
+const NO_LCSH: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
+
+const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subject");
+const subjectBooksCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subjectBooks");
+
+function toSubject(
+  slug: string,
+  ol: openLibrary.OpenLibrarySubject,
+  qid: string | null,
+  description: string | null,
+  relatedConcepts: SubjectConcept[]
+): Subject {
+  return {
+    slug,
+    name: ol.name,
+    workCount: ol.workCount,
+    wikidataId: qid,
+    description,
+    relatedConcepts,
+    books: ol.works.map((w) => ({
+      openLibraryWorkId: w.workId,
+      title: w.title,
+      authors: w.authors,
+      coverUrl: w.coverUrl,
+    })),
+  };
+}
 
 /**
  * Merges Wikidata's own broader/narrower concepts with LCSH's broader/narrower
@@ -49,31 +76,31 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
     const ol = await openLibrary.getSubject(slug);
     if (!ol) return null;
 
-    const qid = await wikidata.searchConceptQid(ol.name);
-    const [wikidataConcepts, description, lcshUri] = await Promise.all([
+    // Matching by name alone confuses same-spelled things ("ghosts" the
+    // supernatural vs. a TV series), so the Wikidata item LCSH itself links
+    // its heading to is trusted first; only a heading with no such link (or
+    // no heading at all) falls back to a — stricter — Wikidata name search.
+    const lcshUri = await locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null);
+    const lcshConcepts = lcshUri
+      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => NO_LCSH)
+      : NO_LCSH;
+    const qid = lcshConcepts.wikidataId ?? (await wikidata.searchConceptQid(ol.name));
+    const [wikidataConcepts, description] = await Promise.all([
       qid ? wikidata.fetchRelatedConcepts(qid) : Promise.resolve([]),
       qid ? wikidata.fetchDescription(qid).catch(() => null) : Promise.resolve(null),
-      locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null),
     ]);
-    const lcshConcepts = lcshUri
-      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => ({ broader: [] as string[], narrower: [] as string[] }))
-      : { broader: [] as string[], narrower: [] as string[] };
-    const relatedConcepts = mergeSubjectConcepts(wikidataConcepts, lcshConcepts);
+    return toSubject(slug, ol, qid, description, mergeSubjectConcepts(wikidataConcepts, lcshConcepts));
+  });
+}
 
-    const result: Subject = {
-      slug,
-      name: ol.name,
-      workCount: ol.workCount,
-      wikidataId: qid,
-      description,
-      relatedConcepts,
-      books: ol.works.map((w) => ({
-        openLibraryWorkId: w.workId,
-        title: w.title,
-        authors: w.authors,
-        coverUrl: w.coverUrl,
-      })),
-    };
-    return result;
+/**
+ * The path finder's cheap subject: Open Library's book list and work count
+ * only. The LCSH/Wikidata concept lookups above took up to ~10 s a subject
+ * on a cold cache, which no path search could afford.
+ */
+export function getSubjectBooks(slug: string): Promise<Subject | null> {
+  return subjectBooksCache.wrap(slug, async () => {
+    const ol = await openLibrary.getSubject(slug);
+    return ol && toSubject(slug, ol, null, null, []);
   });
 }

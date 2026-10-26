@@ -83,6 +83,17 @@ export const BookSchema = z.object({
 });
 export type Book = z.infer<typeof BookSchema>;
 
+// Open Library subject listings return works (title/author, no specific
+// edition), not ISBNs — so this is a distinct, lighter-weight concept from
+// `Book`, which always represents one scanned edition.
+export const WorkRefSchema = z.object({
+  openLibraryWorkId: z.string(),
+  title: z.string(),
+  authors: z.array(AuthorRefSchema),
+  coverUrl: z.string().nullable(),
+});
+export type WorkRef = z.infer<typeof WorkRefSchema>;
+
 export const AuthorRelationSchema = z.object({
   relation: z.enum(["influencedBy", "influenced", "notableWork", "movement"]),
   wikidataId: z.string(),
@@ -109,19 +120,10 @@ export const AuthorSchema = z.object({
   // published name as a "preferred" P742 statement alongside their actual
   // pseudonyms, which isn't useful to surface as "also known as".
   pseudonyms: z.array(z.string()),
+  // Optional enrichment from Open Library; absent when that lookup failed.
+  moreByAuthor: z.array(WorkRefSchema).optional(),
 });
 export type Author = z.infer<typeof AuthorSchema>;
-
-// Open Library subject listings return works (title/author, no specific
-// edition), not ISBNs — so this is a distinct, lighter-weight concept from
-// `Book`, which always represents one scanned edition.
-export const WorkRefSchema = z.object({
-  openLibraryWorkId: z.string(),
-  title: z.string(),
-  authors: z.array(AuthorRefSchema),
-  coverUrl: z.string().nullable(),
-});
-export type WorkRef = z.infer<typeof WorkRefSchema>;
 
 // One specific printing of a work — from Open Library's editions listing for
 // that work, best-effort (fields are whatever that edition's catalogers
@@ -148,6 +150,11 @@ export const WorkSchema = WorkRefSchema.extend({
   editions: z.array(EditionSchema),
   rating: RatingSchema.nullable(),
   reviews: z.array(ReviewSchema),
+  // Optional enrichments (Wikidata P179/P1545, Open Library author works);
+  // absent when the work has none or that lookup failed. `position` is text
+  // because ordinals aren't always integers ("2.5", "A").
+  series: z.object({ name: z.string(), position: z.string().nullable(), wikidataId: z.string() }).optional(),
+  moreByAuthor: z.array(WorkRefSchema).optional(),
 });
 export type Work = z.infer<typeof WorkSchema>;
 
@@ -206,6 +213,21 @@ export const GraphSchema = z.object({
 export type Graph = z.infer<typeof GraphSchema>;
 
 /**
+ * /api/path: the chain of nodes from one end to the other, with edges[i]
+ * joining nodes[i] and nodes[i + 1] (in either direction), or why none was found.
+ */
+/** One chain between the two ends, with a one-line summary of what links them. */
+export const GraphPathSchema = z.object({ nodes: z.array(GraphNodeSchema), edges: z.array(GraphEdgeSchema), summary: z.string() });
+export type GraphPath = z.infer<typeof GraphPathSchema>;
+
+// `paths` is ordered most specific first.
+export const PathResultSchema = z.discriminatedUnion("found", [
+  z.object({ found: z.literal(true), paths: z.array(GraphPathSchema).min(1) }),
+  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout", "upstreamUnavailable"]) }),
+]);
+export type PathResult = z.infer<typeof PathResultSchema>;
+
+/**
  * Strips everything but digits and a check-digit "X" from an ISBN — barcode
  * scans yield bare digits, but typed or pasted ISBNs are often hyphenated
  * ("978-0-06-325085-7"). Used by the server (so every source lookup and the
@@ -221,3 +243,101 @@ export function normalizeIsbn(isbn: string): string {
 export function isValidIsbn(raw: string): boolean {
   return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
 }
+
+// Caps on an imported backup/CSV file, which is untrusted input: big enough
+// for any real library, small enough that parsing it can't hang the app.
+export const MAX_IMPORT_BYTES = 5_000_000;
+export const MAX_IMPORT_RECORDS = 10_000;
+
+// Imported records must carry their own updatedAt (no "now" fallback), so a
+// merge of the same file always gives the same result.
+const VersionedFields = {
+  schemaVersion: z.number().int().positive(),
+  updatedAt: z.number().int().nonnegative(),
+};
+const text = z.string().max(10_000);
+const tagList = z.array(z.string().max(500)).max(1_000);
+// Library URLs are opened as links, so an imported file mustn't be able to
+// plant a javascript: or other non-web URL.
+const webUrl = z.string().max(2_000).regex(/^(https?:\/\/.*)?$/i);
+
+export const SavedItemExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  type: z.enum(["book", "work", "author"]),
+  id: z.string().min(1).max(200),
+  title: text,
+});
+
+export const SavedBookExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  // Becomes part of a storage key, so only the server's normalized form.
+  isbn: z.string().regex(/^(\d{9}[\dX]|\d{13})$/),
+  wikidataId: z.string().max(200).nullable(),
+  openLibraryEditionId: z.string().max(200).nullable(),
+  openLibraryWorkId: z.string().max(200).nullable(),
+  title: text,
+  authorNames: tagList,
+  format: z.string().max(200).nullable(),
+  subjects: tagList,
+  genres: tagList,
+  notes: text,
+  savedAt: z.number().int().nonnegative(),
+});
+
+/** Open Library's work id form; a saved work's id becomes part of a storage key, so only this. */
+export const OPEN_LIBRARY_WORK_ID = /^OL\d+W$/;
+
+export const SavedWorkExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  openLibraryWorkId: z.string().regex(OPEN_LIBRARY_WORK_ID),
+  title: text,
+  authorNames: tagList,
+  subjects: tagList,
+  genres: tagList,
+  notes: text,
+  savedAt: z.number().int().nonnegative(),
+});
+
+export const LibraryExportSchema = z.object({
+  ...VersionedFields,
+  id: z.string().min(1).max(200),
+  name: z.string().max(500),
+  isbnUrl: webUrl,
+  titleUrl: webUrl,
+});
+
+/**
+ * A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts).
+ * Version 1 files predate saved-work records, so they have no `works` and read as none;
+ * from version 2 on `works` is required. (A newer schemaVersion is the app's to reject.)
+ */
+export const SnapshotExportSchema = z
+  .object({
+    schemaVersion: z.number().int().positive(),
+    items: z.array(SavedItemExportSchema).max(MAX_IMPORT_RECORDS),
+    books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
+    works: z.array(SavedWorkExportSchema).max(MAX_IMPORT_RECORDS).optional(),
+    libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
+  })
+  .refine((s) => s.schemaVersion < 2 || s.works !== undefined, { message: "works is required from schemaVersion 2", path: ["works"] })
+  .transform(({ works = [], ...rest }) => ({ ...rest, works }));
+export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;
+
+export const SeriesMemberSchema = z.object({
+  wikidataId: z.string(),
+  title: z.string(),
+  position: z.string().nullable(),
+  // Wikidata doesn't always know the Open Library id, so not every member is navigable.
+  openLibraryWorkId: z.string().nullable(),
+});
+export type SeriesMember = z.infer<typeof SeriesMemberSchema>;
+
+export const SeriesSchema = z.object({
+  wikidataId: z.string(),
+  name: z.string(),
+  members: z.array(SeriesMemberSchema),
+});
+export type Series = z.infer<typeof SeriesSchema>;

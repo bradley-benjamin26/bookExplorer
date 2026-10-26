@@ -3,21 +3,26 @@ import { normalizeIsbn, slugifySubject, type TaggedTerm } from "@book-explorer/s
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { fetchBookByIsbn } from "../../src/api/client";
+import { Image } from "expo-image";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ApiError } from "../../src/api/client";
+import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
 import { ErrorState } from "../../src/components/ErrorState";
+import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { ExpandableText } from "../../src/components/ExpandableText";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SourceBadge } from "../../src/components/SourceBadge";
+import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { openLibraryUrl } from "../../src/share";
 import { addRecentIsbn } from "../../src/storage/history";
-import { getSavedBook, removeSavedBook, saveBookFromApi, type SavedBookRecord } from "../../src/storage/savedBooks";
-import { toggleSaved } from "../../src/storage/savedItems";
+import { getSavedBook, saveBook, unsaveBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleCase } from "../../src/titleCase";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
 const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
@@ -34,9 +39,9 @@ export default function BookDetail() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
     queryKey: ["book", isbn],
-    queryFn: () => fetchBookByIsbn(isbn),
+    queryFn: () => fetchBookWithAlternate(isbn),
     enabled: !!isbn,
   });
 
@@ -54,20 +59,23 @@ export default function BookDetail() {
   // mounted underneath others in the stack, so a book removed (or edited)
   // from the Saved screen would otherwise still show its old saved state
   // when navigating back here.
+  // Saved under the ISBN the server returned, which can be the other (10 vs 13) form of the route's.
+  const savedIsbn = data?.isbn ?? isbn;
   useFocusEffect(
     useCallback(() => {
-      if (isbn) getSavedBook(isbn).then(setSavedRecord);
-    }, [isbn])
+      if (savedIsbn) getSavedBook(savedIsbn).then(setSavedRecord);
+    }, [savedIsbn])
   );
 
   const handleToggleSaved = async () => {
     if (!data) return;
-    const nowSaved = await toggleSaved({ type: "book", id: data.isbn, title: data.title });
-    if (nowSaved) {
-      setSavedRecord(await saveBookFromApi(data));
-    } else {
-      await removeSavedBook(data.isbn);
+    if (saved) {
+      await unsaveBook(data.isbn);
       setSavedRecord(null);
+    } else {
+      // Keeps the cover on disk so the saved book still shows it offline.
+      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+      setSavedRecord(await saveBook(data));
     }
   };
 
@@ -85,18 +93,29 @@ export default function BookDetail() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.link} />
+        <ActivityIndicator size="large" color={theme.colors.cover} />
       </View>
     );
   }
 
-  if (isError || !data) {
-    return <ErrorState message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`} />;
+  if (!data) {
+    return (
+      <ErrorState
+        error={error}
+        message={error instanceof Error ? error.message : `No book found for ISBN ${isbn}`}
+        action={
+          error instanceof ApiError && error.status === 404
+            ? { label: "Search by title instead", onPress: () => router.push(routes.search(isbn)) }
+            : undefined
+        }
+      />
+    );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} resizeMode="contain" />}
+      <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
+      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
       {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
       {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
         <GoogleBooksAttribution label="Cover image" />
@@ -122,6 +141,7 @@ export default function BookDetail() {
       >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
+      <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
       {savedRecord && (
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push(routes.saved())}>
           <Text style={styles.editInLibraryLink}>Edit subjects, genres & notes in My Library</Text>
@@ -150,10 +170,11 @@ export default function BookDetail() {
                     key={genre.label}
                     style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                     onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
-                    accessibilityLabel={genre.label}
+                    accessibilityRole="button"
+                    accessibilityLabel={titleCase(genre.label)}
                   >
                     <Text style={styles.genreTagText}>
-                      {genre.label}
+                      {titleCase(genre.label)}
                       <SourceBadge sources={genre.sources} />
                     </Text>
                   </Pressable>
@@ -173,10 +194,11 @@ export default function BookDetail() {
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
-                accessibilityLabel={subject.label}
+                accessibilityRole="button"
+                accessibilityLabel={titleCase(subject.label)}
               >
                 <Text style={styles.subjectTagText}>
-                  {subject.label}
+                  {titleCase(subject.label)}
                   <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
@@ -193,14 +215,25 @@ export default function BookDetail() {
       ) : null}
 
       {data.openLibraryWorkId && (
-        <Button
-          variant="primary"
-          onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
-          style={styles.graphButton}
-          textStyle={styles.graphButtonText}
-        >
-          View as Graph
-        </Button>
+        <>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
+            style={styles.graphButton}
+            textStyle={styles.graphButtonText}
+          >
+            View as Graph
+          </Button>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+            style={styles.graphButton}
+            textStyle={styles.graphButtonText}
+            accessibilityLabel={`Find a connection from ${data.title}`}
+          >
+            Find Connection
+          </Button>
+        </>
       )}
 
       <View style={styles.findSection}>
@@ -321,7 +354,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
-    formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.text, textTransform: "capitalize" },
+    formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink, textTransform: "capitalize" },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
