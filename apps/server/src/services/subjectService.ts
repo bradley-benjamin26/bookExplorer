@@ -1,11 +1,9 @@
 import type { Subject, SubjectConcept } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as locLinkedData from "../sources/locLinkedData.js";
-import type { BroaderNarrower } from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 
-const NO_LCSH: BroaderNarrower = { broader: [], narrower: [], wikidataId: null };
 
 const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subject");
 const subjectBooksCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subjectBooks");
@@ -82,8 +80,8 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
     // no heading at all) falls back to a — stricter — Wikidata name search.
     const lcshUri = await locLinkedData.findSubjectHeadingUri(ol.name).catch(() => null);
     const lcshConcepts = lcshUri
-      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => NO_LCSH)
-      : NO_LCSH;
+      ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(() => locLinkedData.EMPTY)
+      : locLinkedData.EMPTY;
     const qid = lcshConcepts.wikidataId ?? (await wikidata.searchConceptQid(ol.name));
     const [wikidataConcepts, description] = await Promise.all([
       qid ? wikidata.fetchRelatedConcepts(qid) : Promise.resolve([]),

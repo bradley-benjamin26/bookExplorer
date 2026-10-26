@@ -15,6 +15,7 @@ vi.mock("../sources/wikidata.js", () => ({
 vi.mock("../sources/locLinkedData.js", () => ({
   findSubjectHeadingUri: vi.fn(),
   fetchBroaderNarrower: vi.fn(),
+  EMPTY: { broader: [], narrower: [], wikidataId: null },
 }));
 
 function mockOpenLibrarySubject(name: string) {

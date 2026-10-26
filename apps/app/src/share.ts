@@ -16,15 +16,6 @@ export function schemeUrl(href: Href): string {
   return SCHEME + path.replace(/^\//, "") + (query ? `?${query}` : "");
 }
 
-/** Inverse of schemeUrl: the path segments (decoded) and query params of a deep link. */
-export function parseSchemeUrl(url: string): { segments: string[]; params: Record<string, string> } {
-  const [path, query = ""] = url.slice(SCHEME.length).split("?");
-  return {
-    segments: path.split("/").filter(Boolean).map(decodeURIComponent),
-    params: Object.fromEntries(new URLSearchParams(query)),
-  };
-}
-
 const OPEN_LIBRARY = "https://openlibrary.org";
 
 /** Public Open Library pages for the shareable entity types. */

@@ -14,7 +14,7 @@ import {
   upsertLibrary,
   type Library,
 } from "../src/storage/librarySettings";
-import { getSavedBook, removeSavedBook, updateSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
+import { getSavedBook, unsaveBook, updateSavedBook, type SavedBookRecord } from "../src/storage/savedBooks";
 import { getSavedWork, unsaveWork, updateSavedWork, type SavedWorkChanges, type SavedWorkRecord } from "../src/storage/savedWorks";
 import { stamp, type Unversioned } from "../src/storage/schema";
 import { getSavedItems, removeSaved, type SavedItem } from "../src/storage/savedItems";
@@ -230,10 +230,8 @@ export default function Saved() {
     // behind, its page would still show it as saved, and saving it
     // again would resurrect the old notes instead of starting fresh.
     if (item.type === "work") await unsaveWork(item.id);
-    else {
-      await removeSaved(item.type, item.id);
-      if (item.type === "book") await removeSavedBook(item.id);
-    }
+    else if (item.type === "book") await unsaveBook(item.id);
+    else await removeSaved(item.type, item.id);
     setItems((prev) => prev.filter((i) => !(i.type === item.type && i.id === item.id)));
   };
 

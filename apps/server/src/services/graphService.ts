@@ -1,6 +1,6 @@
 import { UpstreamUnavailableError } from "../httpClient.js";
 import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
-import { slugifySubject } from "@book-explorer/shared";
+import { normalizeTitle, slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
@@ -23,30 +23,6 @@ const MAX_PSEUDONYM_WORKS = 8;
 // authorService's cache, instead of re-hitting Open Library every time.
 const authorWorksCache = new TtlCache<OpenLibraryAuthorWork[]>(1000 * 60 * 60, 1000, "authorWorks");
 const pseudonymAuthorCache = new TtlCache<{ openLibraryId: string; name: string } | null>(1000 * 60 * 60 * 24, 1000, "pseudonymAuthor");
-
-// Open Library frequently catalogs what's really the same book as several
-// separate "work" records: a leading- or trailing-article variant ("The
-// Cricket in Times Square" / "Cricket in Times Square" / "Old Meadow, The"),
-// a differently-capitalized duplicate, or one edition's record carrying a
-// series subtitle another edition's doesn't ("The Cricket in Times Square
-// (Chester Cricket and His Friends)"). Stripping articles, trailing
-// parentheticals, and punctuation collapses all of these onto the same key.
-// This deliberately does NOT attempt to merge translations (e.g. "Grillo en
-// Times Square", a Spanish edition of the same book) — their titles share
-// no text to normalize toward, so any title-based heuristic that caught
-// those would also risk merging genuinely different books that happen to
-// share common words.
-export function normalizeTitle(title: string): string {
-  const base = title
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
-  const noSubtitle = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
-  const noTrailingArticle = noSubtitle.replace(/,\s*(the|a|an)$/, "").trim();
-  const noLeadingArticle = noTrailingArticle.replace(/^(the|a|an)\s+/, "");
-  return noLeadingArticle.replace(/[^a-z0-9]+/g, " ").trim();
-}
 
 // Two different Wikidata items can carry the same English label — e.g. the
 // subject "historical fiction" (Q136472) has a *broader* concept that is

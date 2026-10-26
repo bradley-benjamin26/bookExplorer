@@ -1,4 +1,4 @@
-import { slugifySubject, type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
+import { normalizeTitle, slugifySubject, type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
 import { toAlternateIsbn } from "./isbn";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -125,8 +125,6 @@ export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[], pub
     .map((seeds) => seeds.sort((a, b) => cmp(a.seedTitle, b.seedTitle))[0]);
   return { subjects, authors: topAuthors, excludedWorkIds, excludedTitles };
 }
-
-const normalizeTitle = (title: string) => title.trim().toLowerCase().replace(/\s+/g, " ");
 
 interface Evidence {
   work: WorkRef;

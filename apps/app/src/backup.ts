@@ -1,5 +1,6 @@
 import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema, type Book, type SnapshotExport } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "./api/bookLookup";
+import { stopsPass } from "./prefetchSaved";
 import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
 import { getSavedBook, saveBook } from "./storage/savedBooks";
@@ -104,7 +105,8 @@ export async function runCsvImport(
         await saveBook(book);
         onSaved?.(book);
         p.saved++;
-      } catch {
+      } catch (err) {
+        if (stopsPass(err)) return p; // throttled or offline: leave this row for Resume rather than failing every row after it
         p.failed.push(title || isbn);
       }
       await new Promise((resolve) => setTimeout(resolve, gapMs));

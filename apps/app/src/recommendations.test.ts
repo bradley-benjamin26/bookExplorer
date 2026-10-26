@@ -180,6 +180,12 @@ describe("rankRecommendations", () => {
     expect(rankRecommendations(profileOf(noWorkId, []), listing, new Map()).map((r) => r.work.openLibraryWorkId)).toEqual(["W6"]);
   });
 
+  it("excludes a recommended title that differs from a saved one only by a leading article", () => {
+    const saved = snapshot([book("Cricket in Times Square", ["Fiction"]), book("Other", ["Fiction"])]);
+    const listing = subjects(subject("fiction", [{ ...work("W7"), title: "The Cricket in Times Square" }, work("W8")]));
+    expect(rankRecommendations(profileOf(saved, []), listing, new Map()).map((r) => r.work.openLibraryWorkId)).toEqual(["W8"]);
+  });
+
   it("adds author and influence links from author graphs", () => {
     const seed: AuthorSeed = { id: "OLtA", name: "Tolkien", seedTitle: "The Hobbit" };
     const graph: Graph = {

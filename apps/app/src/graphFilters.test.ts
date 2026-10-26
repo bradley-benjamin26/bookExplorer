@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { applyGraphFilter, filterFromParams, filterToParams, NO_FILTER, toggle } from "./graphFilters";
+import { applyGraphFilter, filterFromParams, filterToParams, toggle } from "./graphFilters";
 
 const n = (id: string, type: "author" | "work" | "subject") => ({ id, type, label: id, navigable: true });
 const graph: Graph = {
@@ -15,7 +15,7 @@ const graph: Graph = {
 
 describe("applyGraphFilter", () => {
   it("returns the graph untouched with no filter", () => {
-    expect(applyGraphFilter(graph, NO_FILTER)).toBe(graph);
+    expect(applyGraphFilter(graph, { hiddenTypes: [], hiddenRelations: [] })).toBe(graph);
   });
 
   it("removes hidden types and leaves no dangling edges", () => {
@@ -49,8 +49,8 @@ describe("filter params", () => {
   it("round-trips and omits empty lists", () => {
     const f = { hiddenTypes: ["work", "genre"], hiddenRelations: ["influencedBy"] };
     expect(filterFromParams(filterToParams(f))).toEqual(f);
-    expect(filterToParams(NO_FILTER)).toEqual({});
-    expect(filterFromParams({})).toEqual(NO_FILTER);
+    expect(filterToParams({ hiddenTypes: [], hiddenRelations: [] })).toEqual({});
+    expect(filterFromParams({})).toEqual({ hiddenTypes: [], hiddenRelations: [] });
   });
 
   it("accepts repeated keys without throwing", () => {

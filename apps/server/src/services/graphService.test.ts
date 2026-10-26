@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
-import { cleanGraph, normalizeTitle } from "./graphService.js";
+import { normalizeTitle } from "@book-explorer/shared";
+import { cleanGraph } from "./graphService.js";
 
 describe("normalizeTitle", () => {
   it("strips a leading article", () => {

@@ -144,7 +144,7 @@ describe("CSV import", () => {
 
   it("saves each book like the Save button, skips rows without an ISBN and lists failures", async () => {
     fetchBook.mockImplementation(async (isbn) => {
-      if (isbn === "9780000000002") throw new Error("404");
+      if (isbn === "9780000000002") throw Object.assign(new Error("404"), { status: 404 });
       return apiBook(isbn, `Book ${isbn}`);
     });
     const seen: number[] = [];
@@ -174,6 +174,19 @@ describe("CSV import", () => {
     const done = await runCsvImport(rows, paused, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
     expect(done).toMatchObject({ next: 4, saved: 3 });
     expect(fetchBook).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops on a throttled or offline lookup without failing the row, so Resume retries it", async () => {
+    let throttled = true;
+    fetchBook.mockImplementation(async (isbn) => {
+      if (isbn === "9780000000002" && throttled) throw Object.assign(new Error("429"), { status: 429 });
+      return apiBook(isbn, isbn);
+    });
+    const paused = await runCsvImport(rows, NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
+    expect(paused).toEqual({ next: 2, saved: 1, alreadySaved: 0, noIsbn: ["No ISBN"], failed: [] });
+    throttled = false;
+    const done = await runCsvImport(rows, paused, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
+    expect(done).toEqual({ next: 4, saved: 3, alreadySaved: 0, noIsbn: ["No ISBN"], failed: [] });
   });
 
   it("skips books already saved without a lookup, so re-running a file is cheap", async () => {

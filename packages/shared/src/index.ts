@@ -341,3 +341,27 @@ export const SeriesSchema = z.object({
   members: z.array(SeriesMemberSchema),
 });
 export type Series = z.infer<typeof SeriesSchema>;
+
+// Open Library frequently catalogs what's really the same book as several
+// separate "work" records: a leading- or trailing-article variant ("The
+// Cricket in Times Square" / "Cricket in Times Square" / "Old Meadow, The"),
+// a differently-capitalized duplicate, or one edition's record carrying a
+// series subtitle another edition's doesn't ("The Cricket in Times Square
+// (Chester Cricket and His Friends)"). Stripping articles, trailing
+// parentheticals, and punctuation collapses all of these onto the same key.
+// This deliberately does NOT attempt to merge translations (e.g. "Grillo en
+// Times Square", a Spanish edition of the same book) — their titles share
+// no text to normalize toward, so any title-based heuristic that caught
+// those would also risk merging genuinely different books that happen to
+// share common words.
+export function normalizeTitle(title: string): string {
+  const base = title
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+  const noSubtitle = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const noTrailingArticle = noSubtitle.replace(/,\s*(the|a|an)$/, "").trim();
+  const noLeadingArticle = noTrailingArticle.replace(/^(the|a|an)\s+/, "");
+  return noLeadingArticle.replace(/[^a-z0-9]+/g, " ").trim();
+}

@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { isIsbnBarcode } from "../src/batchScan";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
 import { routes } from "../src/navigation";
@@ -15,6 +16,7 @@ export default function Scan() {
   const [batch, setBatch] = useState(false);
 
   const handleScanned = (result: BarcodeScanningResult) => {
+    if (!isIsbnBarcode(result.data)) return;
     if (hasScanned.current) return;
     hasScanned.current = true;
     router.replace(routes.book(result.data));
@@ -45,7 +47,7 @@ export default function Scan() {
       <CameraView
         style={StyleSheet.absoluteFill}
         facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+        barcodeScannerSettings={{ barcodeTypes: ["ean13"] }}
         onBarcodeScanned={handleScanned}
       />
       <View style={styles.overlay}>

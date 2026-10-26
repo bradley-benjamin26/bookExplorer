@@ -6,8 +6,6 @@ export interface GraphFilter {
   hiddenRelations: string[];
 }
 
-export const NO_FILTER: GraphFilter = { hiddenTypes: [], hiddenRelations: [] };
-
 export const isFiltered = (f: GraphFilter) => f.hiddenTypes.length + f.hiddenRelations.length > 0;
 
 /**

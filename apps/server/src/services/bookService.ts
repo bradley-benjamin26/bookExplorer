@@ -66,7 +66,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // sources, but no rating anywhere else, still gets a chance at Google
     // Books' rating instead of silently showing none.
     const hasRating = Boolean(hc?.rating && hc.ratingsCount) || Boolean(olRatings);
-    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !(wikipedia?.text ?? ol.description) || !hasRating;
+    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !wikipedia?.text || !hasRating;
     const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(optionalSource(entry, "googleBooks", null)) : null;
     const locMetadata = await locMetadataPromise;
 

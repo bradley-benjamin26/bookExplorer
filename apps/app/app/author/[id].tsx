@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AuthorRelation } from "@book-explorer/shared";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
@@ -35,9 +35,12 @@ export default function AuthorDetail() {
 
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    if (id) isItemSaved("author", id).then(setSaved);
-  }, [id]);
+  // Re-read on focus: this screen stays mounted under others, so a removal from Saved must show on return.
+  useFocusEffect(
+    useCallback(() => {
+      if (id) isItemSaved("author", id).then(setSaved);
+    }, [id])
+  );
 
   const handleToggleSaved = async () => {
     if (!data) return;
@@ -140,7 +143,7 @@ export default function AuthorDetail() {
                 <Pressable
                   key={item.wikidataId}
                   style={({ pressed }) => pressed && styles.pressed}
-                  onPress={() => router.push(routes.author(item.openLibraryId!))}
+                  onPress={() => router.push(item.openLibraryId!.endsWith("W") ? routes.work(item.openLibraryId!) : routes.author(item.openLibraryId!))}
                   accessibilityRole="button"
                   accessibilityLabel={item.label}
                 >

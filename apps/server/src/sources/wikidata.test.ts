@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchConceptQid } from "./wikidata.js";
+import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid } from "./wikidata.js";
 
 describe("isValidQid", () => {
   it("accepts a well-formed QID", () => {
@@ -85,6 +85,28 @@ describe("searchConceptQid", () => {
   });
 });
 
+describe("searchAuthorQid", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const stubSearch = (search: { id: string; description: string }[]) =>
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ search }) })));
+
+  it("matches a historian or philosopher", async () => {
+    stubSearch([
+      { id: "Q1", description: "American film" },
+      { id: "Q2", description: "British historian" },
+    ]);
+    expect(await searchAuthorQid("Someone")).toBe("Q2");
+  });
+
+  it("returns null rather than guessing the first hit when none looks like an author", async () => {
+    stubSearch([{ id: "Q1", description: "American film" }]);
+    expect(await searchAuthorQid("Someone")).toBeNull();
+  });
+});
+
 describe("compareOrdinals", () => {
   it("sorts numerics by value, fractional between integers, non-numeric and missing last", () => {
     const sorted = ["10", "A", null, "2.5", "2", "1"].sort(compareOrdinals);
@@ -142,6 +164,16 @@ describe("series lookups", () => {
     const series = await fetchSeries("Q9");
     expect(series?.members.map((m) => m.title)).toEqual(["Two", "Two and a half", "Three"]);
     expect(series?.members[1]).toMatchObject({ position: "2.5", openLibraryWorkId: null });
+  });
+
+  it("only links a member to Open Library when the id is a work id, not an edition", async () => {
+    const ol = (id: string) => ({ P648: [{ mainsnak: { datavalue: { value: id } } }] });
+    stubWikidata(
+      { Q9: entity("The Saga"), Q1: entity("One", { ...ol("OL1M"), P179: [seriesClaim("Q9", "1")] }) },
+      ["Q1"]
+    );
+    const series = await fetchSeries("Q9");
+    expect(series?.members[0]).toMatchObject({ title: "One", openLibraryWorkId: null });
   });
 
   it("returns null for a malformed qid without calling out", async () => {
