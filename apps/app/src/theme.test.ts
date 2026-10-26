@@ -1,9 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { darkColors, lightColors } from "./theme";
-
-// theme.ts pulls in react-native (Flow source, unparseable under node vitest); only the colour tables are needed.
-vi.mock("react-native", () => ({ useColorScheme: () => "light" }));
-vi.mock("./storage/themePreference", () => ({}));
+import { describe, expect, it } from "vitest";
+import { darkColors, lightColors } from "./themeColors";
 
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {

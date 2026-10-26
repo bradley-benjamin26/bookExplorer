@@ -18,7 +18,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -148,7 +148,7 @@ function placeEdgeLabels(nodes: PositionedNode[], edges: PositionedEdge[], cente
   const placed: Box[] = [];
 
   return edges.map((edge) => {
-    const text = RELATION_LABELS[edge.relation] ?? edge.relation;
+    const text = relationLabel(edge.relation);
     const width = text.length * PILL_CHAR_WIDTH + PILL_PADDING;
     const at = (t: number) => ({
       x: edge.source.x + (edge.target.x - edge.source.x) * t,
@@ -303,7 +303,7 @@ function layoutGraph(graph: Graph, width: number, height: number) {
   const seen = new Set<string>();
   const links = graph.edges
     .filter((e) => {
-      const key = [[e.source, e.target].sort().join("|"), RELATION_LABELS[e.relation] ?? e.relation].join("|");
+      const key = [[e.source, e.target].sort().join("|"), relationLabel(e.relation)].join("|");
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -654,7 +654,7 @@ export default function GraphExplorer() {
     );
   }
 
-  if (!data || !layout || !center) {
+  if (!data || !visible || !layout || !center) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
@@ -778,7 +778,7 @@ export default function GraphExplorer() {
             {[...new Set([...data.edges.map((e) => e.relation), ...filter.hiddenRelations])].map((r) => (
               <FilterRow
                 key={r}
-                label={RELATION_LABELS[r] ?? r}
+                label={relationLabel(r)}
                 checked={!filter.hiddenRelations.includes(r)}
                 onPress={() => updateFilter({ ...filter, hiddenRelations: toggle(filter.hiddenRelations, r) })}
               />
@@ -805,15 +805,16 @@ export default function GraphExplorer() {
       )}
       {showList ? (
         <ScrollView style={styles.list}>
-          <Text accessibilityRole="header" style={styles.listHeading}>
-            {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
-          </Text>
-          {orderedNodes.length <= 1 && (
+          {orderedNodes.length > 1 ? (
+            <Text accessibilityRole="header" style={styles.listHeading}>
+              {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
+            </Text>
+          ) : (
             <Text style={styles.listRelations}>Nothing left after filtering. Change the filter to see connections.</Text>
           )}
           {orderedNodes.length > 1 && orderedNodes.map((node) => {
             const isCenter = node.id === data.centerId;
-            const relations = isCenter ? "" : nodeRelations(visible!, node.id).join(". ");
+            const relations = isCenter ? "" : nodeRelations(visible, node.id).join(". ");
             return (
               <Pressable
                 key={node.id}
@@ -980,7 +981,7 @@ export default function GraphExplorer() {
           const isCenter = node.id === data.centerId;
           const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
           // A screen reader landing on one node in isolation can't see its edges, so spell them out.
-          const relations = nodeRelations(visible!, node.id).join(". ");
+          const relations = nodeRelations(visible, node.id).join(". ");
           const label = [
             `${node.label}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",

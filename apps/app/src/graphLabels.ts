@@ -26,6 +26,11 @@ export const RELATION_LABELS: Record<string, string> = {
   editions: "has",
 };
 
+export const relationLabel = (relation: string) => RELATION_LABELS[relation] ?? relation;
+
+const edgeSentence = (labels: Map<string, string | undefined>, e: { source: string; target: string; relation: string }) =>
+  `${labels.get(e.source)} ${relationLabel(e.relation)} ${labels.get(e.target)}`;
+
 export interface PathStep {
   node: GraphNode;
   /** How this node joins the previous one, read along the edge's own direction; null for the first. */
@@ -35,12 +40,10 @@ export interface PathStep {
 
 /** A found path as a top-to-bottom chain, each step labelled for screen readers with its relation. */
 export function pathSteps(path: GraphPath): PathStep[] {
-  const byId = new Map(path.nodes.map((n) => [n.id, n]));
+  const labels = new Map(path.nodes.map((n) => [n.id, n.label]));
   return path.nodes.map((node, i) => {
     const edge = i > 0 ? path.edges[i - 1] : undefined;
-    const relation = edge
-      ? `${byId.get(edge.source)?.label} ${RELATION_LABELS[edge.relation] ?? edge.relation} ${byId.get(edge.target)?.label}`
-      : null;
+    const relation = edge ? edgeSentence(labels, edge) : null;
     const label = `Step ${i + 1} of ${path.nodes.length}: ${node.label}, ${NODE_LABELS[node.type]}`;
     return { node, relation, accessibilityLabel: relation ? `${label}. ${relation}` : label };
   });
@@ -51,7 +54,7 @@ export function nodeRelations(graph: Graph, nodeId: string): string[] {
   const labels = new Map(graph.nodes.map((n) => [n.id, n.label]));
   const sentences = graph.edges
     .filter((e) => (e.source === nodeId || e.target === nodeId) && labels.has(e.source) && labels.has(e.target))
-    .map((e) => `${labels.get(e.source)} ${RELATION_LABELS[e.relation] ?? e.relation} ${labels.get(e.target)}`);
+    .map((e) => edgeSentence(labels, e));
   return [...new Set(sentences)];
 }
 
