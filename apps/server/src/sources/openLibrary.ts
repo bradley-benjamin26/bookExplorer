@@ -1,5 +1,6 @@
 import type { AuthorRef } from "@book-explorer/shared";
 import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
+import { TtlCache } from "../cache.js";
 
 // Upstream APIs (Open Library asks for this) use the contact address to reach us instead of blocking us.
 const CONTACT_EMAIL = process.env.USER_EMAIL?.trim();
@@ -75,7 +76,7 @@ export interface OpenLibraryAuthor {
 // (OL3894951A) is exactly this — a redirect with no `name` field at all,
 // which would otherwise have shown the literal id as his "name". `depth`
 // just guards against an implausible redirect chain looping forever.
-export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenLibraryAuthor | null> {
+async function fetchAuthor(openLibraryId: string, depth = 0): Promise<OpenLibraryAuthor | null> {
   const url = `https://openlibrary.org/authors/${encodeURIComponent(openLibraryId)}.json`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return null;
@@ -84,7 +85,7 @@ export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenL
   const data = (await res.json()) as OpenLibraryAuthorData;
 
   if (data.type?.key === "/type/redirect" && data.location && depth < 3) {
-    return getAuthor(data.location.replace("/authors/", ""), depth + 1);
+    return fetchAuthor(data.location.replace("/authors/", ""), depth + 1);
   }
 
   const bio = typeof data.bio === "string" ? data.bio : data.bio?.value ?? null;
@@ -96,6 +97,14 @@ export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenL
     deathDate: data.death_date ?? null,
     wikidataId: data.remote_ids?.wikidata ?? null,
   };
+}
+
+// Every work names its authors only by id, so expanding an author's books one
+// by one (as path search does) would re-fetch the same author record each time.
+const authorRecordCache = new TtlCache<OpenLibraryAuthor | null>(1000 * 60 * 60 * 24, 2000, "olAuthor");
+
+export function getAuthor(openLibraryId: string): Promise<OpenLibraryAuthor | null> {
+  return authorRecordCache.wrap(openLibraryId, () => fetchAuthor(openLibraryId));
 }
 
 interface OpenLibraryWorkData {
@@ -227,7 +236,7 @@ async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
   return deduped.map(({ nonEnglish, ...edition }) => edition);
 }
 
-export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
+export async function getWork(workId: string, { editions: withEditions = true }: { editions?: boolean } = {}): Promise<OpenLibraryWork | null> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}.json`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return null;
@@ -260,11 +269,13 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     // Non-fatal and best-effort: this only unlocks a few extra links/an
     // editions list on the work page, so a failure here shouldn't take down
     // the rest of an otherwise-good response.
-    getWorkEditions(workId).catch((err) => {
-      if (err instanceof UpstreamUnavailableError) throw err;
-      console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
-      return [] as OpenLibraryEdition[];
-    }),
+    withEditions
+      ? getWorkEditions(workId).catch((err) => {
+          if (err instanceof UpstreamUnavailableError) throw err;
+          console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
+          return [] as OpenLibraryEdition[];
+        })
+      : ([] as OpenLibraryEdition[]),
   ]);
 
   const isbnCandidates = [...new Set(editions.map((e) => e.isbn).filter((isbn): isbn is string => !!isbn))];
