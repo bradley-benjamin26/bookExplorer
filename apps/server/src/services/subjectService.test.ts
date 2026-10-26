@@ -15,6 +15,7 @@ vi.mock("../sources/wikidata.js", () => ({
 vi.mock("../sources/locLinkedData.js", () => ({
   findSubjectHeadingUri: vi.fn(),
   fetchBroaderNarrower: vi.fn(),
+  EMPTY: { broader: [], narrower: [], wikidataId: null },
 }));
 
 function mockOpenLibrarySubject(name: string) {
@@ -108,6 +109,28 @@ describe("getSubjectDetail", () => {
 
     const subject = await getSubjectDetail("ghosts_no_link");
     expect(subject?.wikidataId).toBe("Q777");
+  });
+
+  it("serves the page when LOC and Wikidata fail, and caches that only briefly", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      mockOpenLibrarySubject("Outage");
+      vi.mocked(locLinkedData.findSubjectHeadingUri).mockRejectedValue(new Error("LOC timed out"));
+      vi.mocked(wikidata.searchConceptQid).mockRejectedValue(new Error("Wikidata timed out"));
+
+      const degraded = await getSubjectDetail("outage");
+      expect(degraded).toMatchObject({ name: "Outage", wikidataId: null, relatedConcepts: [] });
+
+      vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("https://id.loc.gov/authorities/subjects/sh9");
+      vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: ["Folklore"], narrower: [], wikidataId: null });
+      vi.mocked(wikidata.searchConceptQid).mockResolvedValue(null);
+      vi.advanceTimersByTime(6 * 60 * 1000);
+
+      const recovered = await getSubjectDetail("outage");
+      expect(recovered?.relatedConcepts).toEqual([{ relation: "broader", label: "Folklore", sources: ["lcsh"], wikidataId: null }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -13,10 +13,9 @@ export async function lookupByIsbn(isbn: string): Promise<GoogleBooksResult | nu
   // gets its own per-project quota instead. Optional: falls back to the
   // shared pool if GOOGLE_BOOKS_API_KEY isn't set.
   const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
-  const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}${
-    apiKey ? `&key=${encodeURIComponent(apiKey)}` : ""
-  }`;
-  const res = await fetchWithTimeout(url);
+  // Sent as a header, not a `key=` query param, so it can't end up in logs or error text that include the URL.
+  const url = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`;
+  const res = await fetchWithTimeout(url, apiKey ? { headers: { "X-goog-api-key": apiKey } } : {});
   if (!res.ok) throw new Error(`Google Books request failed: ${res.status}`);
 
   const body = (await res.json()) as {

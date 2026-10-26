@@ -1,9 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { getSubjectDetail } from "../services/subjectService.js";
+import { isSubjectSlug } from "../validation.js";
 
 export async function subjectsRoutes(app: FastifyInstance) {
   app.get<{ Params: { slug: string } }>("/api/subjects/:slug", async (req, reply) => {
     const { slug } = req.params;
+    if (!isSubjectSlug(slug)) {
+      reply.code(400);
+      return { error: `"${slug}" is not a valid subject slug` };
+    }
+
     const subject = await getSubjectDetail(slug);
 
     if (!subject) {

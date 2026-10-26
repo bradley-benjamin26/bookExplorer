@@ -1,11 +1,12 @@
 import type { Book } from "@book-explorer/shared";
-import { normalizeIsbn } from "@book-explorer/shared";
+import { normalizeIsbn, splitSubjectTerms } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
+import { getWorkDetail } from "./workService.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
@@ -23,6 +24,12 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
 
+    // Some editions list no authors; the work usually does (shares the work page's cache).
+    const authors =
+      ol.authors.length || !ol.workId
+        ? ol.authors
+        : (await getWorkDetail(ol.workId).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
+
     // LOC subject/genre headings, Hardcover, and Open Library's own ratings
     // — same shared pipeline a work page uses (see bookEnrichment.ts),
     // started here, alongside everything else below, since none of it
@@ -38,7 +45,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // that's already fully usable without it (unlike the author-relations
     // case, a failure here is caught rather than left to fail the whole
     // request — scanning a barcode shouldn't break over a title search).
-    const firstAuthorName = ol.authors[0]?.name ?? null;
+    const firstAuthorName = authors[0]?.name ?? null;
     const workQid = await findWorkQid(ol.title, firstAuthorName, entry);
     const [wikipedia, wikidataGenres] = workQid
       ? await Promise.all([
@@ -66,7 +73,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // sources, but no rating anywhere else, still gets a chance at Google
     // Books' rating instead of silently showing none.
     const hasRating = Boolean(hc?.rating && hc.ratingsCount) || Boolean(olRatings);
-    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !(wikipedia?.text ?? ol.description) || !hasRating;
+    const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !wikipedia?.text || !hasRating;
     const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(optionalSource(entry, "googleBooks", null)) : null;
     const locMetadata = await locMetadataPromise;
 
@@ -82,11 +89,13 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       blendHardcoverAndOpenLibraryRating(hc, olRatings) ??
       (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks" as const] } : null);
 
+    const olTerms = splitSubjectTerms(ol.subjects);
     const result: Book = {
       isbn,
       title: ol.title,
-      authors: ol.authors,
-      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: ol.subjects }),
+      authors,
+      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
+      awards: olTerms.awards,
       genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
       description,
       descriptionSource,

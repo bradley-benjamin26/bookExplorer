@@ -1,5 +1,6 @@
 import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, SnapshotExportSchema, type Book, type SnapshotExport } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "./api/bookLookup";
+import { stopsPass } from "./prefetchSaved";
 import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
 import { getSavedBook, saveBook } from "./storage/savedBooks";
@@ -12,19 +13,36 @@ type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 
 const schemaMatchesStorage: Same<SnapshotExport, Snapshot> = true;
 void schemaMatchesStorage;
 
-/** A file the user picked can't be imported; the message is shown to them as is. */
+/** A backup can't be imported (or made); the message is shown to the user as is. */
 export class ImportError extends Error {}
 
 function checkSize(text: string) {
   if (text.length > MAX_IMPORT_BYTES) throw new ImportError("That file is too large to import (5 MB max).");
 }
 
+const SNAPSHOT_PARTS: Record<string, string> = {
+  items: "a saved item",
+  books: "a saved book",
+  works: "a saved work",
+  libraries: "a library in Settings",
+  lists: "a list",
+};
+
 export async function exportJson(): Promise<string> {
-  return JSON.stringify(await getSnapshot(), null, 2);
+  const snapshot = await getSnapshot();
+  // Import rejects the whole file over one bad record, so a backup that couldn't be restored
+  // fails now, while the data is still on this device, not when the user restores it.
+  const check = SnapshotExportSchema.safeParse(snapshot);
+  if (!check.success) {
+    const part = SNAPSHOT_PARTS[String(check.error.issues[0]?.path[0])] ?? "some saved data";
+    throw new ImportError(`This backup couldn't be restored, so it wasn't made: ${part} has a value that's too long or not allowed. Fix it and try again.`);
+  }
+  return JSON.stringify(snapshot, null, 2);
 }
 
 export async function exportCsv(): Promise<string> {
-  return booksToCsv((await getSnapshot()).books);
+  const { books, lists } = await getSnapshot();
+  return booksToCsv(books, lists);
 }
 
 /** Validates a JSON backup file (untrusted) against the shared schema. */
@@ -37,9 +55,9 @@ export function parseSnapshotJson(text: string): Snapshot {
     throw new ImportError("That file isn't valid JSON.");
   }
   const result = SnapshotExportSchema.safeParse(json);
-  if (!result.success) throw new ImportError("That file isn't a Book Explorer backup, or it's damaged.");
+  if (!result.success) throw new ImportError("That file isn't a Shelf Thread backup, or it's damaged.");
   if (result.data.schemaVersion > SCHEMA_VERSION) {
-    throw new ImportError("That backup is from a newer version of Book Explorer. Update the app to import it.");
+    throw new ImportError("That backup is from a newer version of Shelf Thread. Update the app to import it.");
   }
   return result.data;
 }
@@ -104,7 +122,8 @@ export async function runCsvImport(
         await saveBook(book);
         onSaved?.(book);
         p.saved++;
-      } catch {
+      } catch (err) {
+        if (stopsPass(err)) return p; // throttled or offline: leave this row for Resume rather than failing every row after it
         p.failed.push(title || isbn);
       }
       await new Promise((resolve) => setTimeout(resolve, gapMs));

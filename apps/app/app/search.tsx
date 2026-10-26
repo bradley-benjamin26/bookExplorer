@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
+import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { routes } from "../src/navigation";
 import {
@@ -165,6 +166,7 @@ export default function Search() {
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
+      ListFooterComponent={<Footer />}
     />
   );
 }

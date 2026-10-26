@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { persistQueryClientRestore, persistQueryClientSave, type PersistedClient } from "@tanstack/react-query-persist-client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
-import { CACHE_SCHEMA_VERSION, persistOptions, pruneClient, savedKeyFor } from "./queryCache";
+import { CACHE_SCHEMA_VERSION, createPerQueryPersister, persistOptions, pruneClient, savedKeyFor } from "./queryCache";
 import { toggleSaved } from "./storage/savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
@@ -75,10 +75,11 @@ describe("persisted query cache", () => {
   beforeEach(() => AsyncStorage.clear());
 
   const book = { isbn: "1", title: "Cached" };
-  const save = (queryClient: QueryClient) => persistQueryClientSave({ queryClient, ...persistOptions });
+  const options = { ...persistOptions, persister: createPerQueryPersister(0) }; // no throttle wait between test saves
+  const save = (queryClient: QueryClient) => persistQueryClientSave({ queryClient, ...options });
   const restore = async (buster = persistOptions.buster) => {
     const queryClient = new QueryClient();
-    await persistQueryClientRestore({ queryClient, ...persistOptions, buster });
+    await persistQueryClientRestore({ queryClient, ...options, buster });
     return queryClient;
   };
 
@@ -122,5 +123,33 @@ describe("persisted query cache", () => {
     await queryClient.fetchQuery({ queryKey: ["book", "1"], queryFn: () => book });
     await save(queryClient);
     expect((await restore(String(CACHE_SCHEMA_VERSION + 1))).getQueryData(["book", "1"])).toBeUndefined();
+  });
+
+  it("stores each query under its own key, drops a pruned query's key and clears them all on a version change", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["book", "1"], book);
+    queryClient.setQueryData(["author", "OL1A"], { id: "OL1A" });
+    await save(queryClient);
+    const keysOf = async () => (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith("book-explorer:query-cache")).sort();
+    expect(await keysOf()).toHaveLength(3); // the index plus one per query
+
+    queryClient.removeQueries({ queryKey: ["author"] });
+    await save(queryClient);
+    expect(await keysOf()).toHaveLength(2);
+
+    await restore(String(CACHE_SCHEMA_VERSION + 1));
+    expect(await keysOf()).toEqual([]);
+  });
+
+  it("ignores an older single-value cache and a query whose stored value is corrupt", async () => {
+    await AsyncStorage.setItem("book-explorer:query-cache", JSON.stringify({ timestamp: 0, buster: "1", clientState: { queries: [], mutations: [] } }));
+    expect((await restore()).getQueryCache().getAll()).toHaveLength(0);
+
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(["book", "1"], book);
+    queryClient.setQueryData(["book", "2"], book);
+    await save(queryClient);
+    await AsyncStorage.setItem('book-explorer:query-cache:q:["book","2"]', "{oops");
+    expect((await restore()).getQueryCache().getAll()).toHaveLength(1);
   });
 });

@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
@@ -13,8 +14,8 @@ import { ExpandableText } from "../../src/components/ExpandableText";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
-import { SourceBadge } from "../../src/components/SourceBadge";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
+import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -102,6 +103,7 @@ export default function WorkDetail() {
         {saved ? "Saved" : "Save"}
       </Button>
       <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
+      <AddToListButton member={{ type: "work", id: data.openLibraryWorkId, title: data.title }} />
 
       <Button
         variant="primary"
@@ -115,6 +117,7 @@ export default function WorkDetail() {
         onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
         style={styles.graphButton}
         accessibilityLabel={`Find a connection from ${data.title}`}
+        accessibilityHint="Shows how this book links to another book you pick"
       >
         Find Connection
       </Button>
@@ -143,9 +146,21 @@ export default function WorkDetail() {
               >
                 <Text style={styles.genreTagText}>
                   {titleCase(genre.label)}
-                  <SourceBadge sources={genre.sources} />
                 </Text>
               </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {data.awards.length > 0 && (
+        <View style={styles.genresSection}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
+          <View style={styles.genreTags}>
+            {data.awards.map((award) => (
+              <View key={award} style={styles.genreTag}>
+                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
+              </View>
             ))}
           </View>
         </View>
@@ -165,7 +180,6 @@ export default function WorkDetail() {
               >
                 <Text style={styles.subjectTagText}>
                   {titleCase(subject.label)}
-                  <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
             ))}
@@ -184,6 +198,7 @@ export default function WorkDetail() {
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
       <ReviewsSection reviews={data.reviews} />
+      <Footer />
     </ScrollView>
   );
 }
@@ -205,7 +220,14 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     saveButton: { marginTop: spacing.md },
     genresSection: { marginTop: spacing.xxl, width: "100%" },
     genreTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: radii.pill, paddingHorizontal: 13, paddingVertical: 7 },
+    genreTag: {
+      backgroundColor: colors.chipBackgroundGenre,
+      borderRadius: radii.pill,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextGenre,
+    },
     genreTagText: {
       fontFamily: fonts.bodySemiBold,
       fontSize: typeScale.xs,
@@ -227,6 +249,8 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextSubject,
     },
     subjectTagText: {
       fontFamily: fonts.bodySemiBold,

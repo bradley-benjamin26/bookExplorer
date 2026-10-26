@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { buildAuthorGraph, buildSubjectGraph, buildWorkGraph } from "../services/graphService.js";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId } from "../validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlug } from "../validation.js";
 
 const BUILDERS = {
   author: buildAuthorGraph,
@@ -10,10 +10,9 @@ const BUILDERS = {
 
 type GraphType = keyof typeof BUILDERS;
 
-// Subject slugs are free text (any Open Library subject name), so only the
-// id-keyed graph types get a shape check.
 const ID_VALIDATORS: Partial<Record<GraphType, (id: string) => boolean>> = {
   author: isOpenLibraryAuthorId,
+  subject: isSubjectSlug,
   work: isOpenLibraryWorkId,
 };
 

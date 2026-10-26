@@ -21,7 +21,7 @@ const book = (title: string, subjects: string[], extra: Partial<SavedBookRecord>
   savedAt: 1,
   ...extra,
 });
-const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = [], works: Snapshot["works"] = []): Snapshot => ({ schemaVersion: 1, items, books, works, libraries: [] });
+const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = [], works: Snapshot["works"] = []): Snapshot => ({ schemaVersion: 1, items, books, works, libraries: [], lists: [] });
 const savedWork = (title: string, subjects: string[]): Snapshot["works"][number] => ({
   schemaVersion: 1, updatedAt: 1, openLibraryWorkId: `OL${title}W`, title, authorNames: [], subjects, genres: [], notes: "", savedAt: 1,
 });
@@ -178,6 +178,12 @@ describe("rankRecommendations", () => {
     const noWorkId = snapshot([book("Sharpe's Eagle", ["Napoleonic Wars"]), book("Sharpe's Rifles", ["Napoleonic Wars"])]);
     const listing = subjects(subject("napoleonic_wars", [{ ...work("W5"), title: "  sharpe's  EAGLE" }, work("W6")]));
     expect(rankRecommendations(profileOf(noWorkId, []), listing, new Map()).map((r) => r.work.openLibraryWorkId)).toEqual(["W6"]);
+  });
+
+  it("excludes a recommended title that differs from a saved one only by a leading article", () => {
+    const saved = snapshot([book("Cricket in Times Square", ["Fiction"]), book("Other", ["Fiction"])]);
+    const listing = subjects(subject("fiction", [{ ...work("W7"), title: "The Cricket in Times Square" }, work("W8")]));
+    expect(rankRecommendations(profileOf(saved, []), listing, new Map()).map((r) => r.work.openLibraryWorkId)).toEqual(["W8"]);
   });
 
   it("adds author and influence links from author graphs", () => {

@@ -6,13 +6,13 @@ interface WbSearchResult {
   search: { id: string; label?: string; description?: string }[];
 }
 
-const AUTHOR_KEYWORDS = ["writer", "author", "novelist", "poet", "playwright", "journalist"];
+const AUTHOR_KEYWORDS = ["writer", "author", "novelist", "poet", "playwright", "journalist", "historian", "philosopher", "scholar"];
 
 /** Falls back to a Wikidata name search when Open Library has no `remote_ids.wikidata`. */
 export async function searchAuthorQid(name: string): Promise<string | null> {
   const body = await wbSearchEntities(name, 5);
   const match = body.search.find((r) => AUTHOR_KEYWORDS.some((kw) => r.description?.toLowerCase().includes(kw)));
-  return (match ?? body.search[0])?.id ?? null;
+  return match?.id ?? null;
 }
 
 // Open Library subject strings are topics/genres, not named works, so results
@@ -454,7 +454,9 @@ export async function fetchSeries(seriesQid: string): Promise<Series | null> {
     // Two Wikidata items can carry the same Open Library id (e.g. a work and its edition record); list it once.
     if (!item || (item.openLibraryId && seen.has(item.openLibraryId))) return [];
     if (item.openLibraryId) seen.add(item.openLibraryId);
-    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId: item.openLibraryId }];
+    // P648 can hold an edition id (OL…M), which the work page can't open.
+    const openLibraryWorkId = item.openLibraryId && /^OL\d+W$/.test(item.openLibraryId) ? item.openLibraryId : null;
+    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId }];
   });
   members.sort((a, b) => compareOrdinals(a.position, b.position));
   return { wikidataId: seriesQid, name, members };

@@ -1,6 +1,6 @@
-import type { Author } from "@book-explorer/shared";
+import type { Author, AuthorRelation } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
-import { fetchMoreByAuthor } from "./bookEnrichment.js";
+import { fetchMoreByAuthor, optionalSource } from "./bookEnrichment.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
@@ -13,18 +13,10 @@ const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24, 1000, "auth
  * Shared by the /api/authors and /api/graph/author routes so both hit the
  * same cache.
  *
- * The Wikidata search and relations lookups below used to swallow their own
- * errors and fall back to "no match" / "no relations" — which sounds safe,
- * but made a transient Wikidata failure indistinguishable from an author who
- * genuinely has no linked-data connections. Worse, since that fallback
- * value was still a *successful* result, TtlCache cached it for 24 hours,
- * so a one-off hiccup got permanently remembered as "this author has
- * nothing." (Confirmed live: Margaret Atwood's Wikidata entry has 34
- * relations, but a transient failure had this cached as zero.) Letting
- * these throw instead means a failed lookup surfaces as a real error to the
- * client instead of a false "nothing here," and doesn't get cached, so the
- * next request retries against Wikidata instead of repeating the stale
- * failure for a full day.
+ * Wikidata and Wikipedia are optional: a failed lookup is served with Open
+ * Library's data alone and cached only briefly (see optionalSource). Caching
+ * the fallback for the full 24 hours once remembered a hiccup as "this author
+ * has nothing" (confirmed live: Margaret Atwood's 34 relations cached as zero).
  */
 export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
   return authorCache.wrap(openLibraryId, async (entry) => {
@@ -32,9 +24,14 @@ export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
     if (!ol) return null;
 
     const moreByAuthorPromise = fetchMoreByAuthor({ openLibraryId, name: ol.name }, null, entry);
-    const qid = ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name));
+    const qid =
+      ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name).catch(optionalSource<string | null>(entry, "wikidata author search", null)));
     const [relations, wikipedia, rawPseudonyms] = qid
-      ? await Promise.all([wikidata.fetchAuthorRelations(qid), fetchWikipediaExtract(qid), wikidata.fetchPseudonyms(qid)])
+      ? await Promise.all([
+          wikidata.fetchAuthorRelations(qid).catch(optionalSource<AuthorRelation[]>(entry, "wikidata relations", [])),
+          fetchWikipediaExtract(qid).catch(optionalSource(entry, "wikipedia", null)),
+          wikidata.fetchPseudonyms(qid).catch(optionalSource<string[]>(entry, "wikidata pseudonyms", [])),
+        ])
       : [[], null, []];
 
     const moreByAuthor = await moreByAuthorPromise;

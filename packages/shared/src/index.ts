@@ -41,11 +41,39 @@ export const TaggedTermSchema = z.object({
 });
 export type TaggedTerm = z.infer<typeof TaggedTermSchema>;
 
+const MACHINE_TAG = /^[a-z_]+:\S/i;
+
+/** Splits raw Open Library subject strings into real subjects and readable awards; other machine tags ("nyt:...", "series:...") are dropped. */
+export function splitSubjectTerms(labels: string[]): { subjects: string[]; awards: string[] } {
+  const subjects: string[] = [];
+  const awards = new Map<string, string>();
+  for (const label of labels) {
+    if (!MACHINE_TAG.test(label)) {
+      subjects.push(label);
+      continue;
+    }
+    const m = /^award:(.+)$/i.exec(label);
+    if (!m) continue;
+    const [name, qualifier] = m[1].split("=", 2);
+    const award = name.replace(/_/g, " ").trim() + (qualifier?.trim() ? ` (${qualifier.trim()})` : "");
+    const key = award.toLowerCase();
+    if (!awards.has(key)) awards.set(key, award);
+  }
+  return { subjects, awards: [...awards.values()] };
+}
+
+/** Dedupe key: near-duplicate subjects ("Science-Fiction" / "science fiction", "X, fiction" / "X") share one. */
+export function subjectKey(label: string): string {
+  const plain = label.trim().toLowerCase();
+  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
+}
+
 export const BookSchema = z.object({
   isbn: z.string(),
   title: z.string(),
   authors: z.array(AuthorRefSchema),
   subjects: z.array(TaggedTermSchema),
+  awards: z.array(z.string()).default([]),
   // Distinct from `subjects` (topical — what the book is *about*): a genre
   // is what section of a bookstore or library it'd sit in — "Mystery",
   // "Science fiction", "Memoir". Sourced from LOC's genre/form headings and
@@ -141,6 +169,7 @@ export type Edition = z.infer<typeof EditionSchema>;
 export const WorkSchema = WorkRefSchema.extend({
   description: z.string().nullable(),
   subjects: z.array(TaggedTermSchema),
+  awards: z.array(z.string()).default([]),
   genres: z.array(TaggedTermSchema),
   // A "work" has no ISBN of its own (that's an edition-level concept) — this
   // is the first ISBN found among its editions, best-effort, so work pages
@@ -239,9 +268,12 @@ export function normalizeIsbn(isbn: string): string {
   return isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
 
+/** An ISBN-10 or ISBN-13 in normalizeIsbn's form. */
+export const ISBN_PATTERN = /^(\d{9}[\dX]|\d{13})$/;
+
 /** An ISBN-10 or ISBN-13, hyphens/spaces allowed. */
 export function isValidIsbn(raw: string): boolean {
-  return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
+  return ISBN_PATTERN.test(normalizeIsbn(raw));
 }
 
 // Caps on an imported backup/CSV file, which is untrusted input: big enough
@@ -255,11 +287,16 @@ const VersionedFields = {
   schemaVersion: z.number().int().positive(),
   updatedAt: z.number().int().nonnegative(),
 };
-const text = z.string().max(10_000);
-const tagList = z.array(z.string().max(500)).max(1_000);
+// Exported so the app's inputs can stop at the same limits: one record over
+// them would make the whole backup fail to import.
+export const MAX_TEXT_LENGTH = 10_000;
+export const MAX_TAG_LENGTH = 500;
 // Library URLs are opened as links, so an imported file mustn't be able to
 // plant a javascript: or other non-web URL.
-const webUrl = z.string().max(2_000).regex(/^(https?:\/\/.*)?$/i);
+export const WEB_URL = /^(https?:\/\/.*)?$/i;
+const text = z.string().max(MAX_TEXT_LENGTH);
+const tagList = z.array(z.string().max(MAX_TAG_LENGTH)).max(1_000);
+const webUrl = z.string().max(2_000).regex(WEB_URL);
 
 export const SavedItemExportSchema = z.object({
   ...VersionedFields,
@@ -273,7 +310,7 @@ export const SavedBookExportSchema = z.object({
   ...VersionedFields,
   deletedAt: z.number().int().nonnegative().optional(),
   // Becomes part of a storage key, so only the server's normalized form.
-  isbn: z.string().regex(/^(\d{9}[\dX]|\d{13})$/),
+  isbn: z.string().regex(ISBN_PATTERN),
   wikidataId: z.string().max(200).nullable(),
   openLibraryEditionId: z.string().max(200).nullable(),
   openLibraryWorkId: z.string().max(200).nullable(),
@@ -309,10 +346,31 @@ export const LibraryExportSchema = z.object({
   titleUrl: webUrl,
 });
 
+export const SavedListExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  id: z.string().min(1).max(200),
+  name: z.string().min(1).max(100),
+  description: text,
+  kind: z.enum(["book", "author"]),
+  members: z
+    .array(
+      z.object({
+        type: z.enum(["book", "work", "author"]),
+        id: z.string().min(1).max(200),
+        title: text,
+        addedAt: z.number().int().nonnegative(),
+      })
+    )
+    .max(MAX_IMPORT_RECORDS),
+  createdAt: z.number().int().nonnegative(),
+});
+
 /**
  * A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts).
  * Version 1 files predate saved-work records, so they have no `works` and read as none;
- * from version 2 on `works` is required. (A newer schemaVersion is the app's to reject.)
+ * from version 2 on `works` is required. Likewise `lists` (named lists) from version 3.
+ * (A newer schemaVersion is the app's to reject.)
  */
 export const SnapshotExportSchema = z
   .object({
@@ -321,9 +379,11 @@ export const SnapshotExportSchema = z
     books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
     works: z.array(SavedWorkExportSchema).max(MAX_IMPORT_RECORDS).optional(),
     libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
+    lists: z.array(SavedListExportSchema).max(MAX_IMPORT_RECORDS).optional(),
   })
   .refine((s) => s.schemaVersion < 2 || s.works !== undefined, { message: "works is required from schemaVersion 2", path: ["works"] })
-  .transform(({ works = [], ...rest }) => ({ ...rest, works }));
+  .refine((s) => s.schemaVersion < 3 || s.lists !== undefined, { message: "lists is required from schemaVersion 3", path: ["lists"] })
+  .transform(({ works = [], lists = [], ...rest }) => ({ ...rest, works, lists }));
 export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;
 
 export const SeriesMemberSchema = z.object({
@@ -341,3 +401,27 @@ export const SeriesSchema = z.object({
   members: z.array(SeriesMemberSchema),
 });
 export type Series = z.infer<typeof SeriesSchema>;
+
+// Open Library frequently catalogs what's really the same book as several
+// separate "work" records: a leading- or trailing-article variant ("The
+// Cricket in Times Square" / "Cricket in Times Square" / "Old Meadow, The"),
+// a differently-capitalized duplicate, or one edition's record carrying a
+// series subtitle another edition's doesn't ("The Cricket in Times Square
+// (Chester Cricket and His Friends)"). Stripping articles, trailing
+// parentheticals, and punctuation collapses all of these onto the same key.
+// This deliberately does NOT attempt to merge translations (e.g. "Grillo en
+// Times Square", a Spanish edition of the same book) — their titles share
+// no text to normalize toward, so any title-based heuristic that caught
+// those would also risk merging genuinely different books that happen to
+// share common words.
+export function normalizeTitle(title: string): string {
+  const base = title
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+  const noSubtitle = base.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const noTrailingArticle = noSubtitle.replace(/,\s*(the|a|an)$/, "").trim();
+  const noLeadingArticle = noTrailingArticle.replace(/^(the|a|an)\s+/, "");
+  return noLeadingArticle.replace(/[^a-z0-9]+/g, " ").trim();
+}

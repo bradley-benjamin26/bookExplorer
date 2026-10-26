@@ -69,3 +69,12 @@ export function pathAsGraph(result: PathResult, index = 0): Graph {
   const { nodes, edges } = result.paths[index] ?? result.paths[0];
   return { centerId: nodes[0].id, nodes, edges };
 }
+
+/** Which node types the legend should list (those on screen) and whether to explain faded, unlinked nodes. */
+export function legendEntries(nodes: GraphNode[]): { types: GraphNode["type"][]; showUnlinked: boolean } {
+  const present = new Set(nodes.map((n) => n.type));
+  return {
+    types: (Object.keys(NODE_LABELS) as GraphNode["type"][]).filter((t) => present.has(t)),
+    showUnlinked: nodes.some((n) => !n.navigable),
+  };
+}

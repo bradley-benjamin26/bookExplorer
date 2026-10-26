@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchPath, searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
+import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
 import { routes } from "../src/navigation";
@@ -79,6 +80,9 @@ export default function Connection() {
             <Text style={styles.heading} accessibilityRole="header">
               Connect {label} to…
             </Text>
+            <Text style={styles.explainer}>
+              Pick a second book and we'll show how the two are linked: through shared authors, subjects, series or influences.
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Search for a book"
@@ -94,6 +98,7 @@ export default function Connection() {
           </View>
         }
         renderItem={({ item }) => <WorkListRow work={item} onPress={() => setTarget(item)} />}
+        ListFooterComponent={<Footer />}
       />
     );
   }
@@ -152,6 +157,7 @@ export default function Connection() {
       <Button variant="pill" onPress={() => setTarget(null)} style={styles.action} accessibilityLabel="Choose a different book">
         Choose a Different Book
       </Button>
+      <Footer />
     </ScrollView>
   );
 }
@@ -160,6 +166,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { padding: spacing.lg },
+    explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     input: {
       borderWidth: 1,

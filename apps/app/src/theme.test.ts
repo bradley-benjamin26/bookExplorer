@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { darkColors, lightColors } from "./theme";
 
-// theme.ts pulls in react-native (Flow source, unparseable under node vitest); only the colour tables are needed.
 vi.mock("react-native", () => ({ useColorScheme: () => "light" }));
-vi.mock("./storage/themePreference", () => ({}));
+vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
+const { darkColors, lightColors, typeScale } = await import("./theme");
+
+// WCAG 2.x relative luminance / contrast ratio for "#RRGGBB" colours.
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => {
     const c = parseInt(hex.slice(i, i + 2), 16) / 255;
@@ -18,17 +19,35 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+describe("contrast helper", () => {
+  it("matches known ratios", () => {
+    expect(contrast("#000000", "#FFFFFF")).toBeCloseTo(21, 5);
+    expect(contrast("#FFFFFF", "#FFFFFF")).toBeCloseTo(1, 5);
+  });
+});
+
 describe.each([
   ["light", lightColors],
   ["dark", darkColors],
-])("%s theme contrast against background", (name, colors) => {
-  it(`${name} inputBorder ≥ 3:1`, () => {
-    expect(contrast(colors.inputBorder, colors.background)).toBeGreaterThanOrEqual(3);
+])("%s theme contrast", (_name, c) => {
+  it.each([
+    ["primaryText on primary", c.primaryText, c.primary, 4.5],
+    ["primary vs paper", c.primary, c.paper, 3],
+    ["pillBorder vs paper", c.pillBorder, c.paper, 3],
+    ["pillBorder vs chipBackground", c.pillBorder, c.chipBackground, 3],
+    ["inkFaint on paper", c.inkFaint, c.paper, 5.5],
+    ["danger on paper", c.danger, c.paper, 4.5],
+    ["chipTextSubject on chipBackgroundSubject", c.chipTextSubject, c.chipBackgroundSubject, 4.5],
+    ["inputBorder vs background", c.inputBorder, c.background, 3],
+    ["textFaint on background", c.textFaint, c.background, 4.5],
+    ["warning on background", c.warning, c.background, 4.5],
+  ])("%s", (_label, fg, bg, min) => {
+    expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });
-  it(`${name} textFaint ≥ 4.5:1`, () => {
-    expect(contrast(colors.textFaint, colors.background)).toBeGreaterThanOrEqual(4.5);
-  });
-  it(`${name} warning ≥ 4.5:1`, () => {
-    expect(contrast(colors.warning, colors.background)).toBeGreaterThanOrEqual(4.5);
+});
+
+describe("typeScale", () => {
+  it("keeps the smallest size at 14 or more", () => {
+    expect(typeScale.xs).toBeGreaterThanOrEqual(14);
   });
 });

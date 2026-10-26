@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { searchWorks } from "./openLibrary.js";
+import { getAuthorWorks, searchWorks } from "./openLibrary.js";
 
 function mockSearchResponse(docs: unknown[]) {
   return vi.fn(async () => ({
@@ -74,5 +74,26 @@ describe("searchWorks", () => {
     );
     const [result] = await searchWorks("query");
     expect(result.authors).toEqual([{ openLibraryId: "OL1A", name: "Author One" }]);
+  });
+});
+
+describe("getAuthorWorks", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns each work's own authors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockSearchResponse([
+        { key: "/works/OL1W", title: "House Corrino", author_name: ["Brian Herbert", "Kevin J. Anderson"], author_key: ["OL1A", "OL2A"] },
+      ])
+    );
+
+    const [work] = await getAuthorWorks("OL1A");
+    expect(work.authors).toEqual([
+      { openLibraryId: "OL1A", name: "Brian Herbert" },
+      { openLibraryId: "OL2A", name: "Kevin J. Anderson" },
+    ]);
   });
 });

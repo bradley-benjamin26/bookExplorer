@@ -99,6 +99,8 @@ describe("fetchBroaderNarrower", () => {
   const BROADER_2 = "http://id.loc.gov/authorities/subjects/sh85065164";
   const NARROWER_1 = "http://id.loc.gov/authorities/subjects/sh00000011";
   const NARROWER_2 = "http://id.loc.gov/authorities/subjects/sh00000012";
+  // Records are fetched over https even though their URIs say http.
+  const skos = (uri: string) => `${uri.replace("http:", "https:")}.skos.json`;
 
   function prefLabelEntry(id: string, label: string) {
     return [{ "@id": id, "http://www.w3.org/2004/02/skos/core#prefLabel": [{ "@value": label, "@language": "en" }] }];
@@ -108,7 +110,7 @@ describe("fetchBroaderNarrower", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === `${TOP_URI}.skos.json`) {
+        if (url === skos(TOP_URI)) {
           return {
             ok: true,
             json: async () => [
@@ -120,12 +122,12 @@ describe("fetchBroaderNarrower", () => {
             ],
           };
         }
-        if (url === `${BROADER_1}.skos.json`) return { ok: true, json: async () => prefLabelEntry(BROADER_1, "Tales") };
-        if (url === `${BROADER_2}.skos.json`)
+        if (url === skos(BROADER_1)) return { ok: true, json: async () => prefLabelEntry(BROADER_1, "Tales") };
+        if (url === skos(BROADER_2))
           return { ok: true, json: async () => prefLabelEntry(BROADER_2, "Children's stories") };
-        if (url === `${NARROWER_1}.skos.json`)
+        if (url === skos(NARROWER_1))
           return { ok: true, json: async () => prefLabelEntry(NARROWER_1, "Fairy tales--Adaptations") };
-        if (url === `${NARROWER_2}.skos.json`)
+        if (url === skos(NARROWER_2))
           return { ok: true, json: async () => prefLabelEntry(NARROWER_2, "Fairy tales--History and criticism") };
         return { ok: false, json: async () => ({}) };
       })
@@ -140,7 +142,7 @@ describe("fetchBroaderNarrower", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === `${TOP_URI}.skos.json`) {
+        if (url === skos(TOP_URI)) {
           return {
             ok: true,
             json: async () => [
@@ -151,8 +153,8 @@ describe("fetchBroaderNarrower", () => {
             ],
           };
         }
-        if (url === `${BROADER_1}.skos.json`) return { ok: true, json: async () => prefLabelEntry(BROADER_1, "Tales") };
-        if (url === `${BROADER_2}.skos.json`) throw new Error("network error");
+        if (url === skos(BROADER_1)) return { ok: true, json: async () => prefLabelEntry(BROADER_1, "Tales") };
+        if (url === skos(BROADER_2)) throw new Error("network error");
         return { ok: false, json: async () => ({}) };
       })
     );
@@ -174,7 +176,7 @@ describe("fetchBroaderNarrower", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url === `${TOP_URI}.skos.json`) {
+        if (url === skos(TOP_URI)) {
           return {
             ok: true,
             json: async () => [
@@ -186,7 +188,7 @@ describe("fetchBroaderNarrower", () => {
             ],
           };
         }
-        const match = [...broaderUris, ...narrowerUris].find((id) => url === `${id}.skos.json`);
+        const match = [...broaderUris, ...narrowerUris].find((id) => url === skos(id));
         if (match) return { ok: true, json: async () => prefLabelEntry(match, "Label") };
         return { ok: false, json: async () => ({}) };
       })
@@ -195,6 +197,27 @@ describe("fetchBroaderNarrower", () => {
     const result = await fetchBroaderNarrower(TOP_URI);
     expect(result.broader.length).toBe(20);
     expect(result.narrower.length).toBe(20);
+  });
+
+  it("never fetches a uri that isn't an LCSH subject on id.loc.gov", async () => {
+    const internal = "http://169.254.169.254/latest/meta-data";
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === skos(TOP_URI)) {
+        return {
+          ok: true,
+          json: async () => [
+            { "@id": TOP_URI, "http://www.w3.org/2004/02/skos/core#broader": [{ "@id": internal }, { "@id": BROADER_1 }] },
+          ],
+        };
+      }
+      if (url === skos(BROADER_1)) return { ok: true, json: async () => prefLabelEntry(BROADER_1, "Tales") };
+      return { ok: false, json: async () => ({}) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect((await fetchBroaderNarrower(TOP_URI)).broader).toEqual(["Tales"]);
+    expect(await fetchBroaderNarrower(internal)).toEqual({ broader: [], narrower: [], wikidataId: null });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([skos(TOP_URI), skos(BROADER_1)]);
   });
 
   it("returns empty arrays when the uri has neither broader nor narrower terms", async () => {

@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Book Explorer",
+    "name": "Shelf Thread",
     "slug": "book-explorer",
     "scheme": "bookexplorer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "experiments": {
       "typedRoutes": true
     },
@@ -14,7 +14,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bbradle1.bookexplorer",
       "infoPlist": {
-        "NSCameraUsageDescription": "Book Explorer uses the camera to scan book barcodes."
+        "NSCameraUsageDescription": "Shelf Thread uses the camera to scan book barcodes."
       }
     },
     "android": {
@@ -40,7 +40,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Book Explorer uses the camera to scan book barcodes."
+          "cameraPermission": "Shelf Thread uses the camera to scan book barcodes."
         }
       ],
       "expo-font",

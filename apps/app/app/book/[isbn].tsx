@@ -8,6 +8,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { ExpandableText } from "../../src/components/ExpandableText";
@@ -15,11 +16,11 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
-import { SourceBadge } from "../../src/components/SourceBadge";
+import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
-import { addRecentIsbn } from "../../src/storage/history";
+import { addRecentBook } from "../../src/storage/history";
 import { getSavedBook, saveBook, unsaveBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -52,7 +53,7 @@ export default function BookDetail() {
   const saved = savedRecord !== null;
 
   useEffect(() => {
-    if (data) addRecentIsbn(data.isbn);
+    if (data) addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) });
   }, [data]);
 
   // Re-read on every focus, not just on first load — this screen stays
@@ -135,13 +136,13 @@ export default function BookDetail() {
         variant="pill"
         active={saved}
         onPress={handleToggleSaved}
-        style={[styles.saveButton, saved && styles.savedPill]}
-        textStyle={[styles.saveText, saved && styles.savedText]}
+        style={styles.saveButton}
         accessibilityLabel={saved ? "Saved" : "Save"}
       >
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
       <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
+      <AddToListButton member={{ type: "book", id: data.isbn, title: data.title }} />
       {savedRecord && (
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push(routes.saved())}>
           <Text style={styles.editInLibraryLink}>Edit subjects, genres & notes in My Library</Text>
@@ -175,13 +176,25 @@ export default function BookDetail() {
                   >
                     <Text style={styles.genreTagText}>
                       {titleCase(genre.label)}
-                      <SourceBadge sources={genre.sources} />
                     </Text>
                   </Pressable>
                 ))}
               </View>
             </View>
           )}
+        </View>
+      )}
+
+      {data.awards.length > 0 && (
+        <View style={styles.subjectsSection}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
+          <View style={styles.genreTags}>
+            {data.awards.map((award) => (
+              <View key={award} style={styles.genreTag}>
+                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
 
@@ -199,7 +212,6 @@ export default function BookDetail() {
               >
                 <Text style={styles.subjectTagText}>
                   {titleCase(subject.label)}
-                  <SourceBadge sources={subject.sources} />
                 </Text>
               </Pressable>
             ))}
@@ -220,7 +232,6 @@ export default function BookDetail() {
             variant="primary"
             onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
             style={styles.graphButton}
-            textStyle={styles.graphButtonText}
           >
             View as Graph
           </Button>
@@ -228,8 +239,8 @@ export default function BookDetail() {
             variant="primary"
             onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
             style={styles.graphButton}
-            textStyle={styles.graphButtonText}
             accessibilityLabel={`Find a connection from ${data.title}`}
+            accessibilityHint="Shows how this book links to another book you pick"
           >
             Find Connection
           </Button>
@@ -292,6 +303,7 @@ export default function BookDetail() {
       )}
 
       <ReviewsSection reviews={data.reviews} />
+      <Footer />
     </ScrollView>
   );
 }
@@ -311,10 +323,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       textDecorationLine: "underline",
     },
     saveButton: { marginTop: spacing.md },
-    // Overrides the pill's yellow active fill: marginalia text on it is only 4.07:1 in dark mode.
-    savedPill: { backgroundColor: colors.chipBackground },
-    saveText: { fontFamily: fonts.bodySemiBold, color: colors.ink },
-    savedText: { color: colors.marginalia },
     editInLibraryLink: {
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
@@ -340,7 +348,14 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     // flexShrink lets a long genre list wrap within the row instead of running off the right edge.
     metaColumn: { alignItems: "flex-start", flexShrink: 1 },
     genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: spacing.sm },
-    genreTag: { backgroundColor: colors.chipBackgroundGenre, borderRadius: radii.pill, paddingHorizontal: 13, paddingVertical: 7 },
+    genreTag: {
+      backgroundColor: colors.chipBackgroundGenre,
+      borderRadius: radii.pill,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextGenre,
+    },
     genreTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextGenre },
     // A format tag isn't a link to anywhere (there's no "format" browse page
     // the way there is for a genre/subject) — an outlined, neutral style
@@ -369,8 +384,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderBottomColor: colors.border,
     },
     findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
-    graphButton: { width: "100%", marginTop: spacing.lg, backgroundColor: colors.cover },
-    graphButtonText: { fontFamily: fonts.bodySemiBold, color: colors.paper },
+    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
@@ -383,6 +397,8 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
+      borderWidth: 1,
+      borderColor: colors.chipTextSubject,
     },
     subjectTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });

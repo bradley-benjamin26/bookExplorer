@@ -18,7 +18,7 @@ async function load(ids: string[]) {
   const { withWorkRecords } = await import("./storage/snapshot");
   const { replaceSavedWorks } = await import("./storage/savedWorks");
   const items = ids.map((id) => ({ schemaVersion: 1, updatedAt: 1, type: "work" as const, id, title: id }));
-  await replaceSavedWorks(withWorkRecords({ schemaVersion: 1, items, books: [], works: [], libraries: [] } as Snapshot).works);
+  await replaceSavedWorks(withWorkRecords({ schemaVersion: 1, items, books: [], works: [], libraries: [], lists: [] } as Snapshot).works);
   const fetchWork = vi.mocked((await import("./api/client")).fetchWork);
   // After setup: the storage mock's I/O also runs on timers.
   vi.useFakeTimers();

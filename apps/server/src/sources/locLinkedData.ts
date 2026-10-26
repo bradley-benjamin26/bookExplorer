@@ -13,6 +13,19 @@ const SKOS_EXACT_MATCH = "http://www.w3.org/2004/02/skos/core#exactMatch";
 const SKOS_CLOSE_MATCH = "http://www.w3.org/2004/02/skos/core#closeMatch";
 const SKOS_PREF_LABEL = "http://www.w3.org/2004/02/skos/core#prefLabel";
 
+const LCSH_URI = /^https?:\/\/id\.loc\.gov\/authorities\/subjects\/sh\d+$/;
+
+/**
+ * Where to fetch an LCSH record's SKOS JSON, or null for anything that isn't
+ * an LCSH subject URI. The URIs come from LoC's own responses, so this keeps
+ * a tampered or odd response from pointing the server at another host. LoC
+ * writes them as http://, but the record is fetched over https (http only
+ * 301s there); the http:// form stays the record's @id for matching.
+ */
+function skosUrl(uri: string): string | null {
+  return LCSH_URI.test(uri) ? `${uri.replace(/^http:/, "https:")}.skos.json` : null;
+}
+
 interface Suggest2Hit {
   aLabel: string;
   uri: string;
@@ -87,7 +100,9 @@ function wikidataIdOf(entry: SkosEntry | undefined): string | null {
 }
 
 async function resolveLabel(uri: string): Promise<string | null> {
-  const res = await fetchWithTimeout(`${uri}.skos.json`, { headers: { "User-Agent": USER_AGENT } });
+  const url = skosUrl(uri);
+  if (!url) return null;
+  const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) return null;
   const entries = (await res.json()) as SkosEntry[];
   const entry = entries.find((e) => e["@id"] === uri);
@@ -119,8 +134,10 @@ export const EMPTY: BroaderNarrower = { broader: [], narrower: [], wikidataId: n
  * any failure (top-level request, absent keys) degrades to empty arrays.
  */
 export async function fetchBroaderNarrower(uri: string): Promise<BroaderNarrower> {
+  const url = skosUrl(uri);
+  if (!url) return EMPTY;
   try {
-    const res = await fetchWithTimeout(`${uri}.skos.json`, { headers: { "User-Agent": USER_AGENT } });
+    const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
     if (!res.ok) return EMPTY;
     const entries = (await res.json()) as SkosEntry[];
     const entry = entries.find((e) => e["@id"] === uri);

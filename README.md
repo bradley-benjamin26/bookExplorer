@@ -1,4 +1,4 @@
-# Book Explorer
+# Shelf Thread
 
 Scan a book's barcode (or type its ISBN) and explore a linked-data map of it: its
 authors, those authors' influences and relationships, related subjects, and other
@@ -11,7 +11,7 @@ and fixed.
 
 ## Requirements
 
-- Node.js 20+ (tested on Node 26)
+- Node.js 22.13+ (tested on Node 26)
 - npm (this repo uses npm workspaces — no other package manager is needed)
 - For running on a phone: the [Expo Go](https://expo.dev/go) app, or Xcode/Android
   Studio for a simulator/emulator
@@ -46,6 +46,8 @@ var). Confirm it's up:
 curl http://localhost:3001/health
 ```
 
+On a deployed server, run `npm start --workspace=apps/server` instead (no file watching).
+
 Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
 server's public-API cache in SQLite across restarts (otherwise it is memory-only).
 Set it on a deployed server: repeat lookups are then served from disk instead of
@@ -62,8 +64,7 @@ Wikidata 5/s, other hosts 10/s. On a 429 or 503 (honouring `Retry-After`, else 3
 doubling to 10 min) or three connection failures in a row, the host is left alone
 and calls to it fail fast; book routes answer 503 with `Retry-After` meanwhile.
 It stores only public book/author data, never anything about a user's library
-(search queries stay in memory). This needs Node 22.13+ (`node:sqlite`); on older
-Node the server logs a warning and stays memory-only.
+(search queries stay in memory).
 
 Optionally, set `GOOGLE_BOOKS_API_KEY` to a [Google Books API
 key](https://console.cloud.google.com/apis/library/books.googleapis.com) so book

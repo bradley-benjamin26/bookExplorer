@@ -1,6 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { z, type ZodType } from "zod";
+import { z, type ZodType, type ZodTypeDef } from "zod";
 import {
   AuthorSchema,
   BookSchema,
@@ -30,6 +30,9 @@ function resolveApiBaseUrl(): string {
   // `ngrok http 3001` URL) to bypass LAN detection entirely. EXPO_PUBLIC_
   // env vars are inlined at build time by Expo — no extra config needed.
   if (process.env.EXPO_PUBLIC_API_BASE_URL) return process.env.EXPO_PUBLIC_API_BASE_URL;
+
+  // A release build has no Metro host to guess from; failing here beats shipping a build that calls localhost.
+  if (process.env.NODE_ENV === "production") throw new Error("EXPO_PUBLIC_API_BASE_URL must be set for production builds");
 
   if (Platform.OS === "web") return "http://localhost:3001";
 
@@ -65,7 +68,7 @@ export class ApiError extends Error {
 // silently and surface later as a confusing render-time bug (or not at all,
 // if the missing field just happened to render as blank).
 // `signal` is React Query's, so leaving a screen cancels its in-flight request.
-async function getJson<T>(path: string, schema: ZodType<T>, signal?: AbortSignal): Promise<T> {
+async function getJson<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: APP_SHARED_SECRET ? { "X-App-Key": APP_SHARED_SECRET } : undefined,
     signal,

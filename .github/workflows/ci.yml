@@ -17,3 +17,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Catches Metro bundling/asset failures the type check and unit tests can't; the URL is a placeholder.
+      - run: npx expo export --platform web
+        working-directory: apps/app
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://api.example.invalid

@@ -3,6 +3,7 @@ import type { Library } from "./librarySettings";
 import { mergeSnapshots } from "./mergeSnapshot";
 import type { SavedBookRecord } from "./savedBooks";
 import type { SavedItem } from "./savedItems";
+import type { SavedList } from "./savedLists";
 import type { SavedWorkRecord } from "./savedWorks";
 import type { Snapshot } from "./snapshot";
 
@@ -47,7 +48,19 @@ const work = (id: string, updatedAt: number, extra: Partial<SavedWorkRecord> = {
 
 const library = (id: string, updatedAt: number, name = id): Library => ({ schemaVersion: 1, updatedAt, id, name, isbnUrl: "", titleUrl: "" });
 
-const snap = (parts: Partial<Snapshot>): Snapshot => ({ schemaVersion: 1, items: [], books: [], works: [], libraries: [], ...parts });
+const list = (id: string, updatedAt: number, extra: Partial<SavedList> = {}): SavedList => ({
+  schemaVersion: 3,
+  updatedAt,
+  id,
+  name: "L",
+  description: "",
+  kind: "book",
+  members: [],
+  createdAt: 1,
+  ...extra,
+});
+
+const snap = (parts: Partial<Snapshot>): Snapshot => ({ schemaVersion: 1, items: [], books: [], works: [], libraries: [], lists: [], ...parts });
 
 describe("mergeSnapshots", () => {
   it("unions records only one side has, newest first", () => {
@@ -160,5 +173,28 @@ describe("mergeSnapshots", () => {
     const merged = mergeSnapshots(snap({ libraries: [library("a", 10, "A1")] }), snap({ libraries: [library("a", 20, "A2"), library("b", 5)] }));
     expect(merged.libraries.map((l) => l.name)).toEqual(["A2", "b"]);
     expect(mergeSnapshots(snap({}), snap({ libraries: [library("gone", 1)] })).libraries).toHaveLength(1);
+  });
+
+  it("lists merge by id, newer wins, tombstone beats an older edit", () => {
+    const member = { type: "book" as const, id: "1", title: "One", addedAt: 5 };
+    const a = snap({ lists: [list("x", 10, { name: "Old" }), list("only-a", 1)] });
+    const b = snap({ lists: [list("x", 20, { name: "New", members: [member] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists.map((l) => l.id)).toEqual(["x", "only-a"]);
+      expect(merged.lists[0]).toMatchObject({ name: "New", members: [member] });
+    }
+    const removed = list("x", 30, { deletedAt: 30 });
+    expect(mergeSnapshots(b, snap({ lists: [removed] })).lists).toEqual([removed]);
+    expect(mergeSnapshots(snap({ lists: [removed] }), b).lists).toEqual([removed]);
+  });
+
+  it("unions a live list's members added on each side, keeping the newer copy's name and order", () => {
+    const one = { type: "book" as const, id: "1", title: "One", addedAt: 5 };
+    const two = { type: "book" as const, id: "2", title: "Two", addedAt: 6 };
+    const a = snap({ lists: [list("x", 10, { name: "Old", members: [one] })] });
+    const b = snap({ lists: [list("x", 20, { name: "New", members: [two] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0]).toMatchObject({ name: "New", members: [two, one] });
+    }
   });
 });

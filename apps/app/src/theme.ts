@@ -30,7 +30,10 @@ export interface ThemeColors {
   chipTextSubject: string;
   // The highlighted background of a toggled-on pill button (e.g. "★ Saved").
   pillActiveBackground: string;
+  // The 1px outline that makes a secondary pill read as a button (3:1 against paper and chip).
+  pillBorder: string;
   link: string;
+  // Primary buttons and the toggled-on pill.
   primary: string;
   primaryText: string;
   danger: string;
@@ -67,12 +70,14 @@ export const lightColors: ThemeColors = {
   chipTextAccent: "#3346a8",
   chipBackgroundGenre: "#fbeef7",
   chipTextGenre: "#9c3d82",
-  chipBackgroundSubject: "#fbeee5",
+  // Lightened from #fbeee5 so chipTextSubject (kept equal to graphSubject) clears 4.5:1.
+  chipBackgroundSubject: "#fcf1ea",
   chipTextSubject: "#a8593c",
   pillActiveBackground: "#fdf0d0",
+  pillBorder: "#8C877B",
   link: "#1a4fba",
-  primary: "#1a1a2e",
-  primaryText: "#ffffff",
+  primary: "#2B5951",
+  primaryText: "#FFFFFF",
   danger: "#aa3333",
   dangerBackground: "#fdf0f0",
   warning: "#8a6600",
@@ -83,7 +88,7 @@ export const lightColors: ThemeColors = {
   paper: "#FAF7F0",
   ink: "#1F2430",
   // The plan's #8B8A94 / #C0572E are 3.2:1 / 4.2:1 on paper; nudged darker to pass AA as text.
-  inkFaint: "#6E6D78",
+  inkFaint: "#5C5B66",
   cover: "#2B5951",
   coverLight: "#E4ECE7",
   marginalia: "#A85026",
@@ -113,9 +118,11 @@ export const darkColors: ThemeColors = {
   chipBackgroundSubject: "#3a2a20",
   chipTextSubject: "#e8946e",
   pillActiveBackground: "#4a3a12",
+  // The plan's #6B6B7B is 2.96:1 on chipBackground; nudged lighter to clear 3:1.
+  pillBorder: "#6E6E7E",
   link: "#8ab0ff",
-  primary: "#5b6ee8",
-  primaryText: "#ffffff",
+  primary: "#3A7F70",
+  primaryText: "#FFFFFF",
   danger: "#ff8a8a",
   dangerBackground: "#3a2222",
   warning: "#e0ab52",
@@ -159,7 +166,7 @@ export const fonts = {
 } as const;
 
 export const typeScale = {
-  xs: 13,
+  xs: 14,
   sm: 16,
   md: 20,
   lg: 25,
@@ -205,7 +212,7 @@ function buildTheme(scheme: "light" | "dark"): Theme {
     fonts,
     typeScale,
     kicker: {
-      fontSize: 12,
+      fontSize: typeScale.xs,
       fontWeight: "700",
       color: colors.textMuted,
       letterSpacing: 0.8,

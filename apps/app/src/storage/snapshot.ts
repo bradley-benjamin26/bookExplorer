@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { OPEN_LIBRARY_WORK_ID } from "@book-explorer/shared";
-import { getLibraries, saveLibraries, type Library } from "./librarySettings";
+import { getLibraries, replaceLibraries, type Library } from "./librarySettings";
 import { getAllSavedBooks, replaceSavedBooks, type SavedBookRecord } from "./savedBooks";
 import { getAllSavedItems, replaceSavedItems, type SavedItem } from "./savedItems";
+import { getAllLists, replaceLists, type SavedList } from "./savedLists";
 import { getAllSavedWorks, replaceSavedWorks, type SavedWorkRecord } from "./savedWorks";
 import { SCHEMA_VERSION, stamp } from "./schema";
 
@@ -18,19 +19,27 @@ export interface Snapshot {
   books: SavedBookRecord[];
   works: SavedWorkRecord[];
   libraries: Library[];
+  lists: SavedList[];
 }
 
 // Records written before versioning lack schemaVersion/updatedAt; fill them in on read.
 const withStamp = <T extends object>(r: T) => stamp({ updatedAt: (r as { savedAt?: number }).savedAt ?? Date.now(), ...r });
 
 export async function getSnapshot(): Promise<Snapshot> {
-  const [items, books, works, libraries] = await Promise.all([getAllSavedItems(), getAllSavedBooks(), getAllSavedWorks(), getLibraries()]);
+  const [items, books, works, libraries, lists] = await Promise.all([
+    getAllSavedItems(),
+    getAllSavedBooks(),
+    getAllSavedWorks(),
+    getLibraries(),
+    getAllLists(),
+  ]);
   return {
     schemaVersion: SCHEMA_VERSION,
     items: items.map(withStamp),
     books: books.map(withStamp),
     works,
     libraries: libraries.map(withStamp),
+    lists,
   };
 }
 
@@ -40,7 +49,8 @@ export async function applySnapshot(snapshot: Snapshot): Promise<void> {
     replaceSavedItems(snapshot.items),
     replaceSavedBooks(snapshot.books),
     replaceSavedWorks(snapshot.works),
-    saveLibraries(snapshot.libraries),
+    replaceLibraries(snapshot.libraries),
+    replaceLists(snapshot.lists),
   ]);
 }
 

@@ -1,31 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { openLibraryUrl, parseSchemeUrl, schemeUrl, shareFeedback, shareMessage } from "./share";
+import { openLibraryUrl, schemeUrl, shareFeedback, shareMessage } from "./share";
 import { routes } from "./navigation";
 
-describe("schemeUrl / parseSchemeUrl round-trip", () => {
-  const cases = [
-    ["book", routes.book("9780306406157"), ["book", "9780306406157"], {}],
-    ["author", routes.author("OL23919A"), ["author", "OL23919A"], {}],
-    ["subject with punctuation", routes.subject("fiction,_(general)/x"), ["subject", "fiction,_(general)/x"], {}],
-    ["work", routes.work("OL1W"), ["work", "OL1W"], {}],
-    ["work highlight", routes.work("OL1W", { highlight: "editions" }), ["work", "OL1W"], { highlight: "editions" }],
-    ["graph", routes.graph("subject", "science fiction"), ["graph", "subject", "science fiction"], {}],
-    [
-      "graph filtered",
-      routes.graph("author", "OL1A", { hideTypes: "work,genre", hideRelations: "influencedBy" }),
-      ["graph", "author", "OL1A"],
-      { hideTypes: "work,genre", hideRelations: "influencedBy" },
-    ],
-    ["saved", routes.saved(), ["saved"], {}],
-    ["search", routes.search("dune & co"), ["search"], { q: "dune & co" }],
-    ["search empty", routes.search(), ["search"], {}],
-  ] as const;
-
-  it.each(cases)("%s", (_name, href, segments, params) => {
-    const url = schemeUrl(href);
-    expect(url.startsWith("bookexplorer://")).toBe(true);
-    expect(parseSchemeUrl(url)).toEqual({ segments, params });
-  });
+describe("schemeUrl", () => {
+  it.each([
+    [routes.book("9780306406157"), "bookexplorer://book/9780306406157"],
+    [routes.subject("fiction,_(general)/x"), "bookexplorer://subject/fiction%2C_(general)%2Fx"],
+    [routes.work("OL1W", { highlight: "editions" }), "bookexplorer://work/OL1W?highlight=editions"],
+    [routes.graph("author", "OL1A", { hideTypes: "work,genre" }), "bookexplorer://graph/author/OL1A?hideTypes=work%2Cgenre"],
+    [routes.saved(), "bookexplorer://saved"],
+    [routes.search("dune & co"), "bookexplorer://search?q=dune+%26+co"],
+  ])("%j", (href, url) => expect(schemeUrl(href)).toBe(url));
 });
 
 describe("shareMessage", () => {

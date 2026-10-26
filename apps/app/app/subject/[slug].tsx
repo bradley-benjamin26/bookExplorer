@@ -1,17 +1,19 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { fetchSubject } from "../../src/api/client";
+import { fetchSubject, searchBooks } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
-import { SourceBadge } from "../../src/components/SourceBadge";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
 
 export default function SubjectDetail() {
@@ -23,6 +25,14 @@ export default function SubjectDetail() {
     queryKey: ["subject", slug],
     queryFn: () => fetchSubject(slug),
     enabled: !!slug,
+  });
+
+  const [sort, setSort] = useState(DEFAULT_SUBJECT_SORT);
+  const sortParams = data ? subjectSortParams(data.name, sort) : null;
+  const sorted = useQuery({
+    queryKey: ["search", sortParams],
+    queryFn: () => searchBooks(sortParams!),
+    enabled: !!sortParams,
   });
 
   if (isLoading) {
@@ -37,6 +47,7 @@ export default function SubjectDetail() {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
   }
 
+  const { books, fellBack } = booksForSort(!!sortParams, sorted, data.books);
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
   const narrower = data.relatedConcepts.filter((c) => c.relation === "narrower");
 
@@ -44,7 +55,7 @@ export default function SubjectDetail() {
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.content}
-      data={data.books}
+      data={books}
       keyExtractor={(item) => item.openLibraryWorkId}
       ListHeaderComponent={
         <View>
@@ -86,7 +97,6 @@ export default function SubjectDetail() {
                       >
                         <Text style={styles.conceptTagText}>
                           {titleCase(concept.label)}
-                          <SourceBadge sources={concept.sources} />
                         </Text>
                       </Pressable>
                     ))}
@@ -96,11 +106,21 @@ export default function SubjectDetail() {
           )}
 
           <Text style={styles.sectionTitle} accessibilityRole="header">Books</Text>
+          <View style={styles.conceptTags}>
+            {SUBJECT_SORTS.map((s) => (
+              <Button key={s.value} variant="pill" active={sort === s.value} onPress={() => setSort(s.value)} accessibilityLabel={`Sort by ${s.label.toLowerCase()}`}>
+                {s.label}
+              </Button>
+            ))}
+          </View>
+          {sortParams && sorted.isLoading && <ActivityIndicator color={theme.colors.cover} style={styles.sortSpinner} />}
+          {fellBack && <Text style={styles.noMatch}>Couldn't load this order, showing the classic list.</Text>}
         </View>
       }
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
+      ListFooterComponent={<Footer />}
     />
   );
 }
@@ -120,6 +140,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24, marginTop: spacing.sm },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
     graphButton: { marginTop: spacing.lg },
+    sortSpinner: { marginTop: spacing.md },
     pressed: { opacity: 0.6 },
     conceptSection: { marginTop: spacing.xl },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },

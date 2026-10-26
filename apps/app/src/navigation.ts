@@ -1,5 +1,6 @@
 import type { GraphNode } from "@book-explorer/shared";
 import type { Href } from "expo-router";
+import type { ListMember } from "./storage/savedLists";
 
 // Centralizes route construction using Expo Router's object href form, which
 // encodes params itself — building hrefs as plain template literals (as
@@ -27,5 +28,12 @@ export const routes = {
   /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. */
   connection: (from: string, label: string): Href => ({ pathname: "/connection", params: { from, label } }),
   saved: (): Href => "/saved",
+  recommendations: (): Href => "/recommendations",
+  settings: (): Href => "/settings",
+  lists: (): Href => "/lists",
+  list: (id: string): Href => ({ pathname: "/lists/[id]", params: { id } }),
   search: (query?: string): Href => ({ pathname: "/search", params: query ? { q: query } : {} }),
 };
+
+export const memberHref = (m: Pick<ListMember, "type" | "id">): Href =>
+  m.type === "author" ? routes.author(m.id) : m.type === "work" ? routes.work(m.id) : routes.book(m.id);

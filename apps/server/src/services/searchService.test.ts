@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { closePersistentCache, initPersistentCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
-import { buildQuery, searchBooks } from "./searchService.js";
+import { buildQuery, isDerivativeTitle, searchBooks } from "./searchService.js";
 
 vi.mock("../sources/openLibrary.js", () => ({
   searchWorks: vi.fn(),
@@ -83,6 +83,41 @@ describe("searchBooks", () => {
     await searchBooks("dune cachekey", { sort: "old" });
     await searchBooks("dune cachekey", { yearTo: 1990 });
     expect(openLibrary.searchWorks).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("isDerivativeTitle", () => {
+  it("flags study guides, summaries and similar derivative titles", () => {
+    expect(isDerivativeTitle("Summary of Becoming by Michelle Obama")).toBe(true);
+    expect(isDerivativeTitle("Study Guide: Project Hail Mary")).toBe(true);
+    expect(isDerivativeTitle("Workbook for Atomic Habits")).toBe(true);
+    expect(isDerivativeTitle("Analysis of Dune")).toBe(true);
+    expect(isDerivativeTitle("SparkNotes: Dune")).toBe(true);
+  });
+
+  it("does not flag real book titles", () => {
+    expect(isDerivativeTitle("Becoming")).toBe(false);
+    expect(isDerivativeTitle("The Summary Murders")).toBe(false);
+    expect(isDerivativeTitle("Dune")).toBe(false);
+  });
+});
+
+describe("searchBooks ordering", () => {
+  it("keeps relevance order but moves derivative titles after real ones", async () => {
+    const work = (workId: string, title: string) => ({ workId, title, authors: [], coverUrl: null });
+    vi.mocked(openLibrary.searchWorks).mockResolvedValue([
+      work("OL1W", "Summary of Ordering Test"),
+      work("OL2W", "Ordering Test"),
+      work("OL3W", "Study Guide: Ordering Test"),
+      work("OL4W", "Another Book"),
+    ]);
+    const results = await searchBooks("ordering test");
+    expect(results.map((r) => r.title)).toEqual([
+      "Ordering Test",
+      "Another Book",
+      "Summary of Ordering Test",
+      "Study Guide: Ordering Test",
+    ]);
   });
 });
 

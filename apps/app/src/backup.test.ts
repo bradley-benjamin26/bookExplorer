@@ -1,4 +1,4 @@
-import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, type Book } from "@book-explorer/shared";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, MAX_TEXT_LENGTH, type Book } from "@book-explorer/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchBookWithAlternate } from "./api/bookLookup";
 import { exportJson, ImportError, importSnapshot, NEW_CSV_IMPORT, parseBookCsv, parseSnapshotJson, runCsvImport } from "./backup";
@@ -6,6 +6,7 @@ import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems, toggleSaved } from "./storage/savedItems";
+import { addToList, createList, getLists } from "./storage/savedLists";
 import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
 import { getSnapshot, migrateStorage } from "./storage/snapshot";
 
@@ -25,6 +26,8 @@ async function seed() {
   await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://lib.example/?q=", titleUrl: "" });
   await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
   await migrateStorage(); // gives OL1W its record
+  const list = await createList({ name: "Favourites", kind: "book" });
+  await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
 }
 
 describe("JSON backup", () => {
@@ -41,6 +44,14 @@ describe("JSON backup", () => {
     await toggleSaved({ type: "author", id: "OL1A", title: "Stale" });
     await importSnapshot(parseSnapshotJson(text), "replace");
     expect(await getSnapshot()).toEqual(before);
+  });
+
+  it("refuses to make a backup that import would reject, naming the part to fix", async () => {
+    await seed();
+    await updateSavedBook("9780441013593", { notes: "x".repeat(MAX_TEXT_LENGTH + 1) });
+    const failed = exportJson();
+    await expect(failed).rejects.toBeInstanceOf(ImportError);
+    await expect(failed).rejects.toThrow("a saved book");
   });
 
   it("merge keeps local records the backup lacks and takes the backup's newer edits", async () => {
@@ -74,10 +85,48 @@ describe("JSON backup", () => {
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
   });
 
-  it("exports v2 with works, and imports a v1 backup (no works) as having none", async () => {
+  it("exports v3 with lists", async () => {
+    await seed();
+    const v3 = JSON.parse(await exportJson());
+    expect(v3.schemaVersion).toBe(3);
+    expect(v3.lists).toMatchObject([{ name: "Favourites", kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] }]);
+  });
+
+  it("a schemaVersion 2 backup with no lists imports with lists: []", async () => {
+    await seed();
+    const { lists: _, ...v2 } = { ...JSON.parse(await exportJson()), schemaVersion: 2 };
+    const parsed = parseSnapshotJson(JSON.stringify(v2));
+    expect(parsed.lists).toEqual([]);
+    // Merging it keeps the local lists; replacing with it leaves none.
+    await importSnapshot(parsed, "merge");
+    expect((await getLists()).map((l) => l.name)).toEqual(["Favourites"]);
+    await importSnapshot(parsed, "replace");
+    expect(await getLists()).toEqual([]);
+  });
+
+  it("a schemaVersion 3 backup without lists is rejected", async () => {
+    await seed();
+    const good = JSON.parse(await exportJson());
+    const bad = (mutate: (s: typeof good) => void) => {
+      const copy = structuredClone(good);
+      mutate(copy);
+      return JSON.stringify(copy);
+    };
+    const cases = [
+      bad((s) => delete s.lists),
+      bad((s) => (s.lists[0].name = "")),
+      bad((s) => (s.lists[0].name = "x".repeat(101))),
+      bad((s) => (s.lists[0].kind = "shelf")),
+      bad((s) => (s.lists[0].members[0].id = "")),
+      bad((s) => (s.lists[0].members[0].type = "series")),
+      bad((s) => delete s.lists[0].updatedAt),
+    ];
+    for (const text of cases) expect(() => parseSnapshotJson(text)).toThrow(ImportError);
+  });
+
+  it("exports works, and imports a v1 backup (no works) as having none", async () => {
     await seed();
     const v2 = JSON.parse(await exportJson());
-    expect(v2.schemaVersion).toBe(2);
     expect(v2.works).toMatchObject([{ openLibraryWorkId: "OL1W", title: "Emma" }]);
     expect(parseSnapshotJson(JSON.stringify(v2)).works).toHaveLength(1);
 
@@ -144,7 +193,7 @@ describe("CSV import", () => {
 
   it("saves each book like the Save button, skips rows without an ISBN and lists failures", async () => {
     fetchBook.mockImplementation(async (isbn) => {
-      if (isbn === "9780000000002") throw new Error("404");
+      if (isbn === "9780000000002") throw Object.assign(new Error("404"), { status: 404 });
       return apiBook(isbn, `Book ${isbn}`);
     });
     const seen: number[] = [];
@@ -174,6 +223,19 @@ describe("CSV import", () => {
     const done = await runCsvImport(rows, paused, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
     expect(done).toMatchObject({ next: 4, saved: 3 });
     expect(fetchBook).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops on a throttled or offline lookup without failing the row, so Resume retries it", async () => {
+    let throttled = true;
+    fetchBook.mockImplementation(async (isbn) => {
+      if (isbn === "9780000000002" && throttled) throw Object.assign(new Error("429"), { status: 429 });
+      return apiBook(isbn, isbn);
+    });
+    const paused = await runCsvImport(rows, NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
+    expect(paused).toEqual({ next: 2, saved: 1, alreadySaved: 0, noIsbn: ["No ISBN"], failed: [] });
+    throttled = false;
+    const done = await runCsvImport(rows, paused, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
+    expect(done).toEqual({ next: 4, saved: 3, alreadySaved: 0, noIsbn: ["No ISBN"], failed: [] });
   });
 
   it("skips books already saved without a lookup, so re-running a file is cheap", async () => {

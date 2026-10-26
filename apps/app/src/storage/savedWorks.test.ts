@@ -14,6 +14,7 @@ const work: Work = {
   coverUrl: null,
   description: null,
   subjects: [{ label: "Courtship", sources: ["openLibrary"] }],
+  awards: [],
   genres: [{ label: "Romance", sources: ["openLibrary"] }],
   isbn: null,
   editions: [],
@@ -65,7 +66,7 @@ describe("savedWorks", () => {
   });
 
   it("seeds a migrated (blank) record from the API once, even when two seeds overlap", async () => {
-    const migrated = withWorkRecords({ schemaVersion: 1, items: [{ schemaVersion: 1, type: "work", id: work.openLibraryWorkId, title: work.title, updatedAt: 1 }], books: [], works: [], libraries: [] } as Snapshot);
+    const migrated = withWorkRecords({ schemaVersion: 1, items: [{ schemaVersion: 1, type: "work", id: work.openLibraryWorkId, title: work.title, updatedAt: 1 }], books: [], works: [], libraries: [], lists: [] } as Snapshot);
     await replaceSavedWorks(migrated.works);
     await updateSavedWork(work.openLibraryWorkId, { notes: "mine" });
     const [first, second] = await Promise.all([seedSavedWorkFromApi(work.openLibraryWorkId, work), seedSavedWorkFromApi(work.openLibraryWorkId, work)]);
