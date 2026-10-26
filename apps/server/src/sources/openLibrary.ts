@@ -155,6 +155,7 @@ export interface OpenLibraryWork {
 interface OpenLibraryEditionsData {
   entries?: {
     key?: string;
+    title?: string;
     isbn_13?: string[];
     isbn_10?: string[];
     languages?: { key?: string }[];
@@ -176,14 +177,16 @@ interface OpenLibraryEditionsData {
 // ISBN (spot-checked: 30 of the first 50 for a popular work, 12 of 15 for a
 // less common one), so a single reasonably-sized page is enough without
 // pagination.
-async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
+async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryEdition[]; englishTitles: string[] }> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}/editions.json?limit=50`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
   const data = (await res.json()) as OpenLibraryEditionsData;
   const editions: (OpenLibraryEdition & { nonEnglish: boolean })[] = [];
+  const englishTitles: string[] = [];
   for (const entry of data.entries ?? []) {
+    if (entry.title && entry.languages?.some((l) => l.key === "/languages/eng")) englishTitles.push(entry.title);
     const coverId = entry.covers?.find((c) => c > 0);
     const edition: OpenLibraryEdition = {
       openLibraryEditionId: (entry.key ?? "").replace("/books/", ""),
@@ -233,7 +236,22 @@ async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
     return true;
   });
 
-  return deduped.map(({ nonEnglish, ...edition }) => edition);
+  return { editions: deduped.map(({ nonEnglish, ...edition }) => edition), englishTitles };
+}
+
+// A work's own title is often its original-language one ("Le capital au XXIe
+// siècle"). When no English edition carries it, the English editions' most
+// common title is shown instead; a work an English edition does carry keeps
+// its title (Philosopher's Stone, not the US Sorcerer's Stone).
+function englishTitle(workTitle: string, englishTitles: string[]): string {
+  if (englishTitles.length === 0 || englishTitles.some((t) => t.toLowerCase() === workTitle.toLowerCase())) return workTitle;
+  const counts = new Map<string, { title: string; n: number }>();
+  for (const title of englishTitles) {
+    const entry = counts.get(title.toLowerCase()) ?? { title, n: 0 };
+    entry.n++;
+    counts.set(title.toLowerCase(), entry);
+  }
+  return [...counts.values()].reduce((best, c) => (c.n > best.n ? c : best)).title;
 }
 
 export async function getWork(workId: string, { editions: withEditions = true }: { editions?: boolean } = {}): Promise<OpenLibraryWork | null> {
@@ -251,7 +269,7 @@ export async function getWork(workId: string, { editions: withEditions = true }:
 
   // Work records only reference authors by id, so their names are resolved
   // with a lookup per author (cached separately by the authors route/cache).
-  const [authors, editions] = await Promise.all([
+  const [authors, { editions, englishTitles }] = await Promise.all([
     Promise.all(
       authorIds.map(async (id) => {
         const author = await getAuthor(id).catch((err) => {
@@ -273,9 +291,9 @@ export async function getWork(workId: string, { editions: withEditions = true }:
       ? getWorkEditions(workId).catch((err) => {
           if (err instanceof UpstreamUnavailableError) throw err;
           console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
-          return [] as OpenLibraryEdition[];
+          return { editions: [] as OpenLibraryEdition[], englishTitles: [] };
         })
-      : ([] as OpenLibraryEdition[]),
+      : { editions: [] as OpenLibraryEdition[], englishTitles: [] },
   ]);
 
   const isbnCandidates = [...new Set(editions.map((e) => e.isbn).filter((isbn): isbn is string => !!isbn))];
@@ -285,7 +303,7 @@ export async function getWork(workId: string, { editions: withEditions = true }:
   const coverId = data.covers?.find((c) => c > 0);
 
   return {
-    title: data.title ?? "Unknown title",
+    title: data.title ? englishTitle(data.title, englishTitles) : "Unknown title",
     authors,
     coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null,
     description,
