@@ -27,7 +27,7 @@ Checked against the code by symbol and file search, not by running every feature
 
 | Item | State |
 |---|---|
-| 12 a11y | Implemented per `accessibilityFixPlan.txt` (button roles/labels, hidden glyphs, headings, hit slop, focus ring, contrast). Input-border contrast re-tuned on 2026-10-26 for the cream background. Graph List view is the non-visual alternative (relation sentences per node, default for screen readers). |
+| 12 a11y | Implemented per `accessibilityFixPlan.txt` (button roles/labels, hidden glyphs, headings, hit slop, focus ring, contrast). Input-border contrast re-tuned on 2026-10-26 for the cream background. Graph List view is the non-visual alternative (relation sentences per node, default for native screen readers; on web, via the List button). |
 | 14 persistent cache, storage versioning | Implemented |
 | 10 ISBN fallback, 9 search filters, 13 share links | Implemented (share-link host still undecided, see open questions) |
 | 6 export/import, 11 offline cache | Implemented |
@@ -49,8 +49,7 @@ Checked against the code by symbol and file search, not by running every feature
   vitest suite after each phase.
 - Step 3: new screens in this roadmap (path finder, filters, batch scan) must ship
   with roles/labels from the start; add this to each phase's checklist.
-- Done: graph canvas (`graph/[type]/[id].tsx`, SVG) has a non-visual alternative. Graph List view is the non-visual alternative (relation sentences per node, default for screen readers).
-  The node list view added in #3 doubles as that.
+- Done: graph canvas (`graph/[type]/[id].tsx`, SVG) has a non-visual alternative. Graph List view is the non-visual alternative (relation sentences per node, default for native screen readers; on web, via the List button).
 
 ### 14. Persistent server cache
 - Today `TtlCache` is in-memory with in-flight de-dupe; restarts mean cold Wikidata

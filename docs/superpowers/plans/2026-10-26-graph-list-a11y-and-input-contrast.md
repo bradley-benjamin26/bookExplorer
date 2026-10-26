@@ -22,7 +22,7 @@
 1. **Filtered graph:** an edge whose other end was filtered out must not produce a sentence with `undefined` in it. `applyGraphFilter` already drops such edges; the helper must still skip any edge with an id missing from `graph.nodes`. Test in Task 1.
 2. **Center row:** the center touches every edge, so its row would read out the whole graph. Center row shows no relation line; every other row covers its own edges. Test in Task 1 (helper returns all sentences; the screen chooses not to render them for the center — covered by the Task 2 manual check).
 3. **Filter leaves only the center:** the list must say why it's empty, not show a lone row. Manual check in Task 2.
-4. **Screen reader turned on mid-session:** the default flips only on first render; turning VoiceOver on later must not yank a sighted user out of the canvas. Task 2 subscribes but only applies while the user hasn't toggled.
+4. **Screen reader turned on mid-session:** if the user hasn't touched the List/Graph toggle, switching the list on is right for someone who just enabled a screen reader; once they've toggled, screen-reader events never change the view. Not on web, where RN Web can't detect screen readers.
 5. **Duplicate edges** (same source, target and relation): one sentence, not two. Test in Task 1.
 
 ---
