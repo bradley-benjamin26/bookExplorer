@@ -31,6 +31,9 @@ function resolveApiBaseUrl(): string {
   // env vars are inlined at build time by Expo — no extra config needed.
   if (process.env.EXPO_PUBLIC_API_BASE_URL) return process.env.EXPO_PUBLIC_API_BASE_URL;
 
+  // A release build has no Metro host to guess from; failing here beats shipping a build that calls localhost.
+  if (process.env.NODE_ENV === "production") throw new Error("EXPO_PUBLIC_API_BASE_URL must be set for production builds");
+
   if (Platform.OS === "web") return "http://localhost:3001";
 
   // On a physical device / simulator, reuse the LAN host that Metro is already

@@ -68,8 +68,13 @@ export async function getConfiguredLibraries(): Promise<Library[]> {
   return libraries.filter(isConfigured);
 }
 
-export async function saveLibraries(libraries: Library[]): Promise<void> {
+async function saveLibraries(libraries: Library[]): Promise<void> {
   await AsyncStorage.setItem(LIBRARIES_KEY, JSON.stringify(libraries));
+}
+
+/** Replaces every library, queued behind in-flight upsertLibrary/removeLibrary writes. */
+export function replaceLibraries(libraries: Library[]): Promise<void> {
+  return enqueueWrite(LIBRARIES_KEY, () => saveLibraries(libraries));
 }
 
 export function upsertLibrary(input: Unversioned<Library>): Promise<Library[]> {

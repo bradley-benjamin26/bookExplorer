@@ -29,6 +29,8 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
   const [pendingBackup, setPendingBackup] = useState<Snapshot | null>(null);
   const [csv, setCsv] = useState<{ rows: CsvBookRow[]; progress: CsvImportProgress; running: boolean } | null>(null);
   const stopRequested = useRef(false);
+  // Merge/Replace are async; a second press mid-apply would race the first one's writes.
+  const applying = useRef(false);
   const queryClient = useQueryClient();
   // Leaving the screen pauses a running CSV import, so it can't run on unseen or overlap one started on return.
   useEffect(() => () => {
@@ -54,8 +56,13 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
 
   const applyBackup = (mode: "merge" | "replace") =>
     attempt(async () => {
-      if (!pendingBackup) return;
-      await importSnapshot(pendingBackup, mode);
+      if (!pendingBackup || applying.current) return;
+      applying.current = true;
+      try {
+        await importSnapshot(pendingBackup, mode);
+      } finally {
+        applying.current = false;
+      }
       setPendingBackup(null);
       setMessage(mode === "merge" ? "Backup merged into your library." : "Your library was replaced with the backup.");
       onImported();

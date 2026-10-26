@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { OPEN_LIBRARY_WORK_ID } from "@book-explorer/shared";
-import { getLibraries, saveLibraries, type Library } from "./librarySettings";
+import { getLibraries, replaceLibraries, type Library } from "./librarySettings";
 import { getAllSavedBooks, replaceSavedBooks, type SavedBookRecord } from "./savedBooks";
 import { getAllSavedItems, replaceSavedItems, type SavedItem } from "./savedItems";
 import { getAllSavedWorks, replaceSavedWorks, type SavedWorkRecord } from "./savedWorks";
@@ -40,7 +40,7 @@ export async function applySnapshot(snapshot: Snapshot): Promise<void> {
     replaceSavedItems(snapshot.items),
     replaceSavedBooks(snapshot.books),
     replaceSavedWorks(snapshot.works),
-    saveLibraries(snapshot.libraries),
+    replaceLibraries(snapshot.libraries),
   ]);
 }
 

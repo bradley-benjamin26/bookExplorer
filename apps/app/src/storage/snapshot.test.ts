@@ -98,3 +98,16 @@ describe("snapshot", () => {
     expect((await getSnapshot()).items).toHaveLength(1);
   });
 });
+
+describe("applySnapshot library writes", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("queues library replacement behind an in-flight upsert", async () => {
+    const lib = (id: string) => ({ id, name: id, isbnUrl: "x", titleUrl: "" });
+    const edit = upsertLibrary(lib("edit"));
+    await applySnapshot({ schemaVersion: 2, items: [], books: [], works: [], libraries: [{ ...lib("imported"), schemaVersion: 2, updatedAt: 1 }] });
+    await edit;
+    // The edit ran first, then the import replaced it; never the reverse interleaving.
+    expect((await getSnapshot()).libraries.map((l) => l.id)).toEqual(["imported"]);
+  });
+});
