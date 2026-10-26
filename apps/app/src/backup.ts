@@ -25,7 +25,8 @@ export async function exportJson(): Promise<string> {
 }
 
 export async function exportCsv(): Promise<string> {
-  return booksToCsv((await getSnapshot()).books);
+  const { books, lists } = await getSnapshot();
+  return booksToCsv(books, lists);
 }
 
 /** Validates a JSON backup file (untrusted) against the shared schema. */

@@ -1,4 +1,5 @@
 import type { SavedBookRecord } from "./storage/savedBooks";
+import type { SavedList } from "./storage/savedLists";
 
 /** RFC 4180 rows: quoted fields may hold commas, newlines and "" escapes; a leading BOM is dropped. */
 export function parseCsv(text: string): string[][] {
@@ -38,7 +39,7 @@ export function toCsv(rows: string[][]): string {
 }
 
 // Goodreads export column names, so the file imports into Goodreads (and back into this app).
-const EXPORT_HEADER = ["Title", "Author", "Additional Authors", "ISBN", "ISBN13", "Bookshelves", "Private Notes", "Date Added"];
+const EXPORT_HEADER = ["Title", "Author", "Additional Authors", "ISBN", "ISBN13", "Bookshelves", "Exclusive Shelf", "Private Notes", "Date Added"];
 
 const goodreadsDate = (ms: number) => new Date(ms).toISOString().slice(0, 10).replaceAll("-", "/");
 
@@ -46,8 +47,11 @@ const goodreadsDate = (ms: number) => new Date(ms).toISOString().slice(0, 10).re
 // spreadsheet; a leading ' makes it plain text (OWASP's CSV injection advice).
 const noFormula = (f: string) => (/^[=+\-@\t\r]/.test(f) ? `'${f}` : f);
 
-/** Live saved books as a Goodreads-style CSV: tags (subjects + genres) go in Bookshelves. */
-export function booksToCsv(books: SavedBookRecord[]): string {
+const shelfSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** Live saved books as a Goodreads-style CSV: the names of the book lists a book is in are its shelves. */
+export function booksToCsv(books: SavedBookRecord[], lists: SavedList[]): string {
+  const bookLists = lists.filter((l) => l.kind === "book" && !l.deletedAt);
   const rows = books
     .filter((b) => !b.deletedAt)
     .map((b) => [
@@ -56,7 +60,12 @@ export function booksToCsv(books: SavedBookRecord[]): string {
       b.authorNames.slice(1).join(", "),
       b.isbn.length === 10 ? b.isbn : "",
       b.isbn.length === 13 ? b.isbn : "",
-      [...new Set([...b.subjects, ...b.genres])].join(", "),
+      bookLists
+        .filter((l) => l.members.some((m) => m.type === "book" && m.id === b.isbn))
+        .map((l) => shelfSlug(l.name))
+        .filter(Boolean)
+        .join(", "),
+      "to-read",
       b.notes,
       goodreadsDate(b.savedAt),
     ].map(noFormula));

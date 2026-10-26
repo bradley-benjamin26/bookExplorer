@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { SavedList } from "./storage/savedLists";
 import { booksToCsv, parseCsv, readBookCsv, toCsv } from "./csv";
 import type { SavedBookRecord } from "./storage/savedBooks";
 
@@ -63,8 +64,32 @@ describe("booksToCsv", () => {
     savedAt: Date.UTC(2024, 0, 15),
   };
 
+  const list = (name: string, over: Partial<SavedList> = {}): SavedList => ({
+    schemaVersion: 1, updatedAt: 1, id: name, name, description: "", kind: "book", createdAt: 1,
+    members: [{ type: "book", id: record.isbn, title: "Dune", addedAt: 1 }], ...over,
+  });
+
+  it("Bookshelves holds the book's live book-list names as Goodreads shelf slugs, never subjects", () => {
+    const hugo = { ...record, subjects: ["Award:Hugo_Award=1966"] };
+    const lists = [list("Book Club 2026"), list("Gone", { deletedAt: 3 }), list("Authors", { kind: "author" }), list("Other", { members: [] })];
+    const [header, row] = parseCsv(booksToCsv([hugo], lists));
+    const r = Object.fromEntries(header.map((h, i) => [h, row[i]]));
+    expect(r.Bookshelves).toBe("book-club-2026");
+    expect(r["Exclusive Shelf"]).toBe("to-read");
+  });
+
+  it("a book in no list exports an empty Bookshelves", () => {
+    const [header, row] = parseCsv(booksToCsv([record], []));
+    expect(row[header.indexOf("Bookshelves")]).toBe("");
+  });
+
+  it('a list named "=HYPERLINK(x)" is neutralised', () => {
+    const [header, row] = parseCsv(booksToCsv([record], [list("=HYPERLINK(x)")]));
+    expect(row[header.indexOf("Bookshelves")]).toBe("hyperlink-x");
+  });
+
   it("writes Goodreads columns for live books and reads back through readBookCsv", () => {
-    const csv = booksToCsv([record, { ...record, isbn: "0441013597", deletedAt: 5 }]);
+    const csv = booksToCsv([record, { ...record, isbn: "0441013597", deletedAt: 5 }], []);
     const [header, row, ...rest] = parseCsv(csv);
     expect(rest).toEqual([]);
     expect(Object.fromEntries(header.map((h, i) => [h, row[i]]))).toEqual({
@@ -73,7 +98,8 @@ describe("booksToCsv", () => {
       "Additional Authors": "Someone Else",
       ISBN: "",
       ISBN13: "9780441013593",
-      Bookshelves: "sf, desert",
+      Bookshelves: "",
+      "Exclusive Shelf": "to-read",
       "Private Notes": "line1\nline2",
       "Date Added": "2024/01/15",
     });
@@ -82,7 +108,7 @@ describe("booksToCsv", () => {
 
   it("neutralizes cells a spreadsheet would run as formulas", () => {
     const evil = { ...record, title: '=HYPERLINK("http://x")', authorNames: ["+1", "@SUM(A1)"], notes: "-2", subjects: ["\tx"], genres: [] };
-    const [, row] = parseCsv(booksToCsv([evil]));
-    expect([row[0], row[1], row[2], row[5], row[6]]).toEqual(["'=HYPERLINK(\"http://x\")", "'+1", "'@SUM(A1)", "'\tx", "'-2"]);
+    const [, row] = parseCsv(booksToCsv([evil], []));
+    expect([row[0], row[1], row[2], row[7]]).toEqual(["'=HYPERLINK(\"http://x\")", "'+1", "'@SUM(A1)", "'-2"]);
   });
 });
