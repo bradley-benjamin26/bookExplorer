@@ -1,5 +1,7 @@
 # LCSH Source-Tagging Supplement Implementation Plan
 
+Status: implemented in PR #7; checkboxes below were not ticked as work landed, so treat them as historical.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add Library of Congress Subject Headings (LCSH) as a second,

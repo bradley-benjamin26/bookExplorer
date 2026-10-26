@@ -1,6 +1,6 @@
 # Book Explorer — Visual Design Plan
 
-Status: implemented across all screens (Home and BookDetail first, then the rest in a follow-up pass). Not yet reviewed visually in light and dark.
+Status: implemented across all screens. Not yet reviewed visually in light and dark (still open as of 2026-10-26).
 
 ## Brief (why this direction)
 

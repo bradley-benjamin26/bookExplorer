@@ -1,5 +1,7 @@
 # Graph explorer: pinch-to-zoom and pan
 
+Status: implemented (pinch/pan gestures in `apps/app/app/graph/[type]/[id].tsx`).
+
 ## Problem
 
 The graph explorer (`apps/app/app/graph/[type]/[id].tsx`) lays out nodes with

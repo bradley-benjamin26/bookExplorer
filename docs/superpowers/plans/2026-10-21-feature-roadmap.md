@@ -1,6 +1,6 @@
 # Feature Roadmap: Discovery, Library, Search, Sync, Ops
 
-Status: proposal. Items are numbered to match the original idea list (5, reading
+Status: phases 0-4 implemented; phase 5 (sync) deliberately deferred, see the status table below. Items are numbered to match the original idea list (5, reading
 status/notes, is deliberately not included). Each phase should get its own
 brainstorming spec and task-level plan (as with `2026-10-21-lcsh-source-tagging.md`)
 before implementation; this document fixes scope, order, and the sync decision.
@@ -20,6 +20,20 @@ AsyncStorage (`savedItems`, per-ISBN `savedBook` records, `libraries`, `history`
 | 3 | 8 batch scan, 4 series | Independent features |
 | 4 | 3 graph filters, 1 path finder, 2 recommendations | Graph/discovery; share a graph-query API |
 | 5 | 7 sync | Last: needs stable data model (phase 0, 2) and the SQLite store (14) |
+
+## Status (2026-10-26)
+
+Checked against the code by symbol and file search, not by running every feature.
+
+| Item | State |
+|---|---|
+| 12 a11y | Implemented per `accessibilityFixPlan.txt` (button roles/labels, hidden glyphs, headings, hit slop, focus ring, contrast). Input-border contrast re-tuned on 2026-10-26 for the cream background. Still open: a non-visual alternative to the graph canvas. |
+| 14 persistent cache, storage versioning | Implemented |
+| 10 ISBN fallback, 9 search filters, 13 share links | Implemented (share-link host still undecided, see open questions) |
+| 6 export/import, 11 offline cache | Implemented |
+| 8 batch scan, 4 series | Implemented |
+| 3 graph filters, 1 path finder, 2 recommendations | Implemented |
+| 7 sync | **Deferred.** Decision 2026-10-26: keep manual export/import as the sync story, because the app aims to store as little as possible off-device. Option C below stays the design to revive if a hosted server with persistent disk is approved. |
 
 ---
 
