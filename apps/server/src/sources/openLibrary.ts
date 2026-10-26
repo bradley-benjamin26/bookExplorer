@@ -1,4 +1,5 @@
 import type { AuthorRef } from "@book-explorer/shared";
+import { orderEditions } from "../editionOrder.js";
 import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
 
 // Upstream APIs (Open Library asks for this) use the contact address to reach us instead of blocking us.
@@ -193,16 +194,13 @@ async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
     editions.push({ ...edition, nonEnglish });
   }
 
-  // Stable-sorted (Array#sort has been spec-guaranteed stable since ES2019)
-  // so English and language-unlabeled editions — this app's own users are
-  // assumed English-reading — come first without disturbing their relative
-  // order, while confirmed non-English editions are demoted rather than
-  // dropped. Open Library's own listing order has no language preference at
-  // all: confirmed live, a work's first-listed edition was a Polish
-  // translation, with several English editions further down the same list,
-  // which otherwise surfaced as a Polish ISBN in Bookshop.org/WorldCat
-  // search links meant for an English-language reader.
-  const ordered = [...editions].sort((a, b) => Number(a.nonEnglish) - Number(b.nonEnglish));
+  // English and language-unlabeled editions (this app's users are assumed
+  // English-reading) come first, then newest, with a cover as a small boost;
+  // confirmed non-English editions are demoted rather than dropped. Open
+  // Library's listing order has no language preference: a work's first-listed
+  // edition was once a Polish translation, which surfaced as a Polish ISBN in
+  // Bookshop.org/WorldCat links meant for an English-language reader.
+  const ordered = orderEditions(editions);
 
   // Two distinct Open Library edition *records* sharing one ISBN would
   // otherwise show up as two seemingly-identical cards in an editions list
