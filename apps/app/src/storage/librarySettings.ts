@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LibraryExportSchema, WEB_URL } from "@book-explorer/shared";
 import { stamp, type Unversioned, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -77,9 +78,15 @@ export function replaceLibraries(libraries: Library[]): Promise<void> {
   return enqueueWrite(LIBRARIES_KEY, () => saveLibraries(libraries));
 }
 
+/** Saves the library; throws, with a message for the user, when the backup schema would reject it. */
 export function upsertLibrary(input: Unversioned<Library>): Promise<Library[]> {
+  const library = stamp({ ...input, updatedAt: Date.now() });
+  // Storing one the export schema rejects would break every later backup.
+  if (!LibraryExportSchema.safeParse(library).success) {
+    const badUrl = !WEB_URL.test(input.isbnUrl) || !WEB_URL.test(input.titleUrl);
+    return Promise.reject(new Error(badUrl ? "A library address must start with https:// or http://." : "That library's name or an address is too long."));
+  }
   return enqueueWrite(LIBRARIES_KEY, async () => {
-    const library = stamp({ ...input, updatedAt: Date.now() });
     const libraries = await getLibraries();
     const index = libraries.findIndex((l) => l.id === library.id);
     const next = index === -1 ? [...libraries, library] : libraries.map((l, i) => (i === index ? library : l));

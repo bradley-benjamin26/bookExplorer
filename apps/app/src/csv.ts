@@ -1,3 +1,4 @@
+import { ISBN_PATTERN } from "@book-explorer/shared";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { SavedList } from "./storage/savedLists";
 
@@ -49,26 +50,34 @@ const noFormula = (f: string) => (/^[=+\-@\t\r]/.test(f) ? `'${f}` : f);
 
 const shelfSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+// ="…" as Goodreads writes it, or a spreadsheet drops an ISBN-10's leading zero and turns an ISBN-13
+// into 9.78E+12; readBookCsv unwraps it. Added after noFormula, which would neutralize the "=".
+const isbnCell = (isbn: string) => `="${isbn}"`;
+
 /** Live saved books as a Goodreads-style CSV: the names of the book lists a book is in are its shelves. */
 export function booksToCsv(books: SavedBookRecord[], lists: SavedList[]): string {
   const bookLists = lists.filter((l) => l.kind === "book" && !l.deletedAt);
   const rows = books
     .filter((b) => !b.deletedAt)
-    .map((b) => [
-      b.title,
-      b.authorNames[0] ?? "",
-      b.authorNames.slice(1).join(", "),
-      b.isbn.length === 10 ? b.isbn : "",
-      b.isbn.length === 13 ? b.isbn : "",
-      bookLists
-        .filter((l) => l.members.some((m) => m.type === "book" && m.id === b.isbn))
-        .map((l) => shelfSlug(l.name))
-        .filter(Boolean)
-        .join(", "),
-      "to-read",
-      b.notes,
-      goodreadsDate(b.savedAt),
-    ].map(noFormula));
+    .map((b) => {
+      const row = [
+        b.title,
+        b.authorNames[0] ?? "",
+        b.authorNames.slice(1).join(", "),
+        "",
+        "",
+        bookLists
+          .filter((l) => l.members.some((m) => m.type === "book" && m.id === b.isbn))
+          .map((l) => shelfSlug(l.name))
+          .filter(Boolean)
+          .join(", "),
+        "to-read",
+        b.notes,
+        goodreadsDate(b.savedAt),
+      ].map(noFormula);
+      row[b.isbn.length === 10 ? 3 : 4] = isbnCell(b.isbn);
+      return row;
+    });
   return toCsv([EXPORT_HEADER, ...rows]);
 }
 
@@ -93,7 +102,7 @@ export function readBookCsv(text: string): CsvBookRow[] {
     // Only a field that is wholly an ISBN: stripping a StoryGraph UID down to its digits could fake one.
     const isbn = isbnCols
       .map((i) => (r[i] ?? "").replace(/[="\s-]/g, "").toUpperCase())
-      .find((v) => /^(\d{9}[\dX]|\d{13})$/.test(v));
+      .find((v) => ISBN_PATTERN.test(v));
     return { title: r[title]?.trim() ?? "", isbn: isbn ?? null };
   });
 }

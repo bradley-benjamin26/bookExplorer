@@ -110,13 +110,20 @@ describe("booksToCsv", () => {
       Author: "Frank Herbert",
       "Additional Authors": "Someone Else",
       ISBN: "",
-      ISBN13: "9780441013593",
+      ISBN13: '="9780441013593"',
       Bookshelves: "",
       "Exclusive Shelf": "to-read",
       "Private Notes": "line1\nline2",
       "Date Added": "2024/01/15",
     });
     expect(readBookCsv(csv)).toEqual([{ title: 'Dune, "the" novel', isbn: "9780441013593" }]);
+  });
+
+  it("writes an ISBN-10 in the ISBN column, guarded so a leading zero survives a spreadsheet", () => {
+    const csv = booksToCsv([{ ...record, isbn: "0441013597" }], []);
+    const [header, row] = parseCsv(csv);
+    expect([row[header.indexOf("ISBN")], row[header.indexOf("ISBN13")]]).toEqual(['="0441013597"', ""]);
+    expect(readBookCsv(csv)[0].isbn).toBe("0441013597");
   });
 
   it("neutralizes cells a spreadsheet would run as formulas", () => {

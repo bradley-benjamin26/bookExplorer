@@ -1,3 +1,4 @@
+import { MAX_TAG_LENGTH, MAX_TEXT_LENGTH } from "@book-explorer/shared";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
@@ -47,6 +48,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
           onChangeText={setDraft}
           onSubmitEditing={handleAdd}
           returnKeyType="done"
+          maxLength={MAX_TAG_LENGTH}
         />
         <Button variant="pill" onPress={handleAdd} style={styles.addButton}>
           Add
@@ -169,6 +171,7 @@ export function SavedRecordEditor<R extends EditableFields>({
           value={notes}
           onChangeText={handleNotesChange}
           onBlur={flushNotes}
+          maxLength={MAX_TEXT_LENGTH}
           multiline
         />
       </View>

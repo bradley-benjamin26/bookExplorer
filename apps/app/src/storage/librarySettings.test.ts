@@ -24,11 +24,17 @@ describe("librarySettings", () => {
 
   it("upserts, filters unconfigured libraries, and removes", async () => {
     await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://a/", titleUrl: "" });
-    await upsertLibrary({ id: "b", name: "B", isbnUrl: " ", titleUrl: "" });
+    await upsertLibrary({ id: "b", name: "B", isbnUrl: "", titleUrl: "" });
     await upsertLibrary({ id: "a", name: "A renamed", isbnUrl: "https://a/", titleUrl: "" });
     expect((await getLibraries()).map((l) => l.name)).toEqual(["A renamed", "B"]);
     expect((await getConfiguredLibraries()).map((l) => l.id)).toEqual(["a"]);
     expect((await removeLibrary("a")).map((l) => l.id)).toEqual(["b"]);
+  });
+
+  it("refuses an address the backup schema would reject, storing nothing", async () => {
+    await expect(upsertLibrary({ id: "a", name: "A", isbnUrl: "catalog.lib.example/?q=", titleUrl: "" })).rejects.toThrow("https://");
+    await expect(upsertLibrary({ id: "a", name: "A", isbnUrl: "", titleUrl: "javascript:alert(1)" })).rejects.toThrow("https://");
+    expect(await getLibraries()).toEqual([]);
   });
 
   it("keeps both libraries when two upserts overlap", async () => {

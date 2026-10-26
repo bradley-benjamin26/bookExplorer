@@ -30,6 +30,16 @@ function mergeTagged<T extends Tagged>(a: T, b: T): T {
   return { ...winner, subjects: union(first.subjects, second.subjects), genres: union(first.genres, second.genres) };
 }
 
+/** The newer list, with members unioned while both copies are live: like tags, one side's additions shouldn't drop the other's. */
+function mergeList(a: SavedList, b: SavedList): SavedList {
+  const winner = newer(a, b);
+  if (winner.deletedAt || a.deletedAt || b.deletedAt) return winner;
+  const other = winner === a ? b : a;
+  const key = (m: SavedList["members"][number]) => `${m.type}:${m.id}`;
+  const have = new Set(winner.members.map(key));
+  return { ...winner, members: [...winner.members, ...other.members.filter((m) => !have.has(key(m)))] };
+}
+
 function mergeBy<T extends Versioned>(a: T[], b: T[], key: (r: T) => string, pick: (x: T, y: T) => T): Map<string, T> {
   const merged = new Map<string, T>();
   for (const r of [...a, ...b]) {
@@ -70,8 +80,8 @@ function reconcile<T extends Tagged>(items: Map<string, SavedItem>, type: SavedI
 
 /**
  * Union of two snapshots, record by record: newer updatedAt wins, tombstones
- * beat older edits, and a book's or work's tags (subjects/genres) are unioned when both
- * copies are live, then each one's item and record are made to agree on whether
+ * beat older edits, and a book's or work's tags (subjects/genres) and a list's members
+ * are unioned when both copies are live, then each one's item and record are made to agree on whether
  * it's saved. Pure, so a future cross-device sync can reuse it.
  *
  * Libraries have no tombstone (removeLibrary hard-deletes), so a library
@@ -91,6 +101,6 @@ export function mergeSnapshots(a: Snapshot, b: Snapshot): Snapshot {
     books: sorted(books),
     works: sorted(works),
     libraries: sorted(mergeBy<Library>(a.libraries, b.libraries, (l) => l.id, newer)),
-    lists: sorted(mergeBy<SavedList>(a.lists, b.lists, (l) => l.id, newer)),
+    lists: sorted(mergeBy<SavedList>(a.lists, b.lists, (l) => l.id, mergeList)),
   };
 }

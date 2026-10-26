@@ -17,7 +17,7 @@ describe("snapshot", () => {
   it("migrates unversioned data once, keeping savedAt as updatedAt", async () => {
     await AsyncStorage.setItem("book-explorer:saved-items", JSON.stringify([{ type: "book", id: "1", title: "Old" }]));
     await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify(legacyBook));
-    await AsyncStorage.setItem("book-explorer:libraries", JSON.stringify([{ id: "a", name: "A", isbnUrl: "x", titleUrl: "" }]));
+    await AsyncStorage.setItem("book-explorer:libraries", JSON.stringify([{ id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" }]));
     await migrateStorage();
     const first = await getSnapshot();
     expect(first.books[0]).toMatchObject({ schemaVersion: 3, updatedAt: 1234, notes: "n" });
@@ -68,7 +68,7 @@ describe("snapshot", () => {
   it("round-trips through applySnapshot, replacing existing data", async () => {
     await toggleSaved({ type: "book", id: "1", title: "One" });
     await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify({ ...legacyBook, schemaVersion: 1, updatedAt: 5 }));
-    await upsertLibrary({ id: "a", name: "A", isbnUrl: "x", titleUrl: "" });
+    await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" });
     await toggleSaved({ type: "work", id: "OL1W", title: "W" });
     await migrateStorage(); // gives OL1W its record
     await updateSavedWork("OL1W", { notes: "w" });
@@ -122,7 +122,7 @@ describe("applySnapshot library writes", () => {
   beforeEach(() => AsyncStorage.clear());
 
   it("queues library replacement behind an in-flight upsert", async () => {
-    const lib = (id: string) => ({ id, name: id, isbnUrl: "x", titleUrl: "" });
+    const lib = (id: string) => ({ id, name: id, isbnUrl: "https://x/", titleUrl: "" });
     const edit = upsertLibrary(lib("edit"));
     await applySnapshot({ schemaVersion: 3, items: [], books: [], works: [], lists: [], libraries: [{ ...lib("imported"), schemaVersion: 2, updatedAt: 1 }] });
     await edit;

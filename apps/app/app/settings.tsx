@@ -31,6 +31,7 @@ function LibraryCard({
   const [isbnUrl, setIsbnUrl] = useState(library.isbnUrl);
   const [titleUrl, setTitleUrl] = useState(library.titleUrl);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   // The stored library changed under the card (a save, or an import): show the stored values,
   // so pressing Save can't write the card's stale ones over an import.
   const [shownUpdatedAt, setShownUpdatedAt] = useState(library.updatedAt);
@@ -41,7 +42,10 @@ function LibraryCard({
     setTitleUrl(library.titleUrl);
   }
 
-  const markDirty = () => setSaved(false);
+  const markDirty = () => {
+    setSaved(false);
+    setError("");
+  };
 
   return (
     <View style={styles.libraryCard}>
@@ -111,13 +115,22 @@ function LibraryCard({
       <Button
         variant="primary"
         onPress={async () => {
-          await onSave({ id: library.id, name: name.trim(), isbnUrl: isbnUrl.trim(), titleUrl: titleUrl.trim() });
-          setSaved(true);
+          try {
+            await onSave({ id: library.id, name: name.trim(), isbnUrl: isbnUrl.trim(), titleUrl: titleUrl.trim() });
+            setSaved(true);
+          } catch (err) {
+            setError((err as Error).message);
+          }
         }}
         style={styles.saveButton}
       >
         {saved ? "Saved" : "Save"}
       </Button>
+      {error ? (
+        <Text style={styles.errorText} accessibilityRole="alert" accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -225,6 +238,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.danger,
     },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
+    errorText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm },
     pressed: { opacity: 0.6 },
     helpText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20, marginBottom: spacing.md },
     themeOptions: { flexDirection: "row", gap: spacing.sm },

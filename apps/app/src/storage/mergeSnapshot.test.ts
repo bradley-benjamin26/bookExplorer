@@ -187,4 +187,14 @@ describe("mergeSnapshots", () => {
     expect(mergeSnapshots(b, snap({ lists: [removed] })).lists).toEqual([removed]);
     expect(mergeSnapshots(snap({ lists: [removed] }), b).lists).toEqual([removed]);
   });
+
+  it("unions a live list's members added on each side, keeping the newer copy's name and order", () => {
+    const one = { type: "book" as const, id: "1", title: "One", addedAt: 5 };
+    const two = { type: "book" as const, id: "2", title: "Two", addedAt: 6 };
+    const a = snap({ lists: [list("x", 10, { name: "Old", members: [one] })] });
+    const b = snap({ lists: [list("x", 20, { name: "New", members: [two] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0]).toMatchObject({ name: "New", members: [two, one] });
+    }
+  });
 });

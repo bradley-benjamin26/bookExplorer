@@ -1,4 +1,4 @@
-import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, type Book } from "@book-explorer/shared";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, MAX_TEXT_LENGTH, type Book } from "@book-explorer/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchBookWithAlternate } from "./api/bookLookup";
 import { exportJson, ImportError, importSnapshot, NEW_CSV_IMPORT, parseBookCsv, parseSnapshotJson, runCsvImport } from "./backup";
@@ -44,6 +44,14 @@ describe("JSON backup", () => {
     await toggleSaved({ type: "author", id: "OL1A", title: "Stale" });
     await importSnapshot(parseSnapshotJson(text), "replace");
     expect(await getSnapshot()).toEqual(before);
+  });
+
+  it("refuses to make a backup that import would reject, naming the part to fix", async () => {
+    await seed();
+    await updateSavedBook("9780441013593", { notes: "x".repeat(MAX_TEXT_LENGTH + 1) });
+    const failed = exportJson();
+    await expect(failed).rejects.toBeInstanceOf(ImportError);
+    await expect(failed).rejects.toThrow("a saved book");
   });
 
   it("merge keeps local records the backup lacks and takes the backup's newer edits", async () => {

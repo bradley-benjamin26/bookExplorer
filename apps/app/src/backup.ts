@@ -13,15 +13,31 @@ type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 
 const schemaMatchesStorage: Same<SnapshotExport, Snapshot> = true;
 void schemaMatchesStorage;
 
-/** A file the user picked can't be imported; the message is shown to them as is. */
+/** A backup can't be imported (or made); the message is shown to the user as is. */
 export class ImportError extends Error {}
 
 function checkSize(text: string) {
   if (text.length > MAX_IMPORT_BYTES) throw new ImportError("That file is too large to import (5 MB max).");
 }
 
+const SNAPSHOT_PARTS: Record<string, string> = {
+  items: "a saved item",
+  books: "a saved book",
+  works: "a saved work",
+  libraries: "a library in Settings",
+  lists: "a list",
+};
+
 export async function exportJson(): Promise<string> {
-  return JSON.stringify(await getSnapshot(), null, 2);
+  const snapshot = await getSnapshot();
+  // Import rejects the whole file over one bad record, so a backup that couldn't be restored
+  // fails now, while the data is still on this device, not when the user restores it.
+  const check = SnapshotExportSchema.safeParse(snapshot);
+  if (!check.success) {
+    const part = SNAPSHOT_PARTS[String(check.error.issues[0]?.path[0])] ?? "some saved data";
+    throw new ImportError(`This backup couldn't be restored, so it wasn't made: ${part} has a value that's too long or not allowed. Fix it and try again.`);
+  }
+  return JSON.stringify(snapshot, null, 2);
 }
 
 export async function exportCsv(): Promise<string> {

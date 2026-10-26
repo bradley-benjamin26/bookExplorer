@@ -268,9 +268,12 @@ export function normalizeIsbn(isbn: string): string {
   return isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
 
+/** An ISBN-10 or ISBN-13 in normalizeIsbn's form. */
+export const ISBN_PATTERN = /^(\d{9}[\dX]|\d{13})$/;
+
 /** An ISBN-10 or ISBN-13, hyphens/spaces allowed. */
 export function isValidIsbn(raw: string): boolean {
-  return /^(\d{9}[\dX]|\d{13})$/.test(normalizeIsbn(raw));
+  return ISBN_PATTERN.test(normalizeIsbn(raw));
 }
 
 // Caps on an imported backup/CSV file, which is untrusted input: big enough
@@ -284,11 +287,16 @@ const VersionedFields = {
   schemaVersion: z.number().int().positive(),
   updatedAt: z.number().int().nonnegative(),
 };
-const text = z.string().max(10_000);
-const tagList = z.array(z.string().max(500)).max(1_000);
+// Exported so the app's inputs can stop at the same limits: one record over
+// them would make the whole backup fail to import.
+export const MAX_TEXT_LENGTH = 10_000;
+export const MAX_TAG_LENGTH = 500;
 // Library URLs are opened as links, so an imported file mustn't be able to
 // plant a javascript: or other non-web URL.
-const webUrl = z.string().max(2_000).regex(/^(https?:\/\/.*)?$/i);
+export const WEB_URL = /^(https?:\/\/.*)?$/i;
+const text = z.string().max(MAX_TEXT_LENGTH);
+const tagList = z.array(z.string().max(MAX_TAG_LENGTH)).max(1_000);
+const webUrl = z.string().max(2_000).regex(WEB_URL);
 
 export const SavedItemExportSchema = z.object({
   ...VersionedFields,
@@ -302,7 +310,7 @@ export const SavedBookExportSchema = z.object({
   ...VersionedFields,
   deletedAt: z.number().int().nonnegative().optional(),
   // Becomes part of a storage key, so only the server's normalized form.
-  isbn: z.string().regex(/^(\d{9}[\dX]|\d{13})$/),
+  isbn: z.string().regex(ISBN_PATTERN),
   wikidataId: z.string().max(200).nullable(),
   openLibraryEditionId: z.string().max(200).nullable(),
   openLibraryWorkId: z.string().max(200).nullable(),

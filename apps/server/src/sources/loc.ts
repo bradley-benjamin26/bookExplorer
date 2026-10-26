@@ -1,4 +1,4 @@
-import { subjectKey, type TaggedTerm } from "@book-explorer/shared";
+import { normalizeIsbn, subjectKey, type TaggedTerm } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { tryEachIsbn } from "../isbnFallback.js";
 import { USER_AGENT } from "./openLibrary.js";
@@ -94,7 +94,7 @@ export function parseModsRecord(xml: string, isbn: string): LocMetadata {
  * small-press books.
  */
 export async function fetchMetadataByIsbn(isbn: string): Promise<LocMetadata> {
-  const normalizedIsbn = isbn.replace(/[^0-9Xx]/g, "").toUpperCase();
+  const normalizedIsbn = normalizeIsbn(isbn);
   const query = `bath.isbn=${normalizedIsbn}`;
   const url = `${SRU_URL}?version=1.1&operation=searchRetrieve&query=${encodeURIComponent(query)}&maximumRecords=1&recordSchema=mods`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
