@@ -8,6 +8,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { ExpandableText } from "../../src/components/ExpandableText";
@@ -302,6 +303,7 @@ export default function BookDetail() {
       )}
 
       <ReviewsSection reviews={data.reviews} />
+      <Footer />
     </ScrollView>
   );
 }

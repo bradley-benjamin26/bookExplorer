@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { fetchSubject, searchBooks } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
@@ -117,6 +118,7 @@ export default function SubjectDetail() {
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
+      ListFooterComponent={<Footer />}
     />
   );
 }

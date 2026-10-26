@@ -5,9 +5,9 @@ import { NewSearchButton } from "./NewSearchButton";
 /** Combines the New Search and My Library header buttons for screens that need both. */
 export function HeaderActions() {
   return (
-    <View style={{ flexDirection: "row", gap: 8 }}>
-      <MyLibraryButton />
-      <NewSearchButton />
+    <View style={{ flexDirection: "row", gap: 0 }}>
+      <MyLibraryButton iconOnly />
+      <NewSearchButton iconOnly />
     </View>
   );
 }

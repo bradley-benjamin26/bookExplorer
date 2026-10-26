@@ -14,7 +14,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
-import { Footer } from "../src/components/Footer";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { NewSearchButton } from "../src/components/NewSearchButton";
@@ -120,10 +119,9 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               options={{ title: "Explore Graph", headerRight: inHeader(<HeaderActions />) }}
             />
             <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton />) }} />
+            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
           </Stack>
         </View>
-        <Footer />
       </View>
     </View>
   );

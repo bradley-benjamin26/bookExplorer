@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
@@ -156,6 +157,7 @@ export default function AuthorDetail() {
           </View>
         );
       })}
+      <Footer />
     </ScrollView>
   );
 }

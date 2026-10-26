@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
+import { Footer } from "../src/components/Footer";
 import { RecommendationsSection } from "../src/components/RecommendationsSection";
 import { SavedRecordEditor } from "../src/components/SavedRecordEditor";
 import { routes } from "../src/navigation";
@@ -315,6 +316,7 @@ export default function Saved() {
       </Pressable>
 
       <BackupSection onImported={load} />
+      <Footer />
     </ScrollView>
   );
 }

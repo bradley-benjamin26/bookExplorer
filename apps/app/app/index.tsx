@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Footer } from "../src/components/Footer";
 import { routes } from "../src/navigation";
 import { getRecentBooks, type RecentBook } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
@@ -110,9 +111,11 @@ export default function Home() {
                   </View>
                 </Pressable>
               )}
+              ListFooterComponent={<Footer />}
             />
           </View>
         )}
+        {recent.length === 0 && <Footer />}
       </View>
     </SafeAreaView>
   );

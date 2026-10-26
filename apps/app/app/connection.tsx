@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchPath, searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
+import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
 import { routes } from "../src/navigation";
@@ -94,6 +95,7 @@ export default function Connection() {
           </View>
         }
         renderItem={({ item }) => <WorkListRow work={item} onPress={() => setTarget(item)} />}
+        ListFooterComponent={<Footer />}
       />
     );
   }
@@ -152,6 +154,7 @@ export default function Connection() {
       <Button variant="pill" onPress={() => setTarget(null)} style={styles.action} accessibilityLabel="Choose a different book">
         Choose a Different Book
       </Button>
+      <Footer />
     </ScrollView>
   );
 }

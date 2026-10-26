@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
@@ -194,6 +195,7 @@ export default function WorkDetail() {
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
       <ReviewsSection reviews={data.reviews} />
+      <Footer />
     </ScrollView>
   );
 }

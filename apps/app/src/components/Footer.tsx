@@ -5,7 +5,7 @@ const WIKIDATA_LOGO_URL =
   "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Wikidata_Stamp_Rec_Light.svg/960px-Wikidata_Stamp_Rec_Light.svg.png";
 const OPEN_LIBRARY_URL = "https://openlibrary.org";
 
-/** Attribution footer shown on every screen, since Wikidata- and Open Library-sourced data appears throughout the app. */
+/** Attribution footer shown at the end of scrollable screens, since Wikidata- and Open Library-sourced data appears throughout the app. */
 export function Footer() {
   const styles = useThemedStyles(createStyles);
   return (
@@ -25,7 +25,7 @@ function createStyles({ colors, fonts, typeScale }: Theme) {
     footer: {
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 12,
+      paddingVertical: 8,
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.paper,
@@ -35,9 +35,9 @@ function createStyles({ colors, fonts, typeScale }: Theme) {
       borderRadius: 4,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      marginBottom: 6,
+      marginBottom: 4,
     },
-    logo: { width: 120, height: 24 },
+    logo: { width: 96, height: 19 },
     text: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
   });
 }
