@@ -57,3 +57,7 @@ export function filterFromParams(params: { hideTypes?: string | string[]; hideRe
 /** Returns `list` with `value` toggled in or out. */
 export const toggle = (list: string[], value: string) =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+
+// RN Web's isScreenReaderEnabled() always resolves true, so web never auto-opens the list.
+export const shouldAutoOpenList = (os: string, screenReaderOn: boolean, listChosen: boolean) =>
+  screenReaderOn && !listChosen && os !== "web";

@@ -51,7 +51,7 @@ export interface ThemeColors {
   thread: string;
 }
 
-const lightColors: ThemeColors = {
+export const lightColors: ThemeColors = {
   background: "#FAF7F0",
   shellBackground: "#EFEBE2",
   text: "#1F2430",
@@ -60,7 +60,7 @@ const lightColors: ThemeColors = {
   textFaint: "#6c6c7d",
   border: "#eef0f2",
   cardBorder: "#e6e6ea",
-  inputBorder: "#a8a8b8",
+  inputBorder: "#85859a",
   chipBackground: "#f2f2f5",
   chipBackgroundAccent: "#eef2ff",
   chipBorderAccent: "#e0e6fb",
@@ -95,7 +95,7 @@ const lightColors: ThemeColors = {
 // saturated graph colors nearly disappear against a dark surface, so these
 // are lightened/desaturated to hold the same contrast ratio instead of the
 // same hex value).
-const darkColors: ThemeColors = {
+export const darkColors: ThemeColors = {
   background: "#191B20",
   shellBackground: "#0a0a0f",
   text: "#EDEAE2",
@@ -103,7 +103,7 @@ const darkColors: ThemeColors = {
   textFaint: "#8c8ca0",
   border: "#2a2a35",
   cardBorder: "#2e2e3a",
-  inputBorder: "#5c5c6c",
+  inputBorder: "#707082",
   chipBackground: "#232330",
   chipBackgroundAccent: "#212a4d",
   chipBorderAccent: "#2d3a66",

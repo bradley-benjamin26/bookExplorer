@@ -4,7 +4,7 @@ import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } 
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   useAnimatedStyle,
@@ -18,8 +18,8 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { NODE_LABELS, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
-import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, toggle, type GraphFilter } from "../../../src/graphFilters";
+import { NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
@@ -284,18 +284,6 @@ interface PositionedEdge {
 
 type LabeledEdge = PositionedEdge & { text: string; pillWidth: number; labelX: number; labelY: number };
 
-// The lines-and-labels a sighted user reads visually (source, connecting
-// line, relation label, target) have no equivalent for a screen reader
-// landing on one node in isolation, so each node's accessible description
-// spells out every edge touching it using the same "source relation target"
-// phrasing the diagram itself uses.
-function describeNodeRelations(nodeId: string, edges: LabeledEdge[]): string {
-  return edges
-    .filter((edge) => edge.source.id === nodeId || edge.target.id === nodeId)
-    .map((edge) => `${edge.source.label} ${RELATION_LABELS[edge.relation] ?? edge.relation} ${edge.target.label}`)
-    .join(". ");
-}
-
 interface Center {
   type: GraphNode["type"];
   id: string;
@@ -482,6 +470,21 @@ export default function GraphExplorer() {
   const [filter, setFilter] = useState<GraphFilter>(() => filterFromParams({ hideTypes, hideRelations }));
   const [filterOpen, setFilterOpen] = useState(false);
   const [showList, setShowList] = useState(false);
+  const [listChosen, setListChosen] = useState(false);
+  // Screen-reader users can't use the canvas, so open the list for them, but never override the user's own toggle.
+  useEffect(() => {
+    if (listChosen) return;
+    let cancelled = false;
+    const apply = (on: boolean) => {
+      if (!cancelled && shouldAutoOpenList(Platform.OS, on, listChosen)) setShowList(true);
+    };
+    AccessibilityInfo.isScreenReaderEnabled().then(apply);
+    const sub = AccessibilityInfo.addEventListener("screenReaderChanged", apply);
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [listChosen]);
   const updateFilter = (next: GraphFilter) => {
     setFilter(next);
     const p = filterToParams(next);
@@ -724,8 +727,7 @@ export default function GraphExplorer() {
     <View style={styles.container}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
-        Tap a node to explore it, or swipe through them with a screen reader — activate the highlighted center node
-        for full details.
+        Tap a node to explore it. Screen reader users get a list of every connection; switch with the List button.
       </Text>
       <View style={styles.legend}>
         {(Object.keys(NODE_COLORS) as GraphNode["type"][]).map((nodeType) => (
@@ -745,7 +747,10 @@ export default function GraphExplorer() {
         </Button>
         <Button
           variant="pill"
-          onPress={() => setShowList((v) => !v)}
+          onPress={() => {
+            setListChosen(true);
+            setShowList((v) => !v);
+          }}
           accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
         >
           {showList ? "Graph" : "List"}
@@ -789,22 +794,33 @@ export default function GraphExplorer() {
           onPress={handleBack}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back to previous graph"
         >
-          <ChevronLeft size={16} color={theme.colors.cover} strokeWidth={2} />
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <ChevronLeft size={16} color={theme.colors.cover} strokeWidth={2} />
+          </View>
           <Text style={styles.backButtonText}>Back</Text>
         </Pressable>
       )}
       {showList ? (
         <ScrollView style={styles.list}>
-          {orderedNodes.map((node) => {
+          <Text accessibilityRole="header" style={styles.listHeading}>
+            {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
+          </Text>
+          {orderedNodes.length <= 1 && (
+            <Text style={styles.listRelations}>Nothing left after filtering. Change the filter to see connections.</Text>
+          )}
+          {orderedNodes.length > 1 && orderedNodes.map((node) => {
             const isCenter = node.id === data.centerId;
+            const relations = isCenter ? "" : nodeRelations(visible!, node.id).join(". ");
             return (
               <Pressable
                 key={node.id}
                 onPress={() => handleNodePress(node)}
                 disabled={!node.navigable}
                 accessibilityRole="button"
-                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked"]
+                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
                   .filter(Boolean)
                   .join(". ")}
                 accessibilityHint={node.navigable ? (isCenter ? "Opens full details for this item" : "Re-centers the graph on this item") : undefined}
@@ -812,7 +828,10 @@ export default function GraphExplorer() {
                 style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
               >
                 <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
-                <Text style={styles.listLabel}>{node.label}</Text>
+                <View style={styles.listBody}>
+                  <Text style={styles.listNodeLabel}>{node.label}</Text>
+                  {!!relations && <Text style={styles.listRelations}>{relations}</Text>}
+                </View>
                 <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
               </Pressable>
             );
@@ -960,7 +979,8 @@ export default function GraphExplorer() {
         {orderedNodes.map((node) => {
           const isCenter = node.id === data.centerId;
           const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
-          const relations = describeNodeRelations(node.id, layout.edges);
+          // A screen reader landing on one node in isolation can't see its edges, so spell them out.
+          const relations = nodeRelations(visible!, node.id).join(". ");
           const label = [
             `${node.label}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",
@@ -1124,6 +1144,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     checkboxOn: { backgroundColor: colors.cover },
     list: { flex: 1, paddingHorizontal: spacing.lg },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    listHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, paddingVertical: spacing.md },
+    listBody: { flex: 1, paddingVertical: spacing.sm },
+    listNodeLabel: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
+    listRelations: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.textFaint },
     listLabel: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
     backButtonText: { fontFamily: fonts.bodySemiBold, color: colors.cover, fontSize: 14 },
   });
