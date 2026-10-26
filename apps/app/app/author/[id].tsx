@@ -10,6 +10,7 @@ import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
+import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -81,6 +82,7 @@ export default function AuthorDetail() {
         {saved ? "Saved" : "Save"}
       </Button>
       <ShareButton title={data.name} href={routes.author(data.openLibraryId)} publicUrl={openLibraryUrl.author(data.openLibraryId)} />
+      <AddToListButton member={{ type: "author", id: data.openLibraryId, title: data.name }} />
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
       {data.bioSource === "wikipedia" && data.bioSourceUrl && (

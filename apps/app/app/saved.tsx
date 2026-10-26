@@ -93,7 +93,7 @@ export default function Saved() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {([["Recommendations", routes.recommendations()], ["Settings & backup", routes.settings()]] as const).map(([label, href]) => (
+      {([["Lists", routes.lists()], ["Recommendations", routes.recommendations()], ["Settings & backup", routes.settings()]] as const).map(([label, href]) => (
         <Pressable
           key={label}
           style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}

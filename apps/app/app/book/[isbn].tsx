@@ -16,6 +16,7 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
+import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -142,6 +143,7 @@ export default function BookDetail() {
         {saved ? "★ Saved" : "☆ Save"}
       </Button>
       <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
+      <AddToListButton member={{ type: "book", id: data.isbn, title: data.title }} />
       {savedRecord && (
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push(routes.saved())}>
           <Text style={styles.editInLibraryLink}>Edit subjects, genres & notes in My Library</Text>

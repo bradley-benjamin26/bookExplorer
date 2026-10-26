@@ -15,6 +15,7 @@ import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
+import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
@@ -102,6 +103,7 @@ export default function WorkDetail() {
         {saved ? "Saved" : "Save"}
       </Button>
       <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
+      <AddToListButton member={{ type: "work", id: data.openLibraryWorkId, title: data.title }} />
 
       <Button
         variant="primary"
