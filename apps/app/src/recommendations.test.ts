@@ -21,7 +21,7 @@ const book = (title: string, subjects: string[], extra: Partial<SavedBookRecord>
   savedAt: 1,
   ...extra,
 });
-const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = [], works: Snapshot["works"] = []): Snapshot => ({ schemaVersion: 1, items, books, works, libraries: [] });
+const snapshot = (books: SavedBookRecord[], items: Snapshot["items"] = [], works: Snapshot["works"] = []): Snapshot => ({ schemaVersion: 1, items, books, works, libraries: [], lists: [] });
 const savedWork = (title: string, subjects: string[]): Snapshot["works"][number] => ({
   schemaVersion: 1, updatedAt: 1, openLibraryWorkId: `OL${title}W`, title, authorNames: [], subjects, genres: [], notes: "", savedAt: 1,
 });

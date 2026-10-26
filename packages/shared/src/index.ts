@@ -338,10 +338,31 @@ export const LibraryExportSchema = z.object({
   titleUrl: webUrl,
 });
 
+export const SavedListExportSchema = z.object({
+  ...VersionedFields,
+  deletedAt: z.number().int().nonnegative().optional(),
+  id: z.string().min(1).max(200),
+  name: z.string().min(1).max(100),
+  description: text,
+  kind: z.enum(["book", "author"]),
+  members: z
+    .array(
+      z.object({
+        type: z.enum(["book", "work", "author"]),
+        id: z.string().min(1).max(200),
+        title: text,
+        addedAt: z.number().int().nonnegative(),
+      })
+    )
+    .max(MAX_IMPORT_RECORDS),
+  createdAt: z.number().int().nonnegative(),
+});
+
 /**
  * A JSON backup file: the app's whole saved dataset (see the app's storage/snapshot.ts).
  * Version 1 files predate saved-work records, so they have no `works` and read as none;
- * from version 2 on `works` is required. (A newer schemaVersion is the app's to reject.)
+ * from version 2 on `works` is required. Likewise `lists` (named lists) from version 3.
+ * (A newer schemaVersion is the app's to reject.)
  */
 export const SnapshotExportSchema = z
   .object({
@@ -350,9 +371,11 @@ export const SnapshotExportSchema = z
     books: z.array(SavedBookExportSchema).max(MAX_IMPORT_RECORDS),
     works: z.array(SavedWorkExportSchema).max(MAX_IMPORT_RECORDS).optional(),
     libraries: z.array(LibraryExportSchema).max(MAX_IMPORT_RECORDS),
+    lists: z.array(SavedListExportSchema).max(MAX_IMPORT_RECORDS).optional(),
   })
   .refine((s) => s.schemaVersion < 2 || s.works !== undefined, { message: "works is required from schemaVersion 2", path: ["works"] })
-  .transform(({ works = [], ...rest }) => ({ ...rest, works }));
+  .refine((s) => s.schemaVersion < 3 || s.lists !== undefined, { message: "lists is required from schemaVersion 3", path: ["lists"] })
+  .transform(({ works = [], lists = [], ...rest }) => ({ ...rest, works, lists }));
 export type SnapshotExport = z.infer<typeof SnapshotExportSchema>;
 
 export const SeriesMemberSchema = z.object({

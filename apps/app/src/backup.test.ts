@@ -6,6 +6,7 @@ import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems, toggleSaved } from "./storage/savedItems";
+import { addToList, createList, getLists } from "./storage/savedLists";
 import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
 import { getSnapshot, migrateStorage } from "./storage/snapshot";
 
@@ -25,6 +26,8 @@ async function seed() {
   await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://lib.example/?q=", titleUrl: "" });
   await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
   await migrateStorage(); // gives OL1W its record
+  const list = await createList({ name: "Favourites", kind: "book" });
+  await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
 }
 
 describe("JSON backup", () => {
@@ -74,10 +77,48 @@ describe("JSON backup", () => {
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
   });
 
-  it("exports v2 with works, and imports a v1 backup (no works) as having none", async () => {
+  it("exports v3 with lists", async () => {
+    await seed();
+    const v3 = JSON.parse(await exportJson());
+    expect(v3.schemaVersion).toBe(3);
+    expect(v3.lists).toMatchObject([{ name: "Favourites", kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] }]);
+  });
+
+  it("a schemaVersion 2 backup with no lists imports with lists: []", async () => {
+    await seed();
+    const { lists: _, ...v2 } = { ...JSON.parse(await exportJson()), schemaVersion: 2 };
+    const parsed = parseSnapshotJson(JSON.stringify(v2));
+    expect(parsed.lists).toEqual([]);
+    // Merging it keeps the local lists; replacing with it leaves none.
+    await importSnapshot(parsed, "merge");
+    expect((await getLists()).map((l) => l.name)).toEqual(["Favourites"]);
+    await importSnapshot(parsed, "replace");
+    expect(await getLists()).toEqual([]);
+  });
+
+  it("a schemaVersion 3 backup without lists is rejected", async () => {
+    await seed();
+    const good = JSON.parse(await exportJson());
+    const bad = (mutate: (s: typeof good) => void) => {
+      const copy = structuredClone(good);
+      mutate(copy);
+      return JSON.stringify(copy);
+    };
+    const cases = [
+      bad((s) => delete s.lists),
+      bad((s) => (s.lists[0].name = "")),
+      bad((s) => (s.lists[0].name = "x".repeat(101))),
+      bad((s) => (s.lists[0].kind = "shelf")),
+      bad((s) => (s.lists[0].members[0].id = "")),
+      bad((s) => (s.lists[0].members[0].type = "series")),
+      bad((s) => delete s.lists[0].updatedAt),
+    ];
+    for (const text of cases) expect(() => parseSnapshotJson(text)).toThrow(ImportError);
+  });
+
+  it("exports works, and imports a v1 backup (no works) as having none", async () => {
     await seed();
     const v2 = JSON.parse(await exportJson());
-    expect(v2.schemaVersion).toBe(2);
     expect(v2.works).toMatchObject([{ openLibraryWorkId: "OL1W", title: "Emma" }]);
     expect(parseSnapshotJson(JSON.stringify(v2)).works).toHaveLength(1);
 

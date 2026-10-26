@@ -1,6 +1,7 @@
 import type { Library } from "./librarySettings";
 import type { SavedBookRecord } from "./savedBooks";
 import type { SavedItem } from "./savedItems";
+import type { SavedList } from "./savedLists";
 import type { SavedWorkRecord } from "./savedWorks";
 import type { Versioned } from "./schema";
 import type { Snapshot } from "./snapshot";
@@ -90,5 +91,6 @@ export function mergeSnapshots(a: Snapshot, b: Snapshot): Snapshot {
     books: sorted(books),
     works: sorted(works),
     libraries: sorted(mergeBy<Library>(a.libraries, b.libraries, (l) => l.id, newer)),
+    lists: sorted(mergeBy<SavedList>(a.lists, b.lists, (l) => l.id, newer)),
   };
 }
