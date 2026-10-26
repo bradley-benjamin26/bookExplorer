@@ -7,6 +7,7 @@ import { fetchGraph, fetchSubject } from "../api/client";
 import { routes } from "../navigation";
 import {
   buildTasteProfile,
+  detailLanded,
   FETCH_CONCURRENCY,
   mapWithConcurrency,
   rankRecommendations,
@@ -37,10 +38,7 @@ export function RecommendationsSection({ refreshKey }: { refreshKey: unknown }) 
   useEffect(
     () =>
       queryClient.getQueryCache().subscribe((e) => {
-        const kind = e.query.queryKey[0];
-        // Hydration adds queries ("added") or overwrites them ("setState"); a fetch ends in "success".
-        const landed = e.type === "added" || (e.type === "updated" && (e.action.type === "success" || e.action.type === "setState"));
-        if (landed && (kind === "book" || kind === "work")) setCacheVersion((v) => v + 1);
+        if (detailLanded(e)) setCacheVersion((v) => v + 1);
       }),
     [queryClient]
   );
