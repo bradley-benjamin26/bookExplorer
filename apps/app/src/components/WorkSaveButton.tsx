@@ -25,15 +25,22 @@ export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (i
   // A new object per pick, so picking the same edition again reopens the list sheet.
   const [target, setTarget] = useState<{ isbn: string | null } | null>(null);
   const isbn = target?.isbn ?? null;
+  // Done also runs with nothing ticked or only unticking, so follow the save only when onSave ran.
+  const saved = useRef(false);
 
   useEffect(() => {
     if (target) sheet.current?.open();
   }, [target]);
 
-  const open = () => (editions.length > 0 ? setChoosing(true) : sheet.current?.open());
+  const open = () => {
+    saved.current = false;
+    if (editions.length > 0) setChoosing(true);
+    else sheet.current?.open();
+  };
   useImperativeHandle(ref, () => ({ open }));
   const pick = (isbn: string | null) => {
     setChoosing(false);
+    saved.current = false;
     setTarget({ isbn });
   };
 
@@ -49,12 +56,17 @@ export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (i
         hidden={editions.length > 0}
         member={isbn ? { type: "book", id: isbn, title: work.title } : { type: "work", id: work.openLibraryWorkId, title: work.title }}
         onSave={async () => {
-          if (isbn) return saveBook(await queryClient.fetchQuery({ queryKey: ["book", isbn], queryFn: () => fetchBookWithAlternate(isbn) }));
-          // Keeps the cover on disk so the saved work still shows it offline.
-          if (work.coverUrl) CachedImage.prefetch(work.coverUrl, "disk");
-          return saveWork(work);
+          let record;
+          if (isbn) record = await saveBook(await queryClient.fetchQuery({ queryKey: ["book", isbn], queryFn: () => fetchBookWithAlternate(isbn) }));
+          else {
+            // Keeps the cover on disk so the saved work still shows it offline.
+            if (work.coverUrl) CachedImage.prefetch(work.coverUrl, "disk");
+            record = await saveWork(work);
+          }
+          saved.current = true;
+          return record;
         }}
-        onChange={() => onSaved(isbn)}
+        onChange={() => saved.current && onSaved(isbn)}
       />
       <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
         <Pressable style={styles.backdrop} onPress={() => setChoosing(false)} accessibilityLabel="Close">
