@@ -98,3 +98,17 @@ export function withListedSaves(snapshot: Snapshot, now = Date.now()): Snapshot 
   }
   return { ...snapshot, lists };
 }
+
+/** Just one live list and the saves on it (books by isbn, works by work id); no libraries. An unknown or deleted list gives empty arrays. */
+export function snapshotForList(snapshot: Snapshot, listId: string): Snapshot {
+  const list = snapshot.lists.find((l) => l.id === listId && !l.deletedAt);
+  const has = (type: ListMember["type"], id: string) => !!list?.members.some((m) => m.type === type && m.id === id);
+  return {
+    ...snapshot,
+    items: snapshot.items.filter((i) => has(i.type, i.id)),
+    books: snapshot.books.filter((b) => has("book", b.isbn)),
+    works: snapshot.works.filter((w) => has("work", w.openLibraryWorkId)),
+    libraries: [],
+    lists: list ? [list] : [],
+  };
+}

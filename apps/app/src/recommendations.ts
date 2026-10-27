@@ -100,6 +100,14 @@ export function detailLanded(e: QueryCacheNotifyEvent): boolean {
 
 export const MIN_SHARED_SUBJECT = 2;
 
+/** What the recommendations screen shows: a spinner until there is something to say, then the empty text or the groups. */
+export function recommendationsStatus(s: { ready: boolean; seedCount: number; fetching: boolean; count: number }): "loading" | "empty" | "list" {
+  if (!s.ready) return "loading";
+  if (s.seedCount === 0) return "empty";
+  if (s.count === 0) return s.fetching ? "loading" : "empty";
+  return "list";
+}
+
 /**
  * The live parts of a snapshot reduced to what scoring needs. Author seeds come from the caller, which can resolve ids.
  * Only slugs in `publicSlugs` (terms an API response gave) are used, since a saved

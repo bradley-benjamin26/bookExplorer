@@ -5,7 +5,7 @@ import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
 import { getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
 import { addToList, createList, getLists } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
-import { applySnapshot, getSnapshot, migrateStorage, withListedSaves, type Snapshot } from "./snapshot";
+import { applySnapshot, getSnapshot, migrateStorage, snapshotForList, withListedSaves, type Snapshot } from "./snapshot";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -169,5 +169,28 @@ describe("applySnapshot library writes", () => {
     await edit;
     // The edit ran first, then the import replaced it; never the reverse interleaving.
     expect((await getSnapshot()).libraries.map((l) => l.id)).toEqual(["imported"]);
+  });
+
+  it("snapshotForList keeps only the live list's members, and nothing for a deleted or unknown list", () => {
+    const stamped = { schemaVersion: 4, updatedAt: 1 };
+    const item = (type: "book" | "work" | "author", id: string) => ({ ...stamped, type, id, title: id });
+    const rec = { ...stamped, authorNames: [], subjects: [], genres: [], notes: "", savedAt: 1 };
+    const member = (type: "book" | "work" | "author", id: string) => ({ type, id, title: id, addedAt: 1 });
+    const list = { ...stamped, id: "l1", name: "L", description: "", kind: "book" as const, createdAt: 1, members: [member("book", "1"), member("work", "OL1W"), member("author", "OL1A")] };
+    const snap = {
+      schemaVersion: 4,
+      items: [item("book", "1"), item("book", "2"), item("work", "OL1W"), item("work", "OL2W"), item("author", "OL1A"), item("author", "OL2A")],
+      books: [{ ...rec, isbn: "1" }, { ...rec, isbn: "2" }],
+      works: [{ ...rec, openLibraryWorkId: "OL1W" }, { ...rec, openLibraryWorkId: "OL2W" }],
+      libraries: [{ ...stamped, id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" }],
+      lists: [list, { ...list, id: "gone", deletedAt: 5 }],
+    } as unknown as Snapshot;
+    const out = snapshotForList(snap, "l1");
+    expect(out.items.map((i) => i.id)).toEqual(["1", "OL1W", "OL1A"]);
+    expect(out.books.map((b) => b.isbn)).toEqual(["1"]);
+    expect(out.works.map((w) => w.openLibraryWorkId)).toEqual(["OL1W"]);
+    expect(out.lists).toEqual([list]);
+    expect(out.libraries).toEqual([]);
+    for (const id of ["gone", "nope"]) expect(snapshotForList(snap, id)).toMatchObject({ items: [], books: [], works: [], lists: [] });
   });
 });

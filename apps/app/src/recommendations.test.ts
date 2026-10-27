@@ -2,7 +2,7 @@ import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-ex
 import { dehydrate, hydrate, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Book, Work } from "@book-explorer/shared";
-import { buildTasteProfile, detailLanded, explain, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import { buildTasteProfile, detailLanded, explain, mapWithConcurrency, rankRecommendations, recommendationsStatus, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -263,5 +263,17 @@ describe("detailLanded", () => {
     const { client, landed } = watch();
     hydrate(client, dehydrate(source));
     expect(landed).toEqual([["book", "9780441013593"]]);
+  });
+});
+
+describe("recommendationsStatus", () => {
+  const base = { ready: true, seedCount: 2, fetching: false, count: 3 };
+  it("picks loading, empty or list", () => {
+    expect(recommendationsStatus({ ...base, ready: false })).toBe("loading");
+    expect(recommendationsStatus({ ...base, seedCount: 0, fetching: true })).toBe("empty");
+    expect(recommendationsStatus({ ...base, fetching: true, count: 0 })).toBe("loading");
+    expect(recommendationsStatus({ ...base, count: 0 })).toBe("empty");
+    expect(recommendationsStatus({ ...base, fetching: true })).toBe("list");
+    expect(recommendationsStatus(base)).toBe("list");
   });
 });
