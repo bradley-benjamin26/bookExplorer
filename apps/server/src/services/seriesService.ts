@@ -5,7 +5,8 @@ import * as wikidata from "../sources/wikidata.js";
 import { optionalSource } from "./bookEnrichment.js";
 
 // Wikidata series membership changes rarely, so cached as long as authors.
-const seriesCache = new TtlCache<Series | null>(1000 * 60 * 60 * 24, 500, "series");
+// The "2" suffix drops entries persisted before members carried coverUrl and Open Library-resolved ids; bump it when Series changes shape.
+const seriesCache = new TtlCache<Series | null>(1000 * 60 * 60 * 24, 500, "series2");
 
 const LOOKUP_CONCURRENCY = 4;
 
