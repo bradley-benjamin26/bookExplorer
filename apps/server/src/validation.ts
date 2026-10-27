@@ -20,6 +20,11 @@ export function isWikidataQid(id: string): boolean {
   return /^Q[1-9]\d*$/.test(id);
 }
 
+/** A raw subject slug from a URL: legacy forms are fine, but the raw text is bounded before it is slugified. */
+export function isSubjectSlugInput(raw: string): boolean {
+  return raw.length <= 200 && isSubjectSlug(slugifySubject(raw));
+}
+
 /** A subject slug as the graph builds it: already slugified, and short enough to be a real subject. */
 export function isSubjectSlug(slug: string): boolean {
   return slug.length > 0 && slug.length <= 200 && slugifySubject(slug) === slug;
@@ -33,7 +38,7 @@ export function isPathEndpointId(nodeId: string): boolean {
   if (type === "author") return isOpenLibraryAuthorId(id);
   if (type === "work") return isOpenLibraryWorkId(id);
   // Legacy and unslugified ids are accepted; the path route canonicalizes them.
-  if (type === "subject" || type === "genre") return isSubjectSlug(slugifySubject(id));
+  if (type === "subject" || type === "genre") return isSubjectSlugInput(id);
   return false;
 }
 

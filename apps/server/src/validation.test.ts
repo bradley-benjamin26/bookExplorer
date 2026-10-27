@@ -73,6 +73,11 @@ describe("isPathEndpointId", () => {
     expect(isPathEndpointId("genre:fiction")).toBe(true);
   });
 
+  it("rejects a raw subject id over 200 characters even when it slugifies short", () => {
+    expect(isPathEndpointId(`subject:a${",".repeat(300)}`)).toBe(false);
+    expect(isPathEndpointId(`genre:a${",".repeat(300)}`)).toBe(false);
+  });
+
   it("rejects other types, mismatched ids and subjects that slug to nothing", () => {
     expect(isPathEndpointId("editions:OL1W")).toBe(false);
     expect(isPathEndpointId("author:OL1W")).toBe(false);

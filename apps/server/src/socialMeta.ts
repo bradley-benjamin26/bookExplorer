@@ -1,9 +1,9 @@
-import { isValidIsbn, slugifySubject } from "@book-explorer/shared";
+import { isValidIsbn } from "@book-explorer/shared";
 import { getAuthorDetail } from "./services/authorService.js";
 import { getBookDetail } from "./services/bookService.js";
 import { getSubjectDetail } from "./services/subjectService.js";
 import { getWorkDetail } from "./services/workService.js";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlug } from "./validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "./validation.js";
 
 /** Where shared links point; the same value the app uses for its own share links. */
 export const DEFAULT_WEB_ORIGIN = "https://shelfthread.com";
@@ -54,7 +54,7 @@ const LOOKUPS: Record<string, { valid: (id: string) => boolean; load: Lookup }> 
     },
   },
   subject: {
-    valid: (slug) => isSubjectSlug(slugifySubject(slug)),
+    valid: (slug) => isSubjectSlugInput(slug),
     load: async (slug) => {
       const s = await getSubjectDetail(slug);
       return s && { title: s.name, description: describe(s.description, s.name), image: s.books[0]?.coverUrl ?? null };
