@@ -176,6 +176,32 @@ describe("series lookups", () => {
     expect(series?.members[0]).toMatchObject({ title: "One", openLibraryWorkId: null });
   });
 
+  it("leaves out a member that is part of (P361) another member, like a volume's inner books", async () => {
+    const partOf = (id: string) => ({ P361: [{ mainsnak: { datavalue: { value: { id } } } }] });
+    stubWikidata(
+      {
+        Q9: entity("The Lord of the Rings"),
+        Q1: entity("The Fellowship of the Ring", { P179: [seriesClaim("Q9", "1")] }),
+        Q11: entity("The First Journey", { ...partOf("Q1"), P179: [seriesClaim("Q9", "1")] }),
+      },
+      ["Q1", "Q11"]
+    );
+    expect((await fetchSeries("Q9"))?.members.map((m) => m.title)).toEqual(["The Fellowship of the Ring"]);
+  });
+
+  it("leaves out a prologue (P31 Q920285)", async () => {
+    const instanceOf = (id: string) => ({ P31: [{ mainsnak: { datavalue: { value: { id } } } }] });
+    stubWikidata(
+      {
+        Q9: entity("The Saga"),
+        Q1: entity("One", { P179: [seriesClaim("Q9", "1")] }),
+        Q2: entity("Prologue", { ...instanceOf("Q920285"), P179: [seriesClaim("Q9")] }),
+      },
+      ["Q1", "Q2"]
+    );
+    expect((await fetchSeries("Q9"))?.members.map((m) => m.title)).toEqual(["One"]);
+  });
+
   it("returns null for a malformed qid without calling out", async () => {
     stubWikidata({});
     expect(await fetchSeries("nope")).toBeNull();

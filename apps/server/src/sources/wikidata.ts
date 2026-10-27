@@ -437,6 +437,8 @@ export async function fetchWorkSeries(
   return name ? { name, position: seriesOrdinal(entities[workQid], seriesQid), wikidataId: seriesQid } : null;
 }
 
+const NON_WORK_PARTS = new Set(["Q920285"]); // prologue
+
 /** Every item that is part of the series (P179 -> seriesQid), in series order. */
 export async function fetchSeries(seriesQid: string): Promise<Series | null> {
   if (!isValidQid(seriesQid)) return null;
@@ -449,8 +451,14 @@ export async function fetchSeries(seriesQid: string): Promise<Series | null> {
 
   const [entities, resolved] = await Promise.all([wbGetEntities(memberQids, "claims"), resolveItems(memberQids)]);
   const seen = new Set<string>();
+  const memberSet = new Set(memberQids);
   const members = [...new Set(memberQids)].flatMap((qid) => {
     const item = resolved.get(qid);
+    // A volume's inner books are part of another member, and a prologue is not a work of its own.
+    const isSubPart =
+      claimItemIds(entities[qid], "P361").some((id) => memberSet.has(id)) ||
+      claimItemIds(entities[qid], "P31").some((id) => NON_WORK_PARTS.has(id));
+    if (isSubPart) return [];
     // Two Wikidata items can carry the same Open Library id (e.g. a work and its edition record); list it once.
     if (!item || (item.openLibraryId && seen.has(item.openLibraryId))) return [];
     if (item.openLibraryId) seen.add(item.openLibraryId);
