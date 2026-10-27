@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Check, ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Crosshair, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -19,7 +19,7 @@ import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
 import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
-import { routes } from "../../../src/navigation";
+import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { CENTER_NODE_RADIUS, LABEL_LINE_HEIGHT, layoutGraph, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
 
@@ -329,7 +329,7 @@ export default function GraphExplorer() {
     // screen instead of joining the recenter-the-graph behavior every other
     // non-center node gets.
     if (next.type === "genre") {
-      router.push(routes.subject(next.id));
+      router.push(nodeHref(node.id)!);
       return;
     }
 
@@ -338,7 +338,7 @@ export default function GraphExplorer() {
     // real browsable node, so tapping it jumps straight there instead of
     // recentering.
     if (next.type === "editions") {
-      router.push(routes.work(next.id, { highlight: "editions" }));
+      router.push(nodeHref(node.id)!);
       return;
     }
 
@@ -347,9 +347,7 @@ export default function GraphExplorer() {
       setCenter(next);
       return;
     }
-    if (next.type === "author") router.push(routes.author(next.id));
-    else if (next.type === "subject") router.push(routes.subject(next.id));
-    else router.push(routes.work(next.id));
+    router.push(nodeHref(node.id)!);
   };
 
   const handleBack = () => {
@@ -469,7 +467,7 @@ export default function GraphExplorer() {
         <ScrollView style={styles.list}>
           {orderedNodes.length > 1 ? (
             <Text accessibilityRole="header" style={styles.listHeading}>
-              {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
+              {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}. Tap an item to open its page.`}
             </Text>
           ) : (
             <Text style={styles.listRelations}>Nothing left after filtering. Change the filter to see connections.</Text>
@@ -477,26 +475,41 @@ export default function GraphExplorer() {
           {orderedNodes.length > 1 && orderedNodes.map((node) => {
             const isCenter = node.id === data.centerId;
             const relations = isCenter ? "" : nodeRelations(visible, node.id).join(". ");
+            const href = node.navigable ? nodeHref(node.id) : null;
             return (
-              <Pressable
-                key={node.id}
-                onPress={() => handleNodePress(node)}
-                disabled={!node.navigable}
-                accessibilityRole="button"
-                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
-                  .filter(Boolean)
-                  .join(". ")}
-                accessibilityHint={node.navigable ? (isCenter ? "Opens full details for this item" : "Re-centers the graph on this item") : undefined}
-                accessibilityState={{ disabled: !node.navigable, selected: isCenter }}
-                style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
-              >
-                <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
-                <View style={styles.listBody}>
-                  <Text style={styles.listNodeLabel}>{node.label}</Text>
-                  {!!relations && <Text style={styles.listRelations}>{relations}</Text>}
-                </View>
-                <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
-              </Pressable>
+              <View key={node.id} style={styles.listRow}>
+                <Pressable
+                  onPress={() => href && router.push(href)}
+                  disabled={!href}
+                  accessibilityRole="button"
+                  accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
+                    .filter(Boolean)
+                    .join(". ")}
+                  accessibilityHint={href ? "Opens this item's page" : undefined}
+                  accessibilityState={{ disabled: !href, selected: isCenter }}
+                  style={({ pressed }) => [styles.listRowMain, pressed && styles.pressed]}
+                >
+                  <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
+                  <View style={styles.listBody}>
+                    <Text style={styles.listNodeLabel}>{node.label}</Text>
+                    {!!relations && <Text style={styles.listRelations}>{relations}</Text>}
+                    {!!href && <Text style={styles.listRelations}>{`Open ${NODE_LABELS[node.type].toLowerCase()} page`}</Text>}
+                  </View>
+                  <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
+                  {!!href && <ChevronRight size={16} color={theme.colors.inkFaint} strokeWidth={2} />}
+                </Pressable>
+                {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && (
+                  <Pressable
+                    onPress={() => handleNodePress(node)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Center graph on ${node.label}`}
+                    hitSlop={4}
+                    style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+                  >
+                    <Crosshair size={20} color={theme.colors.cover} strokeWidth={2} />
+                  </Pressable>
+                )}
+              </View>
             );
           })}
         </ScrollView>
@@ -585,7 +598,7 @@ export default function GraphExplorer() {
                       stands in for a drop shadow — react-native-svg's cross-
                       platform blur support is unreliable, so this fakes the
                       same "resting on the page" depth without it. */}
-                  <Circle cx={node.x} cy={node.y + 2} r={radius} fill={theme.colors.ink} opacity={opacity * 0.08} />
+                  <Circle cx={node.x} cy={node.y + 3} r={radius + 1} fill="#000" opacity={opacity * 0.25} />
                   {isCenter && (
                     <Circle
                       cx={node.x}
@@ -676,6 +689,7 @@ export default function GraphExplorer() {
                 width: radius * 2,
                 height: radius * 2,
                 borderRadius: radius,
+                ...(node.navigable && Platform.OS === "web" ? ({ cursor: "pointer" } as object) : null),
               }}
               />
           );
@@ -808,6 +822,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     checkboxOn: { backgroundColor: colors.cover },
     list: { flex: 1, paddingHorizontal: spacing.lg },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    listRowMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md },
     listHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, paddingVertical: spacing.md },
     listBody: { flex: 1, paddingVertical: spacing.sm },
     listNodeLabel: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },

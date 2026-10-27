@@ -38,3 +38,15 @@ export const routes = {
 
 export const memberHref = (m: Pick<ListMember, "type" | "id">): Href =>
   m.type === "author" ? routes.author(m.id) : m.type === "work" ? routes.work(m.id) : routes.book(m.id);
+
+/** The page a graph node id ("author:OL1A", "editions:OL2W", …) opens; null for unresolved (":qid:") nodes. */
+export const nodeHref = (nodeId: string): Href | null => {
+  const [type, ...rest] = nodeId.split(":");
+  const id = rest.join(":");
+  if (id.startsWith("qid:")) return null;
+  if (type === "author") return routes.author(id);
+  if (type === "subject" || type === "genre") return routes.subject(id);
+  if (type === "work") return routes.work(id);
+  if (type === "editions") return routes.work(id, { highlight: "editions" });
+  return null;
+};
