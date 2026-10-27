@@ -56,6 +56,7 @@ export default function AuthorDetail() {
       )}
       <ShareButton title={data.name} href={routes.author(data.openLibraryId)} style={{ marginTop: 8 }} />
       <AddToListButton
+        style={{ marginTop: 8 }}
         member={{ type: "author", id: data.openLibraryId, title: data.name }}
         onSave={() => saveAuthor(data.openLibraryId, data.name)}
       />

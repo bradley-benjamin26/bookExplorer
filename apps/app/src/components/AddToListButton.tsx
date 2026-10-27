@@ -1,7 +1,7 @@
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { applyListChanges, listChanges } from "../storage/listMembership";
 import {
   createList,
@@ -99,10 +99,12 @@ export function AddToListButton({
   member,
   onSave,
   onChange,
+  style,
 }: {
   member: Omit<ListMember, "addedAt">;
   onSave: () => Promise<unknown>;
   onChange?: () => void;
+  style?: StyleProp<ViewStyle>;
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -170,7 +172,7 @@ export function AddToListButton({
 
   return (
     <>
-      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={styles.trigger} tooltip="Save to one of your lists">
+      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} tooltip="Save to one of your lists">
         Save to list
       </Button>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -246,7 +248,6 @@ export function AddToListButton({
 
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    trigger: { marginTop: 8 },
     // No theme token for a scrim; a translucent black reads in both schemes.
     backdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {

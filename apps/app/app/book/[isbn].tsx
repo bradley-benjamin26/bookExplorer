@@ -121,6 +121,7 @@ export default function BookDetail() {
       <RatingBadge rating={data.rating} />
       <ShareButton title={data.title} href={routes.book(data.isbn)} style={{ marginTop: 8 }} />
       <AddToListButton
+        style={{ marginTop: 8 }}
         member={{ type: "book", id: data.isbn, title: data.title }}
         onSave={async () => {
           // Keeps the cover on disk so the saved book still shows it offline.

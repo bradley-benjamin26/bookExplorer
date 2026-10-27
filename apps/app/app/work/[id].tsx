@@ -66,28 +66,32 @@ export default function WorkDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
-      <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
-      {data.authors.map((author) => (
-        <Pressable
-          key={author.openLibraryId}
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => router.push(routes.author(author.openLibraryId))}
-        >
-          <Text style={styles.author}>{author.name}</Text>
-        </Pressable>
-      ))}
-      <RatingBadge rating={data.rating} />
-      <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
-      <AddToListButton
-        member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
-        onSave={async () => {
-          // Keeps the cover on disk so the saved work still shows it offline.
-          if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-          return saveWork(data);
-        }}
-        onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
-      />
+      <View style={styles.header}>
+        {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
+        <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
+        {data.authors.map((author) => (
+          <Pressable
+            key={author.openLibraryId}
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => router.push(routes.author(author.openLibraryId))}
+          >
+            <Text style={styles.author}>{author.name}</Text>
+          </Pressable>
+        ))}
+        <RatingBadge rating={data.rating} />
+      </View>
+      <View style={styles.actions}>
+        <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
+        <AddToListButton
+          member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
+          onSave={async () => {
+            // Keeps the cover on disk so the saved work still shows it offline.
+            if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+            return saveWork(data);
+          }}
+          onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
+        />
+      </View>
 
       <Button
         variant="primary"
@@ -195,7 +199,9 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     content: { padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
-    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
+    header: { alignItems: "center", width: "100%" },
+    actions: { flexDirection: "row", justifyContent: "center", gap: spacing.sm, marginTop: spacing.md, width: "100%" },
+    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "center", letterSpacing: -0.3, color: colors.ink },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,
