@@ -1,11 +1,11 @@
 import { Plus, Square, SquareCheck } from "lucide-react-native";
-import { useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { applyListChanges, listChanges } from "../storage/listMembership";
 import {
-  addToList,
   createList,
   getLists,
-  removeFromList,
   type ListMember,
   type SavedList,
 } from "../storage/savedLists";
@@ -88,46 +88,90 @@ export function CreateListForm({
   );
 }
 
-/** A pill that opens a sheet for putting `member` on lists of its kind, or on a new one. */
-export function AddToListButton({ member }: { member: Omit<ListMember, "addedAt"> }) {
+const LOAD_ERROR = "Couldn't load your lists. Try again.";
+
+/**
+ * A "Save to list" pill that opens a sheet for choosing the lists of its kind (or a new one) that hold `member`.
+ * Tapping rows only edits a draft; Done applies it, saving the item first if it joined a list (`onSave`)
+ * and unsaving it if it left its last one.
+ */
+export function AddToListButton({
+  member,
+  onSave,
+  onChange,
+}: {
+  member: Omit<ListMember, "addedAt">;
+  onSave: () => Promise<unknown>;
+  onChange?: () => void;
+}) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const kind: SavedList["kind"] = member.type === "author" ? "author" : "book";
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [onAnyList, setOnAnyList] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
-  const load = () => getLists(kind).then(setLists).catch(() => setLists([]));
+  const holds = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
+
+  // The star reflects real membership, so re-read it whenever the screen regains focus.
+  const refreshStar = useCallback(() => {
+    getLists(kind)
+      .then((ls) => setOnAnyList(ls.some(holds)))
+      .catch(() => {});
+  }, [kind, member.type, member.id]);
+  useFocusEffect(refreshStar);
+
+  /** Reads the lists; `reset` also restarts the draft from what each list holds. */
+  const load = (reset: boolean) => {
+    setLoadError("");
+    return getLists(kind)
+      .then((ls) => {
+        setLists(ls);
+        if (reset) setChecked(new Set(ls.filter(holds).map((l) => l.id)));
+      })
+      .catch(() => setLoadError(LOAD_ERROR));
+  };
   const show = () => {
     setCreating(false);
     setError("");
     setOpen(true);
-    load();
+    load(true);
   };
-  const isIn = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
-  const toggle = async (list: SavedList) => {
+  const toggle = (list: SavedList) =>
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(list.id)) next.add(list.id);
+      return next;
+    });
+  const done = async () => {
     setError("");
+    setBusy(true);
     try {
-      await (isIn(list) ? removeFromList(list.id, member.type, member.id) : addToList(list.id, member));
+      await applyListChanges(member, listChanges(lists, member, checked), onSave);
+      onChange?.();
+      setOpen(false);
     } catch (e) {
       setError(errorText(e));
+    } finally {
+      setBusy(false);
+      refreshStar();
     }
-    await load();
   };
   const handleCreated = async (list: SavedList) => {
-    try {
-      await addToList(list.id, member);
-    } finally {
-      setCreating(false);
-      await load();
-    }
+    setChecked((prev) => new Set(prev).add(list.id));
+    setCreating(false);
+    await load(false);
   };
 
   return (
     <>
-      <Button variant="pill" onPress={show} style={styles.trigger}>
-        Add to list
+      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={styles.trigger}>
+        Save to list
       </Button>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.backdrop}>
@@ -136,44 +180,62 @@ export function AddToListButton({ member }: { member: Omit<ListMember, "addedAt"
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
               </Text>
-              {lists.map((list) => {
-                const checked = isIn(list);
-                const Icon = checked ? SquareCheck : Square;
-                return (
+              {loadError ? (
+                <>
+                  <Text style={styles.error} accessibilityLiveRegion="polite">
+                    {loadError}
+                  </Text>
+                  <Button variant="pill" onPress={() => load(true)} style={styles.retry}>
+                    Retry
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {lists.map((list) => {
+                    const isChecked = checked.has(list.id);
+                    const Icon = isChecked ? SquareCheck : Square;
+                    return (
+                      <Pressable
+                        key={list.id}
+                        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                        onPress={() => toggle(list)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isChecked }}
+                        accessibilityLabel={list.name}
+                      >
+                        <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
+                        <Text style={styles.rowText} numberOfLines={2}>
+                          {list.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                   <Pressable
-                    key={list.id}
                     style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-                    onPress={() => toggle(list)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked }}
-                    accessibilityLabel={list.name}
+                    onPress={() => setCreating((c) => !c)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: creating }}
+                    accessibilityLabel="Create new list"
                   >
-                    <Icon size={20} color={checked ? theme.colors.cover : theme.colors.inkFaint} />
-                    <Text style={styles.rowText} numberOfLines={2}>
-                      {list.name}
-                    </Text>
+                    <Plus size={20} color={theme.colors.cover} />
+                    <Text style={[styles.rowText, styles.createText]}>Create new list</Text>
                   </Pressable>
-                );
-              })}
+                  {creating && <CreateListForm kind={kind} submitLabel="Create and add" onCreated={handleCreated} />}
+                </>
+              )}
               {error ? (
                 <Text style={styles.error} accessibilityLiveRegion="polite">
                   {error}
                 </Text>
               ) : null}
-              <Pressable
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-                onPress={() => setCreating((c) => !c)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: creating }}
-                accessibilityLabel="Create new list"
-              >
-                <Plus size={20} color={theme.colors.cover} />
-                <Text style={[styles.rowText, styles.createText]}>Create new list</Text>
-              </Pressable>
-              {creating && <CreateListForm kind={kind} submitLabel="Create and add" onCreated={handleCreated} />}
-              <Button variant="primary" onPress={() => setOpen(false)} style={styles.done}>
-                Done
-              </Button>
+              <View style={styles.footer}>
+                <Button variant="pill" onPress={() => setOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onPress={done} disabled={busy || !!loadError} style={styles.doneButton}>
+                  Done
+                </Button>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -208,7 +270,9 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     rowText: { flex: 1, fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     createText: { fontFamily: fonts.bodySemiBold, color: colors.cover },
     pressed: { opacity: 0.6 },
-    done: { marginTop: spacing.lg },
+    footer: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.lg },
+    doneButton: { flex: 1 },
+    retry: { marginTop: spacing.md, alignSelf: "flex-start" },
     form: { paddingVertical: spacing.md },
     kindRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
     fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },

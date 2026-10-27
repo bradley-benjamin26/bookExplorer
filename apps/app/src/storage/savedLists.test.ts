@@ -83,4 +83,13 @@ describe("savedLists", () => {
     expect(await isOnAnyList("book", dune.id)).toBe(true);
     expect(await isOnAnyList("book", emma.id)).toBe(false);
   });
+
+  it("getLists and getList reject when storage fails, instead of returning nothing", async () => {
+    const spy = vi.spyOn(AsyncStorage, "getItem");
+    spy.mockRejectedValueOnce(new Error("disk"));
+    await expect(getLists()).rejects.toThrow("disk");
+    spy.mockRejectedValueOnce(new Error("disk"));
+    await expect(getList("x")).rejects.toThrow("disk");
+    spy.mockRestore();
+  });
 });

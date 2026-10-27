@@ -16,12 +16,13 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
+import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
 import { addRecentBook } from "../../src/storage/history";
-import { getSavedBook, saveBook, unsaveBook, type SavedBookRecord } from "../../src/storage/savedBooks";
+import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -50,7 +51,6 @@ export default function BookDetail() {
   // two are set together everywhere below, so there's no need for a second,
   // separately-tracked boolean that could drift out of sync with this one.
   const [savedRecord, setSavedRecord] = useState<SavedBookRecord | null>(null);
-  const saved = savedRecord !== null;
 
   useEffect(() => {
     if (data) addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) });
@@ -67,18 +67,6 @@ export default function BookDetail() {
       if (savedIsbn) getSavedBook(savedIsbn).then(setSavedRecord);
     }, [savedIsbn])
   );
-
-  const handleToggleSaved = async () => {
-    if (!data) return;
-    if (saved) {
-      await unsaveBook(data.isbn);
-      setSavedRecord(null);
-    } else {
-      // Keeps the cover on disk so the saved book still shows it offline.
-      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-      setSavedRecord(await saveBook(data));
-    }
-  };
 
   // Once a book is saved, its own record (subjects/genres the user has
   // edited, on top of the snapshot taken at save time) is what's shown and
@@ -132,21 +120,18 @@ export default function BookDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <Button
-        variant="pill"
-        active={saved}
-        onPress={handleToggleSaved}
-        style={styles.saveButton}
-        accessibilityLabel={saved ? "Saved" : "Save"}
-      >
-        {saved ? "★ Saved" : "☆ Save"}
-      </Button>
       <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
-      <AddToListButton member={{ type: "book", id: data.isbn, title: data.title }} />
+      <AddToListButton
+        member={{ type: "book", id: data.isbn, title: data.title }}
+        onSave={async () => {
+          // Keeps the cover on disk so the saved book still shows it offline.
+          if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+          return saveBook(data);
+        }}
+        onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
+      />
       {savedRecord && (
-        <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push(routes.saved())}>
-          <Text style={styles.editInLibraryLink}>Edit subjects, genres & notes in My Library</Text>
-        </Pressable>
+        <SavedRecordEditor record={savedRecord} update={(c) => updateSavedBook(savedRecord.isbn, c)} onChange={setSavedRecord} />
       )}
 
       {(data.format || displayGenres.length > 0) && (
@@ -320,14 +305,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       fontSize: typeScale.sm,
       color: colors.cover,
       marginTop: spacing.xs,
-      textDecorationLine: "underline",
-    },
-    saveButton: { marginTop: spacing.md },
-    editInLibraryLink: {
-      fontFamily: fonts.body,
-      fontSize: typeScale.xs,
-      color: colors.cover,
-      marginTop: spacing.sm,
       textDecorationLine: "underline",
     },
     // Format and Genre are two distinct labeled sections (different

@@ -4,7 +4,8 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
 import { memberHref, routes } from "../../src/navigation";
-import { deleteList, getList, removeFromList, type ListMember, type SavedList } from "../../src/storage/savedLists";
+import { applyListChanges, deleteListAndUnsave } from "../../src/storage/listMembership";
+import { getList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useThemedStyles, type Theme } from "../../src/theme";
 
 export default function ListDetail() {
@@ -13,16 +14,20 @@ export default function ListDetail() {
   const styles = useThemedStyles(createStyles);
   const [list, setList] = useState<SavedList | null | undefined>(undefined);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const load = useCallback(() => {
-    getList(id).then(setList).catch(() => setList(null));
+    setLoadError("");
+    getList(id)
+      .then(setList)
+      .catch(() => setLoadError("Couldn't load this list. Try again."));
   }, [id]);
   useFocusEffect(load);
 
   const handleRemove = async (member: ListMember) => {
     setError("");
     try {
-      await removeFromList(id, member.type, member.id);
+      await applyListChanges(member, { add: [], remove: [id] }, async () => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -32,7 +37,7 @@ export default function ListDetail() {
   const doDelete = async () => {
     setError("");
     try {
-      await deleteList(id);
+      await deleteListAndUnsave(id);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       return;
@@ -54,12 +59,23 @@ export default function ListDetail() {
     }
   };
 
-  if (list === undefined) return null;
+  if (list === undefined && !loadError) return null;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {list === null ? (
-        <Text style={styles.emptyText}>This list no longer exists.</Text>
+      {!list ? (
+        loadError ? (
+          <>
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {loadError}
+            </Text>
+            <Button variant="pill" onPress={load} style={styles.retry}>
+              Retry
+            </Button>
+          </>
+        ) : (
+          <Text style={styles.emptyText}>This list no longer exists.</Text>
+        )
       ) : (
         <>
           <Text style={styles.name} accessibilityRole="header">
@@ -73,7 +89,7 @@ export default function ListDetail() {
           ) : null}
           {list.members.length === 0 ? (
             <Text style={styles.emptyText}>
-              Nothing here yet. Tap “Add to list” on {list.kind === "author" ? "an author" : "a book"} page to add one.
+              Nothing here yet. Tap “Save to list” on {list.kind === "author" ? "an author" : "a book"} page to add one.
             </Text>
           ) : (
             list.members.map((member) => (
@@ -137,6 +153,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.danger,
     },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
+    retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
     deleteButton: { marginTop: spacing.xxl, backgroundColor: colors.dangerBackground },
     pressed: { opacity: 0.6 },
   });

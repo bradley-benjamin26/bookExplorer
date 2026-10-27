@@ -25,8 +25,8 @@ export const routes = {
     pathname: "/graph/[type]/[id]",
     params: { type, id, ...filter },
   }),
-  /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. */
-  connection: (from: string, label: string): Href => ({ pathname: "/connection", params: { from, label } }),
+  /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. With neither, the screen has no starting point (Task 10 adds a picker). */
+  connection: (from?: string, label?: string): Href => ({ pathname: "/connection", params: from ? { from, label } : {} }),
   saved: (): Href => "/saved",
   recommendations: (): Href => "/recommendations",
   settings: (): Href => "/settings",

@@ -19,7 +19,7 @@ import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { openLibraryUrl } from "../../src/share";
-import { getSavedWork, saveWork, seedSavedWorkFromApi, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
+import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -36,7 +36,6 @@ export default function WorkDetail() {
 
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
-  const saved = savedRecord !== null;
 
   // Re-read on every focus: this screen stays mounted under others, so an edit
   // or removal on the Saved screen would otherwise not show here.
@@ -52,18 +51,6 @@ export default function WorkDetail() {
   useEffect(() => {
     if (data && savedRecord) seedSavedWorkFromApi(savedRecord.openLibraryWorkId, data).then((r) => r && setSavedRecord(r));
   }, [data, savedRecord]);
-
-  const handleToggleSaved = async () => {
-    if (!data) return;
-    if (saved) {
-      await unsaveWork(data.openLibraryWorkId);
-      setSavedRecord(null);
-    } else {
-      // Keeps the cover on disk so the saved work still shows it offline.
-      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-      setSavedRecord(await saveWork(data));
-    }
-  };
 
   if (isLoading) {
     return (
@@ -92,18 +79,16 @@ export default function WorkDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <Button
-        variant="pill"
-        active={saved}
-        starIcon
-        onPress={handleToggleSaved}
-        style={styles.saveButton}
-        accessibilityLabel={saved ? "Saved" : "Save"}
-      >
-        {saved ? "Saved" : "Save"}
-      </Button>
       <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
-      <AddToListButton member={{ type: "work", id: data.openLibraryWorkId, title: data.title }} />
+      <AddToListButton
+        member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
+        onSave={async () => {
+          // Keeps the cover on disk so the saved work still shows it offline.
+          if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+          return saveWork(data);
+        }}
+        onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
+      />
 
       <Button
         variant="primary"
@@ -217,7 +202,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    saveButton: { marginTop: spacing.md },
     genresSection: { marginTop: spacing.xxl, width: "100%" },
     genreTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     genreTag: {

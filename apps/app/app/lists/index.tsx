@@ -10,8 +10,8 @@ import { getLists, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 const SECTIONS = [
-  { kind: "book", title: "Book lists", noun: "book", empty: "No book lists yet. Tap “Add to list” on a book page to start one." },
-  { kind: "author", title: "Author lists", noun: "author", empty: "No author lists yet. Tap “Add to list” on an author page to start one." },
+  { kind: "book", title: "Book lists", noun: "book", empty: "No book lists yet. Tap “Save to list” on a book page to start one." },
+  { kind: "author", title: "Author lists", noun: "author", empty: "No author lists yet. Tap “Save to list” on an author page to start one." },
 ] as const;
 
 export default function Lists() {
@@ -21,8 +21,13 @@ export default function Lists() {
   const [lists, setLists] = useState<SavedList[]>([]);
   const [creating, setCreating] = useState(false);
 
+  const [error, setError] = useState("");
+
   const load = useCallback(() => {
-    getLists().then(setLists).catch(() => setLists([]));
+    setError("");
+    getLists()
+      .then(setLists)
+      .catch(() => setError("Couldn't load your lists. Try again."));
   }, []);
   useFocusEffect(load);
 
@@ -40,6 +45,17 @@ export default function Lists() {
           }}
         />
       )}
+
+      {error ? (
+        <>
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {error}
+          </Text>
+          <Button variant="pill" onPress={load} style={styles.retry}>
+            Retry
+          </Button>
+        </>
+      ) : null}
 
       {SECTIONS.map((section) => {
         const ofKind = lists.filter((l) => l.kind === section.kind);
@@ -85,6 +101,8 @@ export default function Lists() {
 
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
+    error: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.md },
+    retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
     container: { flex: 1, backgroundColor: colors.paper },
     content: { padding: spacing.lg },
     sectionTitle: {
