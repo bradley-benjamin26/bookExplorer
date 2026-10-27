@@ -5,13 +5,11 @@ import { WEB_ORIGIN, shareFeedback, webUrl } from "../share";
 import { useTheme } from "../theme";
 import { Button } from "./Button";
 
-/** Resolves true when it copied to the clipboard instead of opening a share sheet. */
-async function shareLink(title: string, url: string): Promise<boolean> {
+/** Web always copies the link (the browser share sheet offers Notes and Freeform); native opens its share sheet. Resolves true when it copied. */
+async function shareLink(url: string): Promise<boolean> {
   if (Platform.OS !== "web") {
     // iOS shows `message` and `url` both, so send only one per platform.
     await Share.share(Platform.OS === "ios" ? { url } : { message: url });
-  } else if (navigator.share) {
-    await navigator.share({ title, url });
   } else {
     await navigator.clipboard.writeText(url);
     return true;
@@ -19,14 +17,14 @@ async function shareLink(title: string, url: string): Promise<boolean> {
   return false;
 }
 
-/** Shares the link to the page shown: native share sheet, Web Share API, or copy-to-clipboard on web browsers without it. */
+/** Shares the link to the page shown: native share sheet, or copy-to-clipboard on web. */
 export function ShareButton({ title, href, style }: { title: string; href: Href; style?: StyleProp<ViewStyle> }) {
   const { colors } = useTheme();
   const [status, setStatus] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   const share = async () => {
-    const message = await shareFeedback(() => shareLink(title, webUrl(href, Platform.OS === "web" ? undefined : WEB_ORIGIN)));
+    const message = await shareFeedback(() => shareLink(webUrl(href, Platform.OS === "web" ? undefined : WEB_ORIGIN)));
     setStatus(message);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setStatus(""), 3000);
