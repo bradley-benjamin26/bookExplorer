@@ -8,6 +8,7 @@ import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
+import { connectionStep } from "../src/connectionSteps";
 import { routes } from "../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
@@ -19,14 +20,17 @@ const SEARCHING_MESSAGE = "Searching… this can take up to 25 seconds.";
 
 export default function Connection() {
   const params = useLocalSearchParams<{ from: string; label?: string }>();
-  const from = params.from;
-  const label = params.label || "this item";
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Set only when opened from My Library, where no starting book comes in the route.
+  const [start, setStart] = useState<WorkRef | null>(null);
   const [target, setTarget] = useState<WorkRef | null>(null);
+  const from = params.from ?? (start ? `work:${start.openLibraryWorkId}` : undefined);
+  const label = params.label ?? start?.title ?? "this item";
+  const step = connectionStep(params.from, start, target);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS);
@@ -37,13 +41,13 @@ export default function Connection() {
   const search = useQuery({
     queryKey: ["search", { q: trimmedQuery }],
     queryFn: () => searchBooks({ q: trimmedQuery }),
-    enabled: !target && trimmedQuery.length >= MIN_QUERY_LENGTH,
+    enabled: step !== "result" && trimmedQuery.length >= MIN_QUERY_LENGTH,
   });
 
   const to = target ? `work:${target.openLibraryWorkId}` : "";
   const path = useQuery({
     queryKey: ["path", from, to],
-    queryFn: ({ signal }) => fetchPath(from, to, signal),
+    queryFn: ({ signal }) => fetchPath(from!, to, signal),
     enabled: !!from && !!to,
     // Each run is costly and tightly rate-limited server-side, so never repeat one on its own.
     retry: false,
@@ -68,7 +72,7 @@ export default function Connection() {
   const sep = (from ?? "").indexOf(":");
   const [fromType, fromId] = [from?.slice(0, sep), from?.slice(sep + 1)];
 
-  if (!target) {
+  if (step !== "result" || !target) {
     return (
       <FlatList
         style={styles.container}
@@ -79,10 +83,13 @@ export default function Connection() {
         ListHeaderComponent={
           <View>
             <Text style={styles.heading} accessibilityRole="header">
-              Connect {label} to…
+              {step === "pickStart" ? "Choose the first book" : `Connect ${label} to…`}
+            </Text>
+            <Text style={styles.howTitle} accessibilityRole="header">
+              How it works
             </Text>
             <Text style={styles.explainer}>
-              Pick a second book and we'll show how the two are linked: through shared authors, subjects, series or influences.
+              Pick two books. Shelf Thread searches outward from the first: through its authors, subjects, series, and the writers who influenced them, up to 4 steps away, until it reaches the second. You'll see up to three connections, best first, and can open each one on the graph. A search can take up to 25 seconds.
             </Text>
             <TextInput
               style={styles.input}
@@ -98,7 +105,13 @@ export default function Connection() {
             {search.isError && <Text style={styles.errorText}>{search.error.message}</Text>}
           </View>
         }
-        renderItem={({ item }) => <WorkListRow work={item} onPress={() => setTarget(item)} />}
+        renderItem={({ item }) => <WorkListRow work={item} onPress={() => {
+          if (step === "pickStart") {
+            setStart(item);
+            setQuery("");
+            setDebouncedQuery("");
+          } else setTarget(item);
+        }} />}
         ListFooterComponent={<Footer />}
       />
     );
@@ -163,6 +176,21 @@ export default function Connection() {
       <Button variant="pill" onPress={() => setTarget(null)} style={styles.action} accessibilityLabel="Choose a different book">
         Choose a Different Book
       </Button>
+      {start && !params.from && (
+        <Button
+          variant="pill"
+          onPress={() => {
+            setStart(null);
+            setTarget(null);
+            setQuery("");
+            setDebouncedQuery("");
+          }}
+          style={styles.action}
+          accessibilityLabel="Start over and choose the first book again"
+        >
+          Start Over
+        </Button>
+      )}
       <Footer />
     </ScrollView>
   );
@@ -173,6 +201,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     content: { padding: spacing.lg },
     explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
+    howTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.xs },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     input: {
       borderWidth: 1,
