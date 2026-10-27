@@ -88,6 +88,7 @@ export default function AuthorDetail() {
         variant="primary"
         onPress={() => router.push(routes.graph("author", data.openLibraryId))}
         style={styles.graphButton}
+        tooltip="See this book's authors, subjects and links as a graph"
       >
         View as Graph
       </Button>
@@ -96,6 +97,7 @@ export default function AuthorDetail() {
         onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
         style={styles.graphButton}
         accessibilityLabel={`Find a connection from ${data.name}`}
+        tooltip="Find how this book links to another"
       >
         Find Connection
       </Button>

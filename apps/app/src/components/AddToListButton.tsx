@@ -170,7 +170,7 @@ export function AddToListButton({
 
   return (
     <>
-      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={styles.trigger}>
+      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={styles.trigger} tooltip="Save to one of your lists">
         Save to list
       </Button>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>

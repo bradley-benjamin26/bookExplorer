@@ -17,6 +17,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
+import { titleRef } from "../../../src/webTitle";
 import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { nodeHref, routes } from "../../../src/navigation";
@@ -403,7 +404,7 @@ export default function GraphExplorer() {
         )}
       </View>
       <View style={styles.toolbar}>
-        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph">
+        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
         <Button
@@ -413,6 +414,7 @@ export default function GraphExplorer() {
             setShowList((v) => !v);
           }}
           accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
+          tooltip={showList ? "Show as a graph" : "Show as a list"}
         >
           {showList ? "Graph" : "List"}
         </Button>
@@ -451,6 +453,7 @@ export default function GraphExplorer() {
       </Modal>
       {history.length > 0 && (
         <Pressable
+          ref={titleRef("Back to the previous graph")}
           onPress={handleBack}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
@@ -479,6 +482,7 @@ export default function GraphExplorer() {
             return (
               <View key={node.id} style={styles.listRow}>
                 <Pressable
+                  ref={titleRef(href ? `Open ${node.label}` : `${node.label} has no page yet`)}
                   onPress={() => href && router.push(href)}
                   disabled={!href}
                   accessibilityRole="button"
@@ -500,6 +504,7 @@ export default function GraphExplorer() {
                 </Pressable>
                 {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && (
                   <Pressable
+                    ref={titleRef(`Center graph on ${node.label}`)}
                     onPress={() => handleNodePress(node)}
                     accessibilityRole="button"
                     accessibilityLabel={`Center graph on ${node.label}`}
@@ -670,6 +675,7 @@ export default function GraphExplorer() {
           return (
             <Pressable
               key={node.id}
+              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `Center the graph on ${node.label}`)}
               onPress={() => handleNodePress(node)}
               disabled={!node.navigable}
               accessibilityRole="button"
@@ -697,6 +703,7 @@ export default function GraphExplorer() {
           </Animated.View>
           <View style={styles.zoomControls}>
             <Pressable
+              ref={titleRef("Zoom in")}
               onPress={() => zoomByStep(DOUBLE_TAP_ZOOM_STEP)}
               accessibilityRole="button"
               accessibilityLabel="Zoom in"
@@ -706,6 +713,7 @@ export default function GraphExplorer() {
               <ZoomIn size={20} color={theme.colors.cover} strokeWidth={2} />
             </Pressable>
             <Pressable
+              ref={titleRef("Zoom out")}
               onPress={() => zoomByStep(1 / DOUBLE_TAP_ZOOM_STEP)}
               accessibilityRole="button"
               accessibilityLabel="Zoom out"
@@ -715,6 +723,7 @@ export default function GraphExplorer() {
               <ZoomOut size={20} color={theme.colors.cover} strokeWidth={2} />
             </Pressable>
             <Pressable
+              ref={titleRef("Fit the whole graph")}
               onPress={resetView}
               accessibilityRole="button"
               accessibilityLabel="Reset zoom to fit the whole graph"

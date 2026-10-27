@@ -216,6 +216,7 @@ export default function BookDetail() {
             variant="primary"
             onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
             style={styles.graphButton}
+            tooltip="See this book's authors, subjects and links as a graph"
           >
             View as Graph
           </Button>
@@ -225,6 +226,7 @@ export default function BookDetail() {
             style={styles.graphButton}
             accessibilityLabel={`Find a connection from ${data.title}`}
             accessibilityHint="Shows how this book links to another book you pick"
+            tooltip="Find how this book links to another"
           >
             Find Connection
           </Button>

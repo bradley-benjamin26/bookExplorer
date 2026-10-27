@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Footer } from "../src/components/Footer";
 import { routes } from "../src/navigation";
+import { titleRef } from "../src/webTitle";
 import { getRecentBooks, type RecentBook } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
@@ -41,6 +42,7 @@ export default function Home() {
         </View>
 
         <Pressable
+          ref={titleRef("Scan a book's barcode")}
           onPress={() => router.push("/scan")}
           accessibilityRole="button"
           accessibilityLabel="Scan a book"
@@ -66,6 +68,7 @@ export default function Home() {
             onSubmitEditing={submitSearch}
           />
           <Pressable
+            ref={titleRef("Search")}
             onPress={submitSearch}
             accessibilityRole="button"
             accessibilityLabel="Search"

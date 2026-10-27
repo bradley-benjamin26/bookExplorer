@@ -2,6 +2,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
+import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
 import { Footer } from "../../src/components/Footer";
 import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
@@ -121,6 +122,7 @@ export default function ListDetail() {
                   </Text>
                 </Pressable>
                 <Pressable
+                  ref={titleRef("Remove from this list")}
                   style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
                   onPress={() => handleRemove(member)}
                   hitSlop={8}
@@ -133,10 +135,10 @@ export default function ListDetail() {
             ))
           )}
           <View style={styles.exportRow}>
-            <Button variant="pill" onPress={() => exportList("csv")}>
+            <Button variant="pill" onPress={() => exportList("csv")} tooltip="Download for Goodreads or StoryGraph">
               Export CSV
             </Button>
-            <Button variant="pill" onPress={() => exportList("json")}>
+            <Button variant="pill" onPress={() => exportList("json")} tooltip="Download a backup of this list">
               Export JSON
             </Button>
           </View>

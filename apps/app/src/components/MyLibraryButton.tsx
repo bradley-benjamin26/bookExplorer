@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Library } from "lucide-react-native";
 import { Pressable } from "react-native";
 import { routes } from "../navigation";
+import { titleRef } from "../webTitle";
 import { useTheme } from "../theme";
 import { Button } from "./Button";
 
@@ -13,6 +14,7 @@ export function MyLibraryButton({ iconOnly = false }: { iconOnly?: boolean }) {
   if (iconOnly) {
     return (
       <Pressable
+        ref={titleRef("My Library")}
         onPress={open}
         accessibilityRole="button"
         accessibilityLabel="My Library"
@@ -28,7 +30,7 @@ export function MyLibraryButton({ iconOnly = false }: { iconOnly?: boolean }) {
     );
   }
   return (
-    <Button variant="pill" onPress={open}>
+    <Button variant="pill" onPress={open} tooltip="My Library">
       My Library
     </Button>
   );

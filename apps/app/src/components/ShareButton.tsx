@@ -29,7 +29,7 @@ export function ShareButton({ title, href, style }: { title: string; href: Href;
   };
   return (
     <View style={style}>
-      <Button variant="pill" onPress={share} accessibilityLabel={`Share ${title}`}>
+      <Button variant="pill" onPress={share} accessibilityLabel={`Share ${title}`} tooltip="Copy a link to this page">
         Share
       </Button>
       <Text accessibilityLiveRegion="polite" style={{ position: "absolute", top: "100%", color: colors.textMuted }}>

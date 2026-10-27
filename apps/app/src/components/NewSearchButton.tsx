@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
 import { Pressable } from "react-native";
+import { titleRef } from "../webTitle";
 import { useTheme } from "../theme";
 import { Button } from "./Button";
 
@@ -12,6 +13,7 @@ export function NewSearchButton({ iconOnly = false }: { iconOnly?: boolean }) {
   if (iconOnly) {
     return (
       <Pressable
+        ref={titleRef("New search")}
         onPress={open}
         accessibilityRole="button"
         accessibilityLabel="New search"
@@ -27,7 +29,7 @@ export function NewSearchButton({ iconOnly = false }: { iconOnly?: boolean }) {
     );
   }
   return (
-    <Button variant="pill" onPress={open}>
+    <Button variant="pill" onPress={open} tooltip="New search">
       New Search
     </Button>
   );
