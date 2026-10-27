@@ -63,7 +63,7 @@ describe("pageMeta", () => {
   });
 
   it("invalid id or unknown path → null, no service call", async () => {
-    for (const p of ["/work/nope", "/book/123", "/author/OL1W", "/subject/Not A Slug", "/graph/x/OL1W", "/other", "/", "/work/OL1W/extra"]) {
+    for (const p of ["/work/nope", "/book/123", "/author/OL1W", "/subject/, --", "/graph/x/OL1W", "/other", "/", "/work/OL1W/extra"]) {
       expect(await pageMeta(p)).toBeNull();
     }
     expect(getWorkDetail).not.toHaveBeenCalled();

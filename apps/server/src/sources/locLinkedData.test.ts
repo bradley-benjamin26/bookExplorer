@@ -56,6 +56,16 @@ describe("findSubjectHeadingUri", () => {
     expect(uri).toBe("http://id.loc.gov/authorities/subjects/sh00000099");
   });
 
+  it("matches suggest2's '--' heading against Open Library's collapsed name", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({ hits: [{ aLabel: "Science fiction--Authorship", uri: "http://id.loc.gov/authorities/subjects/sh2008111319" }] })
+    );
+
+    const uri = await findSubjectHeadingUri("science fiction authorship");
+    expect(uri).toBe("http://id.loc.gov/authorities/subjects/sh2008111319");
+  });
+
   it("rejects a left-anchored near-miss that isn't an exact label match", async () => {
     vi.stubGlobal(
       "fetch",

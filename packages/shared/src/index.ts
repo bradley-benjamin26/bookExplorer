@@ -215,9 +215,21 @@ export const SubjectSchema = z.object({
 });
 export type Subject = z.infer<typeof SubjectSchema>;
 
-/** Open Library's subject URLs are the subject name, lowercased with spaces turned into underscores. */
+/**
+ * Open Library's subject URLs: the name lowercased, with spaces turned into
+ * underscores. LCSH's "--" subdivisions and commas are dropped, since Open
+ * Library files "Science fiction -- Authorship" as science_fiction_authorship;
+ * hyphens, apostrophes, parentheses and periods stay (they make different
+ * subjects there). Idempotent, so it also turns a legacy slug canonical.
+ */
 export function slugifySubject(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, "_");
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/,/g, "") // first, so "-,-" can't leave a new "--" behind
+    .replace(/--/g, " ")
+    .replace(/[\s_]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 export const GraphNodeSchema = z.object({

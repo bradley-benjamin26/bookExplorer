@@ -1,3 +1,4 @@
+import { slugifySubject } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
@@ -65,8 +66,8 @@ function labelVariants(name: string): string[] {
 
 /**
  * Resolves a subject heading's own label (e.g. "Fairy tales") to its LCSH
- * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact,
- * case-insensitive match against the label or its singular/plural variant —
+ * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact
+ * slug match (see slugifySubject) against the label or its singular/plural variant —
  * a left-anchored near-miss like "Fairy tales--Adaptations" is a different,
  * more specific heading and must not be treated as a match. Never throws:
  * any failure (network error, non-ok response, no hits, no match) degrades
@@ -78,8 +79,9 @@ export async function findSubjectHeadingUri(name: string): Promise<string | null
     const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
     if (!res.ok) return null;
     const data = (await res.json()) as Suggest2Response;
-    const targets = labelVariants(name);
-    const hit = (data.hits ?? []).find((h) => targets.includes(h.aLabel?.toLowerCase()));
+    // Compared as slugs: Open Library's collapsed "science fiction authorship" is LCSH's "Science fiction--Authorship".
+    const targets = labelVariants(name).map(slugifySubject);
+    const hit = (data.hits ?? []).find((h) => typeof h.aLabel === "string" && targets.includes(slugifySubject(h.aLabel)));
     return hit?.uri ?? null;
   } catch {
     return null;

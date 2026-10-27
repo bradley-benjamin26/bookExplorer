@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PersistedClient, PersistQueryClientOptions, Persister } from "@tanstack/react-query-persist-client";
 import { getSavedItems } from "./storage/savedItems";
 
-// Bump when a cached response shape changes; the persisted cache is then dropped on next launch.
-export const CACHE_SCHEMA_VERSION = 2;
+// Bump when a cached response shape (or its ids, e.g. subject slugs) changes; the persisted cache is then dropped on next launch.
+export const CACHE_SCHEMA_VERSION = 3;
 export const CACHE_LIMIT = 50;
 // Total size budget across all stored queries (each is its own AsyncStorage value, so no single value nears
 // Android's ~2 MB read limit). Characters, not bytes, so this leaves room for non-ASCII text and web's ~5 MB quota.

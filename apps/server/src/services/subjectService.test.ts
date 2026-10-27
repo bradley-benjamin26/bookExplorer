@@ -152,3 +152,31 @@ describe("getSubjectBooks", () => {
     expect(wikidata.fetchRelatedConcepts).not.toHaveBeenCalled();
   });
 });
+
+describe("legacy '--' slugs", () => {
+  beforeEach(() => {
+    vi.mocked(openLibrary.getSubject).mockReset();
+  });
+
+  it("asks Open Library for the canonical slug first", async () => {
+    vi.mocked(openLibrary.getSubject).mockResolvedValue({ name: "Science fiction authorship", workCount: 141, works: [] });
+
+    const subject = await getSubjectBooks("science_fiction_--_authorship");
+    expect(openLibrary.getSubject).toHaveBeenCalledTimes(1);
+    expect(openLibrary.getSubject).toHaveBeenCalledWith("science_fiction_authorship");
+    expect(subject).toMatchObject({ slug: "science_fiction_authorship", workCount: 141 });
+  });
+
+  it("falls back to the raw slug when the canonical one has no works, still answering with the canonical slug", async () => {
+    vi.mocked(openLibrary.getSubject).mockImplementation(async (slug) =>
+      slug === "authors_american_20th_century_interviews"
+        ? { name: "Authors, American 20th century interviews", workCount: 0, works: [] }
+        : { name: "Authors, American -- 20th century -- Interviews", workCount: 4, works: [] }
+    );
+
+    const subject = await getSubjectBooks("authors,_american_--_20th_century_--_interviews");
+    expect(openLibrary.getSubject).toHaveBeenNthCalledWith(1, "authors_american_20th_century_interviews");
+    expect(openLibrary.getSubject).toHaveBeenNthCalledWith(2, "authors,_american_--_20th_century_--_interviews");
+    expect(subject).toMatchObject({ slug: "authors_american_20th_century_interviews", workCount: 4 });
+  });
+});

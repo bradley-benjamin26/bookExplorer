@@ -1,4 +1,4 @@
-import type { Subject, SubjectConcept } from "@book-explorer/shared";
+import { slugifySubject, type Subject, type SubjectConcept } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as locLinkedData from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
@@ -64,6 +64,18 @@ function mergeSubjectConcepts(
 }
 
 /**
+ * Open Library's subject for a slug, tried in its canonical form first. Only
+ * if that has no works is a different raw slug tried: a legacy "--" slug from
+ * an old link, for the rare heading Open Library files only that way.
+ */
+async function loadOlSubject(slug: string): Promise<openLibrary.OpenLibrarySubject | null> {
+  const canonical = slugifySubject(slug);
+  const ol = await openLibrary.getSubject(canonical);
+  if ((ol && ol.workCount > 0) || canonical === slug) return ol;
+  return (await openLibrary.getSubject(slug)) ?? ol;
+}
+
+/**
  * Shared by the /api/subjects and /api/graph/subject routes so both hit the
  * same cache. LCSH and Wikidata are optional: a failed lookup is served
  * without them and cached only briefly (see optionalSource), so an outage
@@ -71,7 +83,7 @@ function mergeSubjectConcepts(
  */
 export function getSubjectDetail(slug: string): Promise<Subject | null> {
   return subjectCache.wrap(slug, async (entry) => {
-    const ol = await openLibrary.getSubject(slug);
+    const ol = await loadOlSubject(slug);
     if (!ol) return null;
 
     // Matching by name alone confuses same-spelled things ("ghosts" the
@@ -91,7 +103,7 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
       qid ? wikidata.fetchRelatedConcepts(qid).catch(optionalSource<SubjectConcept[]>(entry, "wikidata related concepts", [])) : [],
       qid ? wikidata.fetchDescription(qid).catch(optionalSource<string | null>(entry, "wikidata description", null)) : null,
     ]);
-    return toSubject(slug, ol, qid, description, mergeSubjectConcepts(wikidataConcepts, lcshConcepts));
+    return toSubject(slugifySubject(slug), ol, qid, description, mergeSubjectConcepts(wikidataConcepts, lcshConcepts));
   });
 }
 
@@ -102,7 +114,7 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
  */
 export function getSubjectBooks(slug: string): Promise<Subject | null> {
   return subjectBooksCache.wrap(slug, async () => {
-    const ol = await openLibrary.getSubject(slug);
-    return ol && toSubject(slug, ol, null, null, []);
+    const ol = await loadOlSubject(slug);
+    return ol && toSubject(slugifySubject(slug), ol, null, null, []);
   });
 }

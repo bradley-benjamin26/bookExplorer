@@ -32,7 +32,8 @@ export function isPathEndpointId(nodeId: string): boolean {
   const id = nodeId.slice(sep + 1);
   if (type === "author") return isOpenLibraryAuthorId(id);
   if (type === "work") return isOpenLibraryWorkId(id);
-  if (type === "subject") return isSubjectSlug(id);
+  // Legacy and unslugified ids are accepted; the path route canonicalizes them.
+  if (type === "subject" || type === "genre") return isSubjectSlug(slugifySubject(id));
   return false;
 }
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { normalizeTitle } from "@book-explorer/shared";
 import { buildWorkLinksGraph, cleanGraph } from "./graphService.js";
+import { getWorkLinks } from "./workService.js";
 
 vi.mock("./workService.js", () => ({
   getWorkDetail: vi.fn(),
@@ -109,5 +110,17 @@ describe("buildWorkLinksGraph", () => {
   it("builds a work's links graph with 'genre:' subjects as genre nodes and no editions node", async () => {
     const graph = await buildWorkLinksGraph("OL1W");
     expect(graph?.nodes.map((n) => n.id)).toEqual(["work:OL1W", "author:OL2A", "subject:desert", "genre:science_fiction"]);
+  });
+
+  it("links an LOC '--' heading and Open Library's collapsed spelling of it to one subject node", async () => {
+    const work = (id: string, subject: string, source: "loc" | "openLibrary") => ({
+      openLibraryWorkId: id, title: id, authors: [], subjects: [{ label: subject, sources: [source] }], genres: [], editions: [],
+    });
+    vi.mocked(getWorkLinks)
+      .mockResolvedValueOnce(work("OL10W", "Science fiction -- Authorship", "loc") as never)
+      .mockResolvedValueOnce(work("OL11W", "science fiction authorship", "openLibrary") as never);
+    const [a, b] = [await buildWorkLinksGraph("OL10W"), await buildWorkLinksGraph("OL11W")];
+    expect(a?.edges).toContainEqual({ source: "work:OL10W", target: "subject:science_fiction_authorship", relation: "subject" });
+    expect(b?.edges).toContainEqual({ source: "work:OL11W", target: "subject:science_fiction_authorship", relation: "subject" });
   });
 });

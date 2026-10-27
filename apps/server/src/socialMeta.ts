@@ -1,4 +1,4 @@
-import { isValidIsbn } from "@book-explorer/shared";
+import { isValidIsbn, slugifySubject } from "@book-explorer/shared";
 import { getAuthorDetail } from "./services/authorService.js";
 import { getBookDetail } from "./services/bookService.js";
 import { getSubjectDetail } from "./services/subjectService.js";
@@ -54,7 +54,7 @@ const LOOKUPS: Record<string, { valid: (id: string) => boolean; load: Lookup }> 
     },
   },
   subject: {
-    valid: isSubjectSlug,
+    valid: (slug) => isSubjectSlug(slugifySubject(slug)),
     load: async (slug) => {
       const s = await getSubjectDetail(slug);
       return s && { title: s.name, description: describe(s.description, s.name), image: s.books[0]?.coverUrl ?? null };
