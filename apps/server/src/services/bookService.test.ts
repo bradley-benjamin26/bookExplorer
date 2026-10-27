@@ -42,6 +42,44 @@ describe("getBookDetail description", () => {
   });
 });
 
+describe("getBookDetail non-English description", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("drops a Spanish Open Library description and falls through to Google Books", async () => {
+    vi.mocked(openLibrary.lookupByIsbn).mockResolvedValue({
+      title: "T",
+      authors: [{ name: "A" }],
+      subjects: [],
+      coverUrl: "ol.jpg",
+      description: "Bilbo Bolsón es un hobbit que vive cómodamente en su agujero hasta el día en que el mago Gandalf lo elige para una aventura.",
+      workId: "OL1W",
+    } as never);
+    vi.mocked(googleBooks.lookupByIsbn).mockResolvedValue({ description: "A real synopsis.", coverUrl: null, rating: null });
+
+    const book = await getBookDetail("9780000000003");
+
+    expect(book?.description).toBe("A real synopsis.");
+    expect(book?.descriptionSource).toBe("googleBooks");
+  });
+
+  it("has no description when every source is non-English", async () => {
+    vi.mocked(openLibrary.lookupByIsbn).mockResolvedValue({
+      title: "T",
+      authors: [{ name: "A" }],
+      subjects: [],
+      coverUrl: "ol.jpg",
+      description: "Bilbo Bolsón es un hobbit que vive cómodamente en su agujero hasta el día en que el mago Gandalf lo elige para una aventura.",
+      workId: "OL1W",
+    } as never);
+    vi.mocked(googleBooks.lookupByIsbn).mockResolvedValue(null);
+
+    const book = await getBookDetail("9780000000004");
+
+    expect(book?.description).toBeNull();
+    expect(book?.descriptionSource).toBeNull();
+  });
+});
+
 describe("getBookDetail authors", () => {
   beforeEach(() => vi.clearAllMocks());
 

@@ -2,6 +2,7 @@ import { splitSubjectTerms, type Work } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
+import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByAuthor, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
@@ -77,6 +78,7 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     const result: Work = {
       openLibraryWorkId: workId,
       ...ol,
+      description: englishOrNull(ol.description),
       // Same Open-Library-then-Hardcover cover fallback as a scanned book —
       // no Google Books here (see above), so a work whose edition Open
       // Library has no cover recorded for just has none instead of falling
