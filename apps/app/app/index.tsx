@@ -86,6 +86,7 @@ export default function Home() {
             </Text>
             <FlatList
               data={recent}
+              contentContainerStyle={{ flexGrow: 1 }}
               keyExtractor={(item) => item.isbn}
               renderItem={({ item }) => (
                 <Pressable
@@ -115,6 +116,7 @@ export default function Home() {
                 </Pressable>
               )}
               ListFooterComponent={<Footer />}
+              ListFooterComponentStyle={{ marginTop: "auto" }}
             />
           </View>
         )}

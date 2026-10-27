@@ -120,6 +120,7 @@ export default function SubjectDetail() {
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
       ListFooterComponent={<Footer />}
+      ListFooterComponentStyle={{ marginTop: "auto" }}
     />
   );
 }
@@ -127,7 +128,7 @@ export default function SubjectDetail() {
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     name: {
       fontFamily: fonts.display,

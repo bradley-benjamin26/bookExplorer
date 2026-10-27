@@ -219,7 +219,7 @@ export default function Settings() {
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     sectionTitle: {
       fontFamily: fonts.displayMedium,
       fontSize: typeScale.md,

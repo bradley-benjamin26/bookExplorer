@@ -47,7 +47,7 @@ export default function Recommendations() {
 function createStyles({ colors, spacing }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     pills: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     pill: { alignSelf: "auto" },
   });

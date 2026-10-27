@@ -146,7 +146,7 @@ export default function AuthorDetail() {
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg, alignItems: "flex-start" },
+    content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
     dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },

@@ -113,6 +113,7 @@ export default function Connection() {
           } else setTarget(item);
         }} />}
         ListFooterComponent={<Footer />}
+      ListFooterComponentStyle={{ marginTop: "auto" }}
       />
     );
   }
@@ -199,7 +200,7 @@ export default function Connection() {
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
     howTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.xs },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },

@@ -155,7 +155,7 @@ export default function ListDetail() {
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     name: { fontFamily: fonts.displayMedium, fontSize: typeScale.lg, color: colors.ink },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.sm, lineHeight: 22 },
     emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },

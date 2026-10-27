@@ -104,7 +104,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     error: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.md },
     retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     sectionTitle: {
       fontFamily: fonts.displayMedium,
       fontSize: typeScale.md,

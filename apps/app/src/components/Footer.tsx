@@ -1,5 +1,5 @@
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { useThemedStyles, type Theme } from "../theme";
+import { spacing, useThemedStyles, type Theme } from "../theme";
 
 const WIKIDATA_LOGO_URL =
   "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Wikidata_Stamp_Rec_Light.svg/960px-Wikidata_Stamp_Rec_Light.svg.png";
@@ -26,6 +26,9 @@ function createStyles({ colors, fonts, typeScale }: Theme) {
       alignItems: "center",
       justifyContent: "center",
       paddingVertical: 8,
+      paddingTop: spacing.xl,
+      marginTop: "auto",
+      alignSelf: "stretch",
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.paper,

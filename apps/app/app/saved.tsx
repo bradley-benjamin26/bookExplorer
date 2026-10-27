@@ -34,7 +34,7 @@ export default function Saved() {
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     pressed: { opacity: 0.6 },
     navRow: {
       flexDirection: "row",
