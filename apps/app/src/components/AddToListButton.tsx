@@ -2,7 +2,8 @@ import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
-import { applyListChanges, listChanges } from "../storage/listMembership";
+import { confirmLeave } from "../confirm";
+import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import {
   createList,
   getLists,
@@ -11,6 +12,7 @@ import {
 } from "../storage/savedLists";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { titleRef } from "../webTitle";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -89,7 +91,7 @@ export function CreateListForm({
 }
 
 /** Lets a parent open the list sheet itself. */
-export type SaveSheetHandle = { open: () => void };
+export type SaveSheetHandle = { open: (notice?: string) => void };
 
 const LOAD_ERROR = "Couldn't load your lists. Try again.";
 
@@ -126,6 +128,8 @@ export function AddToListButton({
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Why the sheet was opened for the user, e.g. the lock asking to save first. The pill clears it.
+  const [notice, setNotice] = useState("");
 
   const holds = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
 
@@ -149,7 +153,8 @@ export function AddToListButton({
       .catch(() => setLoadError(LOAD_ERROR))
       .finally(() => setLoading(false));
   };
-  const show = () => {
+  const show = (why = "") => {
+    setNotice(why);
     setCreating(false);
     setError("");
     setOpen(true);
@@ -163,8 +168,9 @@ export function AddToListButton({
     });
   const done = async () => {
     setError("");
-    setBusy(true);
+    setBusy(true); // also blocks a second tap while the confirm is up
     try {
+      if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
       await applyListChanges(member, listChanges(lists, member, checked), onSave);
       onChange?.();
       setOpen(false);
@@ -175,7 +181,7 @@ export function AddToListButton({
       refreshStar();
     }
   };
-  useImperativeHandle(ref, () => ({ open: show }));
+  useImperativeHandle(ref, () => ({ open: (why) => show(why) }));
   const handleCreated = async (list: SavedList) => {
     setChecked((prev) => new Set(prev).add(list.id));
     setCreating(false);
@@ -184,7 +190,7 @@ export function AddToListButton({
 
   return (
     <>
-      {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
+      {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={() => show()} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -194,6 +200,11 @@ export function AddToListButton({
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
               </Text>
+              {!!notice && (
+                <Text style={styles.notice} accessibilityLiveRegion="polite">
+                  {notice}
+                </Text>
+              )}
               {loadError ? (
                 <>
                   <Text style={styles.error} accessibilityLiveRegion="polite">
@@ -210,6 +221,7 @@ export function AddToListButton({
                     const Icon = isChecked ? SquareCheck : Square;
                     return (
                       <Pressable
+                        ref={titleRef(`Add to or remove from ${list.name}`)}
                         key={list.id}
                         style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                         onPress={() => toggle(list)}
@@ -225,6 +237,7 @@ export function AddToListButton({
                     );
                   })}
                   <Pressable
+                    ref={titleRef("Create a new list")}
                     style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                     onPress={() => setCreating((c) => !c)}
                     accessibilityRole="button"
@@ -272,6 +285,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     },
     sheetContent: { padding: spacing.lg },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
+    notice: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.md },
     row: {
       flexDirection: "row",
       alignItems: "center",

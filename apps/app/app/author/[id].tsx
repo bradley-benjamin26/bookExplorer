@@ -11,12 +11,15 @@ import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
+import { AboutSection } from "../../src/components/AboutSection";
+import { DetailTop } from "../../src/components/DetailTop";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleRef } from "../../src/webTitle";
 
 const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
   { relation: "influencedBy", title: "Influenced by" },
@@ -56,59 +59,60 @@ export default function AuthorDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.photoUrl && (
-        <>
-          <Image
-            source={{ uri: data.photoUrl }}
-            style={styles.photo}
-            contentFit="cover"
-            accessibilityLabel={`Photo of ${data.name}`}
-          />
-          {/* Commons images carry their own licences; the Wikipedia page credits them. */}
-          {data.bioSourceUrl && (
-            <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
-              <Text style={styles.photoCredit}>Photo via Wikipedia</Text>
-            </Pressable>
-          )}
-        </>
-      )}
-      <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
-      {(data.birthDate || data.deathDate) && (
-        <Text style={styles.dates}>
-          {data.birthDate ?? "?"} – {data.deathDate ?? "present"}
-        </Text>
-      )}
-      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} style={{ marginTop: 8 }} />
-      <AddToListButton
-        style={{ marginTop: 8 }}
-        member={{ type: "author", id: data.openLibraryId, title: data.name }}
-        onSave={() => saveAuthor(data.openLibraryId, data.name)}
-      />
-      {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
-      {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
-      {data.bioSource === "wikipedia" && data.bioSourceUrl && (
-        <Pressable
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => Linking.openURL(data.bioSourceUrl!)}
-        >
-          <Text style={styles.bioSource}>via Wikipedia</Text>
-        </Pressable>
-      )}
-      {data.pseudonyms.length > 0 && (
-        <Text style={styles.pseudonyms}>Also published as {data.pseudonyms.join(", ")}</Text>
-      )}
-
-      {!data.wikidataId && (
-        <Text style={styles.noMatch}>No Wikidata match found — showing Open Library data only.</Text>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [styles.openLibraryLink, pressed && styles.pressed]}
-        onPress={() => Linking.openURL(`https://openlibrary.org/authors/${data.openLibraryId}`)}
+      <DetailTop
+        image={
+          data.photoUrl ? (
+            <>
+              <Image
+                source={{ uri: data.photoUrl }}
+                style={styles.photo}
+                contentFit="cover"
+                accessibilityLabel={`Photo of ${data.name}`}
+              />
+              {/* Commons images carry their own licences; the Wikipedia page credits them. */}
+              {data.bioSourceUrl && (
+                <Pressable ref={titleRef("Photo source on Wikipedia")} accessibilityRole="link" style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
+                  <Text style={styles.photoCredit}>Photo via Wikipedia</Text>
+                </Pressable>
+              )}
+            </>
+          ) : undefined
+        }
+        title={data.name}
+        actions={
+          <>
+            <ShareButton title={data.name} href={routes.author(data.openLibraryId)} />
+            <AddToListButton
+              member={{ type: "author", id: data.openLibraryId, title: data.name }}
+              onSave={() => saveAuthor(data.openLibraryId, data.name)}
+            />
+          </>
+        }
       >
-        <Text style={styles.openLibraryLinkText}>View on Open Library</Text>
-      </Pressable>
-
+        {(data.birthDate || data.deathDate) && (
+          <Text style={styles.dates}>
+            {data.birthDate ?? "?"} – {data.deathDate ?? "present"}
+          </Text>
+        )}
+      </DetailTop>
+      {data.bio && (
+        <AboutSection
+          text={data.bio}
+          credit={
+            // Wikipedia's text is CC BY-SA, which requires attribution on reuse.
+            data.bioSource === "wikipedia" && data.bioSourceUrl ? (
+              <Pressable
+                ref={titleRef("Read the source on Wikipedia")}
+                accessibilityRole="link"
+                style={({ pressed }) => pressed && styles.pressed}
+                onPress={() => Linking.openURL(data.bioSourceUrl!)}
+              >
+                <Text style={styles.bioSource}>via Wikipedia</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
+      )}
       <Button
         variant="primary"
         onPress={() => router.push(routes.graph("author", data.openLibraryId))}
@@ -126,6 +130,23 @@ export default function AuthorDetail() {
       >
         Find Connection
       </Button>
+
+      {data.pseudonyms.length > 0 && (
+        <Text style={styles.pseudonyms}>Also published as {data.pseudonyms.join(", ")}</Text>
+      )}
+
+      {!data.wikidataId && (
+        <Text style={styles.noMatch}>No Wikidata match found — showing Open Library data only.</Text>
+      )}
+
+      <Pressable
+        ref={titleRef("View this author on Open Library")}
+        accessibilityRole="link"
+        style={({ pressed }) => [styles.openLibraryLink, pressed && styles.pressed]}
+        onPress={() => Linking.openURL(`https://openlibrary.org/authors/${data.openLibraryId}`)}
+      >
+        <Text style={styles.openLibraryLinkText}>View on Open Library</Text>
+      </Pressable>
 
       <MoreByAuthor title="Works" works={data.moreByAuthor} />
 
@@ -147,6 +168,7 @@ export default function AuthorDetail() {
               );
               return isNavigable ? (
                 <Pressable
+                  ref={titleRef(`View ${item.label}`)}
                   key={item.wikidataId}
                   style={({ pressed }) => pressed && styles.pressed}
                   onPress={() => router.push(item.openLibraryId!.endsWith("W") ? routes.work(item.openLibraryId!) : routes.author(item.openLibraryId!))}
@@ -174,9 +196,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     photo: { width: 120, height: 150, borderRadius: 6 },
     photoCredit: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.xs, marginBottom: spacing.md },
-    name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
     dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
-    bio: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, lineHeight: 24 },
     bioSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     pseudonyms: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md, fontStyle: "italic" },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.lg, fontStyle: "italic" },

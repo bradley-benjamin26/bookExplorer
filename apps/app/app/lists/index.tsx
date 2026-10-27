@@ -8,6 +8,7 @@ import { Footer } from "../../src/components/Footer";
 import { routes } from "../../src/navigation";
 import { getLists, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleRef } from "../../src/webTitle";
 
 const SECTIONS = [
   { kind: "book", title: "Book lists", noun: "book", empty: "No book lists yet. Tap “Save to list” on a book page to start one." },
@@ -71,6 +72,7 @@ export default function Lists() {
                 const count = `${list.members.length} ${section.noun}${list.members.length === 1 ? "" : "s"}`;
                 return (
                   <Pressable
+                    ref={titleRef(`Open ${list.name}`)}
                     key={list.id}
                     style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                     onPress={() => router.push(routes.list(list.id))}

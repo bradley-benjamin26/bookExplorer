@@ -34,7 +34,7 @@ export function SeriesSection({ seriesQid, currentWorkId }: { seriesQid?: string
   if (!data?.members.length) return null;
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">{data.name}</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">{`Series: ${data.name}`}</Text>
       {data.members.map((m) => {
         const current = m.openLibraryWorkId === currentWorkId;
         const id = m.openLibraryWorkId;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { applyListChanges, deleteListAndUnsave, listChanges } from "./listMembership";
+import { applyListChanges, deleteListAndUnsave, leavesLibrary, listChanges } from "./listMembership";
 import { getSavedItems } from "./savedItems";
 import { addToList, createList, getList, type SavedList } from "./savedLists";
 import { getSavedWork, saveWorkFromApi, updateSavedWork } from "./savedWorks";
@@ -80,4 +80,13 @@ describe("listMembership", () => {
     expect(await getList(a.id)).toBeNull();
     expect(await getSavedItems()).toEqual([]); // never went through ensureSaved, so only the records matter
   });
+});
+
+describe("leavesLibrary", () => {
+  const m = { type: "book" as const, id: "1" };
+  const list = (id: string, held: boolean) => ({ id, members: held ? [{ ...m, title: "t", addedAt: 0 }] : [] }) as unknown as SavedList;
+  it("is true when the only list holding it is unticked", () => expect(leavesLibrary([list("a", true), list("b", false)], m, new Set())).toBe(true));
+  it("is false while any list stays ticked", () => expect(leavesLibrary([list("a", true), list("b", false)], m, new Set(["b"]))).toBe(false));
+  it("is false while the holding list stays ticked", () => expect(leavesLibrary([list("a", true), list("b", false)], m, new Set(["a"]))).toBe(false));
+  it("is false for an item on no list yet", () => expect(leavesLibrary([list("a", false)], m, new Set())).toBe(false));
 });

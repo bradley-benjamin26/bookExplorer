@@ -1,5 +1,6 @@
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { spacing, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 const WIKIDATA_LOGO_URL =
   "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Wikidata_Stamp_Rec_Light.svg/960px-Wikidata_Stamp_Rec_Light.svg.png";
@@ -13,7 +14,7 @@ export function Footer() {
       <View style={styles.logoBacking}>
         <Image source={{ uri: WIKIDATA_LOGO_URL }} style={styles.logo} resizeMode="contain" />
       </View>
-      <Pressable onPress={() => Linking.openURL(OPEN_LIBRARY_URL)} accessibilityRole="link">
+      <Pressable ref={titleRef("Visit Open Library")} onPress={() => Linking.openURL(OPEN_LIBRARY_URL)} accessibilityRole="link">
         <Text style={styles.text}>Built using Open Library APIs</Text>
       </Pressable>
     </View>

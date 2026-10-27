@@ -1,6 +1,6 @@
 import { Star } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, type AccessibilityState, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { titleRef } from "../webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
@@ -21,6 +21,7 @@ export function Button({
   textStyle,
   accessibilityLabel,
   accessibilityHint,
+  accessibilityState,
   disabled = false,
   tooltip,
 }: {
@@ -34,6 +35,8 @@ export function Button({
   textStyle?: StyleProp<TextStyle>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /** Extra state on top of selected/disabled, e.g. `expanded` for a show-more toggle. */
+  accessibilityState?: AccessibilityState;
   disabled?: boolean;
   /** Hover text on web; no effect on native. */
   tooltip?: string;
@@ -50,7 +53,7 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={variant === "pill" ? { selected: active, disabled } : { disabled }}
+      accessibilityState={{ ...accessibilityState, ...(variant === "pill" ? { selected: active, disabled } : { disabled }) }}
       style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
         variant === "primary" ? styles.primary : styles.pill,
         active && styles.pillActive,

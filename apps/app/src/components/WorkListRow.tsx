@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { seriesRowLabel } from "../seriesLabel";
 import { CoverPlaceholder } from "./CoverPlaceholder";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 /** A tappable cover/title/author row for a work — shared by any screen that
  * lists works from Open Library (a subject's book list, search results). */
@@ -25,6 +26,7 @@ export function WorkListRow({
   const authorNames = work.authors.map((a) => a.name).join(", ") || "Unknown author";
   return (
     <Pressable
+      ref={titleRef(`Open ${work.title}`)}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       onPress={onPress}
       accessibilityRole="button"

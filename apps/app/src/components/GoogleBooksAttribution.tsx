@@ -1,5 +1,6 @@
 import { Image, Linking, Pressable, StyleSheet, Text } from "react-native";
 import { useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 const LOGO_URL = "https://books.google.com/googlebooks/images/poweredby.png";
 
@@ -9,7 +10,7 @@ const LOGO_URL = "https://books.google.com/googlebooks/images/poweredby.png";
 export function GoogleBooksAttribution({ label }: { label: string }) {
   const styles = useThemedStyles(createStyles);
   return (
-    <Pressable style={styles.row} accessibilityRole="link" onPress={() => Linking.openURL("https://books.google.com")}>
+    <Pressable ref={titleRef("Visit Google Books")} style={styles.row} accessibilityRole="link" onPress={() => Linking.openURL("https://books.google.com")}>
       <Text style={styles.label}>{label}</Text>
       <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
     </Pressable>

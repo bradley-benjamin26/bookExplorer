@@ -31,11 +31,6 @@ export async function getSavedItems(): Promise<SavedItem[]> {
   return (await getAllSavedItems()).filter((i) => !i.deletedAt);
 }
 
-export async function isItemSaved(type: SavedItem["type"], id: string): Promise<boolean> {
-  const items = await getSavedItems();
-  return items.some((item) => itemKey(item.type, item.id) === itemKey(type, id));
-}
-
 function write(items: SavedItem[]): Promise<void> {
   return AsyncStorage.setItem(SAVED_KEY, JSON.stringify(items));
 }
@@ -45,22 +40,7 @@ function tombstone(items: SavedItem[], key: string): SavedItem[] {
   return items.map((i) => (itemKey(i.type, i.id) === key && !i.deletedAt ? { ...i, updatedAt: now, deletedAt: now } : i));
 }
 
-/** Adds or removes the item and returns whether it ended up saved. */
-export function toggleSaved(item: Unversioned<SavedItem>): Promise<boolean> {
-  return enqueueWrite(SAVED_KEY, async () => {
-    const items = await getAllSavedItems();
-    const key = itemKey(item.type, item.id);
-    const alreadySaved = items.some((i) => itemKey(i.type, i.id) === key && !i.deletedAt);
-    // Re-saving replaces the old tombstone rather than leaving two entries for one key.
-    const next = alreadySaved
-      ? tombstone(items, key)
-      : [stamp(item), ...items.filter((i) => itemKey(i.type, i.id) !== key)];
-    await write(next);
-    return !alreadySaved;
-  });
-}
-
-/** Idempotent save: unlike toggleSaved, never removes an item that's already saved. */
+/** Idempotent save: does nothing if the item is already saved. */
 export function ensureSaved(item: Unversioned<SavedItem>): Promise<void> {
   return enqueueWrite(SAVED_KEY, async () => {
     const items = await getAllSavedItems();

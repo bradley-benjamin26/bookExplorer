@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
 import { upsertLibrary } from "./librarySettings";
 import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
-import { getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
+import { ensureSaved, getSavedItems, removeSaved } from "./savedItems";
 import { addToList, createList, getLists } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
 import { booksToCsv } from "../csv";
@@ -70,10 +70,10 @@ describe("snapshot", () => {
   });
 
   it("round-trips through applySnapshot, replacing existing data", async () => {
-    await toggleSaved({ type: "book", id: "1", title: "One" });
+    await ensureSaved({ type: "book", id: "1", title: "One" });
     await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify({ ...legacyBook, schemaVersion: 1, updatedAt: 5 }));
     await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" });
-    await toggleSaved({ type: "work", id: "OL1W", title: "W" });
+    await ensureSaved({ type: "work", id: "OL1W", title: "W" });
     await migrateStorage(); // gives OL1W its record
     await updateSavedWork("OL1W", { notes: "w" });
     const list = await createList({ name: "L", kind: "book" });
@@ -83,7 +83,7 @@ describe("snapshot", () => {
     expect(snap.works).toMatchObject([{ openLibraryWorkId: "OL1W", notes: "w" }]);
     await AsyncStorage.clear();
     await AsyncStorage.setItem("book-explorer:saved-work:stale", JSON.stringify({ openLibraryWorkId: "stale" }));
-    await toggleSaved({ type: "work", id: "stale", title: "Stale" });
+    await ensureSaved({ type: "work", id: "stale", title: "Stale" });
     await AsyncStorage.setItem("book-explorer:saved-book:stale", JSON.stringify({ ...legacyBook, isbn: "stale" }));
     await createList({ name: "Stale", kind: "author" });
     await applySnapshot(snap);
@@ -91,7 +91,7 @@ describe("snapshot", () => {
   });
 
   it("exports tombstones without the removed book's notes", async () => {
-    await toggleSaved({ type: "book", id: "1", title: "One" });
+    await ensureSaved({ type: "book", id: "1", title: "One" });
     await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify({ ...legacyBook, schemaVersion: 1, updatedAt: 5 }));
     await removeSaved("book", "1");
     await removeSavedBook("1");
@@ -106,18 +106,19 @@ describe("snapshot", () => {
   });
 
   it("hides tombstoned items and books but keeps them in the snapshot", async () => {
-    await toggleSaved({ type: "book", id: "1", title: "One" });
+    await ensureSaved({ type: "book", id: "1", title: "One" });
     await AsyncStorage.setItem("book-explorer:saved-book:1", JSON.stringify({ ...legacyBook, schemaVersion: 1, updatedAt: 5 }));
     await removeSaved("book", "1");
     await removeSavedBook("1");
     expect(await getSavedItems()).toEqual([]);
-    expect(await isItemSaved("book", "1")).toBe(false);
+    expect((await getSavedItems()).some((i) => i.type === "book" && i.id === "1")).toBe(false);
     expect(await getSavedBook("1")).toBeNull();
     expect(await updateSavedBook("1", { notes: "x" })).toBeNull();
     const snap = await getSnapshot();
     expect(snap.items[0].deletedAt).toBeTypeOf("number");
     expect(snap.books[0].deletedAt).toBeTypeOf("number");
-    expect(await toggleSaved({ type: "book", id: "1", title: "One" })).toBe(true);
+    await ensureSaved({ type: "book", id: "1", title: "One" });
+    expect((await getSavedItems()).some((i) => i.type === "book" && i.id === "1")).toBe(true);
     expect((await getSnapshot()).items).toHaveLength(1);
   });
 });
@@ -126,9 +127,9 @@ describe("v4 lists", () => {
   beforeEach(() => AsyncStorage.clear());
 
   it("v4 puts saved items that are on no list onto Saved books / Saved authors", async () => {
-    await toggleSaved({ type: "book", id: "9780441013593", title: "Dune" });
-    await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
-    await toggleSaved({ type: "author", id: "OL1A", title: "Jane Austen" });
+    await ensureSaved({ type: "book", id: "9780441013593", title: "Dune" });
+    await ensureSaved({ type: "work", id: "OL1W", title: "Emma" });
+    await ensureSaved({ type: "author", id: "OL1A", title: "Jane Austen" });
     const faves = await createList({ name: "Faves", kind: "book" });
     await addToList(faves.id, { type: "work", id: "OL1W", title: "Emma" });
     await AsyncStorage.setItem("book-explorer:schema-version", "3");

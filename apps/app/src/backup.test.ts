@@ -5,7 +5,7 @@ import { exportJson, exportListCsv, exportListJson, ImportError, importSnapshot,
 import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
-import { getSavedItems, toggleSaved } from "./storage/savedItems";
+import { ensureSaved, getSavedItems } from "./storage/savedItems";
 import { addToList, createList, getLists } from "./storage/savedLists";
 import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
 import { parseCsv } from "./csv";
@@ -20,12 +20,12 @@ const apiBook = (isbn: string, title: string) =>
   ({ isbn, title, wikidataId: null, openLibraryEditionId: null, openLibraryWorkId: null, authors: [], format: null, subjects: [], genres: [] }) as unknown as Book;
 
 async function seed() {
-  await toggleSaved({ type: "book", id: "9780441013593", title: "Dune" });
+  await ensureSaved({ type: "book", id: "9780441013593", title: "Dune" });
   fetchBook.mockResolvedValueOnce(apiBook("9780441013593", "Dune"));
   await runCsvImport([{ title: "Dune", isbn: "9780441013593" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
   await updateSavedBook("9780441013593", { notes: "spice" });
   await upsertLibrary({ id: "a", name: "A", isbnUrl: "https://lib.example/?q=", titleUrl: "" });
-  await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
+  await ensureSaved({ type: "work", id: "OL1W", title: "Emma" });
   await migrateStorage(); // gives OL1W its record
   const list = await createList({ name: "Favourites", kind: "book" });
   await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
@@ -39,7 +39,7 @@ describe("per-list export", () => {
 
   async function seedTwoLists() {
     await seed();
-    await toggleSaved({ type: "book", id: "9780000000002", title: "Other" });
+    await ensureSaved({ type: "book", id: "9780000000002", title: "Other" });
     fetchBook.mockResolvedValueOnce(apiBook("9780000000002", "Other"));
     await runCsvImport([{ title: "Other", isbn: "9780000000002" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
     const other = await createList({ name: "Other list", kind: "book" });
@@ -74,7 +74,7 @@ describe("JSON backup", () => {
     const before = await getSnapshot();
     const text = await exportJson();
     await AsyncStorage.clear();
-    await toggleSaved({ type: "author", id: "OL1A", title: "Stale" });
+    await ensureSaved({ type: "author", id: "OL1A", title: "Stale" });
     await importSnapshot(parseSnapshotJson(text), "replace");
     expect(await getSnapshot()).toEqual(before);
   });
@@ -91,7 +91,7 @@ describe("JSON backup", () => {
     await seed();
     const backup = parseSnapshotJson(await exportJson());
     backup.books[0] = { ...backup.books[0], notes: "from backup", updatedAt: backup.books[0].updatedAt + 1000 };
-    await toggleSaved({ type: "author", id: "OL1A", title: "Local only" });
+    await ensureSaved({ type: "author", id: "OL1A", title: "Local only" });
     await importSnapshot(backup, "merge");
     expect((await getSavedItems()).map((i) => i.id).sort()).toEqual(["9780441013593", "OL1A", "OL1W"]);
     expect((await getSavedBook("9780441013593"))?.notes).toBe("from backup");

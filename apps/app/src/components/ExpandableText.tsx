@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import { titleRef } from "../webTitle";
 
 /**
  * A paragraph clamped to a few lines with a "View more" link — but only
@@ -66,7 +67,7 @@ export function ExpandableText({
         </Text>
       )}
       {(expanded || truncated) && (
-        <Pressable onPress={() => setExpanded((v) => !v)} accessibilityRole="button">
+        <Pressable ref={titleRef(expanded ? "View less" : "View more")} onPress={() => setExpanded((v) => !v)} accessibilityRole="button">
           <Text style={viewMoreStyle}>{expanded ? "View less" : "View more"}</Text>
         </Pressable>
       )}

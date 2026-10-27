@@ -1,0 +1,13 @@
+Problems found from most recent update.
+1) There seems to be no text on hover. For example: When a user puts their cursor over the My Library icon, there should be hover text reading "My Library". The "save" button should read "copy link" and so on.
+2) Page formats are not uniform. The top section should be centered across all pages.
+3) For the lock feature, a user needs to save the book first, so it triggers the appropriate way to save the book, but it is unclear to the user why this is happening. Add a message that informs the user that they must save the entity to a list before editting.
+4) Add "series" term to the series list on pages to better inform users what the list is.
+5) Book pages and work pages have the view as a graph and connection buttons in different places. Book pages should display the buttons like the the works page
+6) Ensure that all pages have the same basic structure
+7) Remove the  "no wikidata concept match..." text on subject pages
+8) Split Genre, subjects, and awards again.
+9) There should be one lock icon that locks and unlocks all the editable fields.
+10) Make subject lists on works/books pages accordians if there are more than 5 terms. 5 terms should display. The 5 that display should prioritize subject terms from LCSH, if there aren't 5 make up for the number with any of the subject terms.
+11) Move the about section to right below the save and share buttons.
+12) as part of ensuring all pages have the same general structure, ensure the share and save buttons are side by side. If they are stacked the "link copied" message is covered up.

@@ -16,6 +16,7 @@ import {
   type SearchMode,
 } from "../src/storage/searchFilters";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { titleRef } from "../src/webTitle";
 
 // Waits for typing to pause before actually searching — Open Library is hit
 // on every distinct query, so searching on every keystroke would fire a
@@ -88,6 +89,7 @@ export default function Search() {
             returnKeyType="search"
           />
           <Pressable
+            ref={titleRef(filtersOpen ? "Hide search filters" : "Show search filters")}
             onPress={() => setFiltersOpen((o) => !o)}
             accessibilityRole="button"
             accessibilityState={{ expanded: filtersOpen }}

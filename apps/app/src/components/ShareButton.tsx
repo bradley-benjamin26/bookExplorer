@@ -32,7 +32,7 @@ export function ShareButton({ title, href, style }: { title: string; href: Href;
   };
   return (
     <View style={style}>
-      <Button variant="pill" onPress={share} accessibilityLabel={`Share ${title}`} tooltip="Copy a link to this page">
+      <Button variant="pill" onPress={share} accessibilityLabel={`Share ${title}`} tooltip="Copy link">
         Share
       </Button>
       <Text
