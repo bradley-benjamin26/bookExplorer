@@ -3,7 +3,7 @@ import { persistQueryClientRestore, persistQueryClientSave, type PersistedClient
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
 import { CACHE_SCHEMA_VERSION, createPerQueryPersister, persistOptions, pruneClient, savedKeyFor } from "./queryCache";
-import { toggleSaved } from "./storage/savedItems";
+import { ensureSaved } from "./storage/savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
@@ -97,7 +97,7 @@ describe("persisted query cache", () => {
   });
 
   it("never evicts a saved item's detail however many others are viewed after it", async () => {
-    await toggleSaved({ type: "book", id: "1", title: "Cached" });
+    await ensureSaved({ type: "book", id: "1", title: "Cached" });
     const queryClient = new QueryClient();
     queryClient.setQueryData(["book", "1"], book, { updatedAt: 1 }); // the oldest entry, first in line for LRU eviction
     for (let i = 0; i < 60; i++) await queryClient.fetchQuery({ queryKey: ["work", `w${i}`], queryFn: () => ({ i }) });
@@ -110,7 +110,7 @@ describe("persisted query cache", () => {
 
   it("protects a book saved under the server's ISBN, as the book screen saves it, when opened by the other ISBN form", async () => {
     const fetched = { isbn: "9780306406157", title: "Cached" };
-    await toggleSaved({ type: "book", id: fetched.isbn, title: fetched.title }); // what book/[isbn].tsx does: id = data.isbn
+    await ensureSaved({ type: "book", id: fetched.isbn, title: fetched.title }); // what book/[isbn].tsx does: id = data.isbn
     const queryClient = new QueryClient();
     queryClient.setQueryData(["book", "0306406152"], fetched, { updatedAt: 1 });
     for (let i = 0; i < 60; i++) await queryClient.fetchQuery({ queryKey: ["work", `w${i}`], queryFn: () => ({ i }) });
