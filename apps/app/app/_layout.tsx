@@ -15,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
 import { HeaderActions } from "../src/components/HeaderActions";
+import { HeaderTitle } from "../src/components/HeaderTitle";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
@@ -94,6 +95,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
         <View style={styles.stackArea}>
           <Stack
             screenOptions={{
+              headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
               headerTitleStyle: { fontFamily: theme.fonts.displayMedium, color: theme.colors.ink },
               headerStyle: { backgroundColor: theme.colors.paper },
               headerShadowVisible: false,

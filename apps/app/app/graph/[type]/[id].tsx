@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ChevronLeft, ChevronRight, Crosshair, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { fetchGraph, fetchPath, type GraphCenterType } from "../../../src/api/client";
+import { exploringTitle } from "../../../src/graphTitle";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
@@ -307,6 +308,8 @@ export default function GraphExplorer() {
           : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
   }));
 
+  const titleScreen = <Stack.Screen options={{ title: exploringTitle(data?.nodes.find((n) => n.id === data.centerId)?.label) }} />;
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -372,6 +375,7 @@ export default function GraphExplorer() {
     const centerLabel = layout.nodes[0]?.label ?? "this";
     return (
       <View style={styles.center}>
+        {titleScreen}
         <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
         <Text style={styles.emptyGraphText}>No linked connections found for {centerLabel} yet.</Text>
       </View>
@@ -385,6 +389,7 @@ export default function GraphExplorer() {
 
   return (
     <View style={styles.container}>
+      {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
