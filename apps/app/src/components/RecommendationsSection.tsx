@@ -113,30 +113,30 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
         const expanded = toggled[key] ?? index === 0;
         const Chevron = expanded ? ChevronDown : ChevronRight;
         return (
-        <View key={key}>
-          <Pressable
-            ref={titleRef(`${expanded ? "Hide" : "Show"} ${heading}`)}
-            style={({ pressed }) => [styles.groupHeader, pressed && styles.pressed]}
-            onPress={() => setToggled((t) => ({ ...t, [key]: !expanded }))}
-            accessibilityRole="button"
-            accessibilityState={{ expanded }}
-          >
-            <Text style={styles.sectionTitle}>
-              {heading} ({recs.length})
-            </Text>
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <Chevron size={18} color={theme.colors.inkFaint} strokeWidth={2} />
-            </View>
-          </Pressable>
-          {expanded && recs.map((r) => (
-            <WorkListRow
-              key={r.work.openLibraryWorkId}
-              work={r.work}
-              note={`shares: ${r.shares.join(", ")}`}
-              onPress={() => router.push(routes.work(r.work.openLibraryWorkId))}
-            />
-          ))}
-        </View>
+          <View key={key}>
+            <Pressable
+              ref={titleRef(`${expanded ? "Hide" : "Show"} ${heading}`)}
+              style={({ pressed }) => [styles.groupHeader, pressed && styles.pressed]}
+              onPress={() => setToggled((t) => ({ ...t, [key]: !expanded }))}
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+            >
+              <Text accessibilityRole="header" style={styles.sectionTitle}>
+                {heading} ({recs.length})
+              </Text>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Chevron size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+              </View>
+            </Pressable>
+            {expanded && recs.map((r) => (
+              <WorkListRow
+                key={r.work.openLibraryWorkId}
+                work={r.work}
+                note={`shares: ${r.shares.join(", ")}`}
+                onPress={() => router.push(routes.work(r.work.openLibraryWorkId))}
+              />
+            ))}
+          </View>
         );
       })}
     </View>

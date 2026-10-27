@@ -112,7 +112,7 @@ export default function Connection() {
             <TextInput
               style={styles.input}
               placeholder="Search for a book or author"
-              accessibilityLabel="Search for a book to connect to"
+              accessibilityLabel="Search for a book or author to connect to"
               placeholderTextColor={theme.colors.inkFaint}
               value={query}
               onChangeText={setQuery}

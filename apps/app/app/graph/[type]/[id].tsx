@@ -430,10 +430,11 @@ export default function GraphExplorer() {
         />
       </View>
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setFilterOpen(false)} accessibilityLabel="Close filter">
-          {/* The empty onPress keeps presses inside the popup from reaching the backdrop. */}
-          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
-          <ScrollView accessibilityViewIsModal>
+        <View style={styles.sheetBackdrop}>
+          {/* A sibling behind the popup, so the popup's controls are not nested inside a button. */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setFilterOpen(false)} accessibilityLabel="Close filter" />
+          <View style={styles.sheet}>
+            <ScrollView style={{ flexShrink: 1 }} accessibilityViewIsModal>
             <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
             <Text style={styles.sheetHeading}>Node types</Text>
             {[...new Set([...(data.nodes.map((n) => n.type) as string[]), ...filter.hiddenTypes])].map((t) => (
@@ -456,9 +457,9 @@ export default function GraphExplorer() {
             <Button variant="pill" onPress={() => setFilterOpen(false)} style={{ marginVertical: 16 }}>
               Done
             </Button>
-          </ScrollView>
-          </Pressable>
-        </Pressable>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
       {history.length > 0 && (
         <Pressable

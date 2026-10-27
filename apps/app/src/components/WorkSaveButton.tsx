@@ -69,10 +69,11 @@ export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (i
         onChange={() => saved.current && onSaved(isbn)}
       />
       <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setChoosing(false)} accessibilityLabel="Close">
-          {/* The empty onPress keeps presses inside the popup from reaching the backdrop. */}
-          <Pressable style={styles.popup} onPress={() => {}} accessible={false}>
-            <ScrollView accessibilityViewIsModal>
+        <View style={styles.backdrop}>
+          {/* A sibling behind the popup, so the popup's controls are not nested inside a button. */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setChoosing(false)} accessibilityLabel="Close" />
+          <View style={styles.popup}>
+            <ScrollView style={{ flexShrink: 1 }} accessibilityViewIsModal>
               <Text accessibilityRole="header" style={styles.title}>Choose an edition</Text>
               {editions.map((e) => (
                 <EditionRow key={e.isbn} edition={e} onPress={() => pick(e.isbn)} />
@@ -81,8 +82,8 @@ export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (i
                 Save the work instead
               </Button>
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </>
   );
