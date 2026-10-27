@@ -2,7 +2,6 @@ import { useFocusEffect } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { BackupSection } from "../src/components/BackupSection";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import {
@@ -212,7 +211,6 @@ export default function Settings() {
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
 
-      <BackupSection onImported={load} />
       <Footer />
     </ScrollView>
   );

@@ -20,7 +20,7 @@ import type { Snapshot } from "../storage/snapshot";
 import { useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
 
-const today = () => new Date().toISOString().slice(0, 10);
+export const today = () => new Date().toISOString().slice(0, 10);
 
 /** Export/import of the saved library, on the Saved screen. `onImported` reloads the screen's lists. */
 export function BackupSection({ onImported }: { onImported: () => void }) {

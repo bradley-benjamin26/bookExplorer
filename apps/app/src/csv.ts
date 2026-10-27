@@ -1,6 +1,7 @@
 import { ISBN_PATTERN } from "@book-explorer/shared";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { SavedList } from "./storage/savedLists";
+import type { SavedWorkRecord } from "./storage/savedWorks";
 
 /** RFC 4180 rows: quoted fields may hold commas, newlines and "" escapes; a leading BOM is dropped. */
 export function parseCsv(text: string): string[][] {
@@ -48,37 +49,34 @@ const goodreadsDate = (ms: number) => new Date(ms).toISOString().slice(0, 10).re
 // spreadsheet; a leading ' makes it plain text (OWASP's CSV injection advice).
 const noFormula = (f: string) => (/^[=+\-@\t\r]/.test(f) ? `'${f}` : f);
 
-const shelfSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+export const shelfSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // ="…" as Goodreads writes it, or a spreadsheet drops an ISBN-10's leading zero and turns an ISBN-13
 // into 9.78E+12; readBookCsv unwraps it. Added after noFormula, which would neutralize the "=".
 const isbnCell = (isbn: string) => `="${isbn}"`;
 
-/** Live saved books as a Goodreads-style CSV: the names of the book lists a book is in are its shelves. */
-export function booksToCsv(books: SavedBookRecord[], lists: SavedList[]): string {
+/** Live saved books and works as a Goodreads-style CSV: the names of the book lists an item is in are its shelves. A work has no ISBN, so its ISBN cells are empty. */
+export function booksToCsv(books: SavedBookRecord[], lists: SavedList[], works: SavedWorkRecord[] = []): string {
   const bookLists = lists.filter((l) => l.kind === "book" && !l.deletedAt);
-  const rows = books
+  const shelves = (type: "book" | "work", id: string) =>
+    bookLists
+      .filter((l) => l.members.some((m) => m.type === type && m.id === id))
+      .map((l) => shelfSlug(l.name))
+      .filter(Boolean)
+      .join(", ");
+  const row = (title: string, authors: string[], shelf: string, notes: string, savedAt: number) =>
+    [title, authors[0] ?? "", authors.slice(1).join(", "), "", "", shelf, "to-read", notes, goodreadsDate(savedAt)].map(noFormula);
+  const bookRows = books
     .filter((b) => !b.deletedAt)
     .map((b) => {
-      const row = [
-        b.title,
-        b.authorNames[0] ?? "",
-        b.authorNames.slice(1).join(", "),
-        "",
-        "",
-        bookLists
-          .filter((l) => l.members.some((m) => m.type === "book" && m.id === b.isbn))
-          .map((l) => shelfSlug(l.name))
-          .filter(Boolean)
-          .join(", "),
-        "to-read",
-        b.notes,
-        goodreadsDate(b.savedAt),
-      ].map(noFormula);
-      row[b.isbn.length === 10 ? 3 : 4] = isbnCell(b.isbn);
-      return row;
+      const r = row(b.title, b.authorNames, shelves("book", b.isbn), b.notes, b.savedAt);
+      r[b.isbn.length === 10 ? 3 : 4] = isbnCell(b.isbn);
+      return r;
     });
-  return toCsv([EXPORT_HEADER, ...rows]);
+  const workRows = works
+    .filter((w) => !w.deletedAt)
+    .map((w) => row(w.title, w.authorNames, shelves("work", w.openLibraryWorkId), w.notes, w.savedAt));
+  return toCsv([EXPORT_HEADER, ...bookRows, ...workRows]);
 }
 
 export interface CsvBookRow {

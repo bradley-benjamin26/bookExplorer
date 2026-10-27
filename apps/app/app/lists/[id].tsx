@@ -2,7 +2,11 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
+import { today } from "../../src/components/BackupSection";
 import { Footer } from "../../src/components/Footer";
+import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
+import { shareFile } from "../../src/backupFiles";
+import { shelfSlug } from "../../src/csv";
 import { memberHref, routes } from "../../src/navigation";
 import { applyListChanges, deleteListAndUnsave } from "../../src/storage/listMembership";
 import { getList, type ListMember, type SavedList } from "../../src/storage/savedLists";
@@ -32,6 +36,18 @@ export default function ListDetail() {
       setError(e instanceof Error ? e.message : String(e));
     }
     load();
+  };
+
+  // Same failure handling as BackupSection's attempt.
+  const exportList = async (ext: "csv" | "json") => {
+    setError("");
+    try {
+      const file = `${shelfSlug(list?.name ?? "") || "list"}-${today()}.${ext}`;
+      if (ext === "csv") await shareFile(file, await exportListCsv(id), "text/csv");
+      else await shareFile(file, await exportListJson(id), "application/json");
+    } catch (e) {
+      setError(e instanceof ImportError ? e.message : "Something went wrong. Please try again.");
+    }
   };
 
   const doDelete = async () => {
@@ -116,6 +132,14 @@ export default function ListDetail() {
               </View>
             ))
           )}
+          <View style={styles.exportRow}>
+            <Button variant="pill" onPress={() => exportList("csv")}>
+              Export CSV
+            </Button>
+            <Button variant="pill" onPress={() => exportList("json")}>
+              Export JSON
+            </Button>
+          </View>
           <Button variant="pill" onPress={confirmDelete} style={styles.deleteButton} textStyle={styles.removeText}>
             Delete list
           </Button>
@@ -153,6 +177,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.danger,
     },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
+    exportRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
     retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
     deleteButton: { marginTop: spacing.xxl, backgroundColor: colors.dangerBackground },
     pressed: { opacity: 0.6 },

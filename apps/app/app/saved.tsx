@@ -11,7 +11,7 @@ export default function Saved() {
   const styles = useThemedStyles(createStyles);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {([["Lists", routes.lists()], ["Recommendations", routes.recommendations()], ["Find Connection", routes.connection()], ["Settings", routes.settings()]] as const).map(([label, href]) => (
+      {([["Lists", routes.lists()], ["Recommendations", routes.recommendations()], ["Find Connection", routes.connection()], ["Import & Export", routes.backup()], ["Settings", routes.settings()]] as const).map(([label, href]) => (
         <Pressable
           key={label}
           style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}

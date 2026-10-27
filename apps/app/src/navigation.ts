@@ -29,6 +29,7 @@ export const routes = {
   connection: (from?: string, label?: string): Href => ({ pathname: "/connection", params: from ? { from, label } : {} }),
   saved: (): Href => "/saved",
   recommendations: (): Href => "/recommendations",
+  backup: (): Href => "/backup",
   settings: (): Href => "/settings",
   lists: (): Href => "/lists",
   list: (id: string): Href => ({ pathname: "/lists/[id]", params: { id } }),
