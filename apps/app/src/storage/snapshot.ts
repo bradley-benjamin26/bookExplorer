@@ -57,7 +57,7 @@ export async function applySnapshot(snapshot: Snapshot): Promise<void> {
 /** One-time upgrade of data saved before versioning; call once at startup. Safe to call repeatedly. */
 export async function migrateStorage(): Promise<void> {
   if (Number(await AsyncStorage.getItem(VERSION_KEY)) >= SCHEMA_VERSION) return;
-  await applySnapshot(withListedSaves(withWorkRecords(await getSnapshot())));
+  await applySnapshot(withWorkRecords(withListedSaves(await getSnapshot())));
   await AsyncStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
 }
 
@@ -79,13 +79,21 @@ export function withWorkRecords(snapshot: Snapshot): Snapshot {
 
 /**
  * v4: every live saved item sits on a live list of its kind, so lists can replace saves.
- * Anything on none goes onto the default list (reused by name, else created). Also applied
+ * Anything on none goes onto the default list (reused by name, else created); a member of a live list with no item gets one. Also applied
  * to imports, since an older backup has saves but no lists. Changes nothing once all are listed.
  */
 export function withListedSaves(snapshot: Snapshot, now = Date.now()): Snapshot {
   const lists = snapshot.lists.map((l) => ({ ...l }));
+  // v3 let an item join a list without being saved; save it now. A tombstoned item stays deleted (the user removed it on purpose, so its stale list entry loses).
+  const known = new Set(snapshot.items.map((i) => `${i.type}:${i.id}`));
+  const items = [...snapshot.items];
+  for (const m of lists.filter((l) => !l.deletedAt).flatMap((l) => l.members)) {
+    if (known.has(`${m.type}:${m.id}`)) continue;
+    known.add(`${m.type}:${m.id}`);
+    items.push(stamp({ type: m.type, id: m.id, title: m.title, updatedAt: now }));
+  }
   const listed = new Set(lists.filter((l) => !l.deletedAt).flatMap((l) => l.members.map((m) => `${m.type}:${m.id}`)));
-  for (const item of snapshot.items) {
+  for (const item of items) {
     if (item.deletedAt || listed.has(`${item.type}:${item.id}`)) continue;
     const kind: SavedList["kind"] = item.type === "author" ? "author" : "book";
     let list = lists.find((l) => !l.deletedAt && l.kind === kind && l.name === DEFAULT_LIST_NAMES[kind]);
@@ -96,7 +104,7 @@ export function withListedSaves(snapshot: Snapshot, now = Date.now()): Snapshot 
     list.members = [...list.members, { type: item.type, id: item.id, title: item.title, addedAt: now }];
     list.updatedAt = now;
   }
-  return { ...snapshot, lists };
+  return { ...snapshot, items, lists };
 }
 
 /** Just one live list and the saves on it (books by isbn, works by work id); no libraries. An unknown or deleted list gives empty arrays. */

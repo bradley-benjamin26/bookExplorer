@@ -5,6 +5,7 @@ import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
 import { getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
 import { addToList, createList, getLists } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
+import { booksToCsv } from "../csv";
 import { applySnapshot, getSnapshot, migrateStorage, snapshotForList, withListedSaves, type Snapshot } from "./snapshot";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
@@ -155,6 +156,39 @@ describe("v4 lists", () => {
     const out = withListedSaves(snap, 10);
     expect(out.lists).toHaveLength(2);
     expect(out.lists[0].members).toMatchObject([{ type: "book", id: "1", addedAt: 10 }]);
+    expect(withListedSaves(out, 20)).toEqual(out);
+  });
+});
+
+describe("unsaved list members", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("migration saves a v3 list member that has no item, with a work record, and it exports", async () => {
+    const list = { schemaVersion: 3, updatedAt: 1, id: "l1", name: "Faves", description: "", kind: "book", createdAt: 1, members: [{ type: "work", id: "OL5W", title: "Persuasion", addedAt: 1 }, { type: "author", id: "OL5A", title: "Austen", addedAt: 1 }] };
+    await AsyncStorage.setItem("book-explorer:saved-lists", JSON.stringify([list]));
+    await AsyncStorage.setItem("book-explorer:schema-version", "3");
+    await migrateStorage();
+    expect((await getSavedItems()).map((i) => `${i.type}:${i.id}`).sort()).toEqual(["author:OL5A", "work:OL5W"]);
+    expect(await getSavedWork("OL5W")).not.toBeNull();
+    const { books, lists, works } = snapshotForList(await getSnapshot(), "l1");
+    expect(booksToCsv(books, lists, works)).toContain("Persuasion");
+  });
+
+  it("withListedSaves saves members of live lists only, skips tombstoned items, and is idempotent", () => {
+    const st = { schemaVersion: 3, updatedAt: 1 };
+    const m = (type: "book" | "work" | "author", id: string) => ({ type, id, title: id, addedAt: 1 });
+    const list = { ...st, id: "l1", name: "L", description: "", kind: "book" as const, createdAt: 1, members: [m("book", "1"), m("book", "2")] };
+    const snap: Snapshot = {
+      ...st,
+      items: [{ ...st, type: "book", id: "2", title: "2", deletedAt: 5 }],
+      books: [],
+      works: [],
+      libraries: [],
+      lists: [list, { ...list, id: "gone", deletedAt: 5, members: [m("book", "3")] }],
+    };
+    const out = withListedSaves(snap, 10);
+    expect(out.items.filter((i) => !i.deletedAt).map((i) => i.id)).toEqual(["1"]);
+    expect(out.items.find((i) => i.id === "2")?.deletedAt).toBe(5);
     expect(withListedSaves(out, 20)).toEqual(out);
   });
 });

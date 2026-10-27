@@ -25,13 +25,13 @@ export async function unsaveIfUnlisted(member: Pick<ListMember, "type" | "id">):
 
 /**
  * Adds first and removes last, so a move between lists never leaves the item on none
- * (which would unsave it and lose its notes). `save` runs only if something was added.
+ * (which would unsave it and lose its notes). `save` runs whenever the member ends up on a list.
  */
 export async function applyListChanges(member: Member, changes: { add: string[]; remove: string[] }, save: () => Promise<unknown>): Promise<void> {
   for (const id of changes.add) await addToList(id, member);
-  if (changes.add.length) await save();
   for (const id of changes.remove) await removeFromList(id, member.type, member.id);
-  await unsaveIfUnlisted(member);
+  // Saving is idempotent, so also run it for a member already listed but unsaved.
+  if (!(await unsaveIfUnlisted(member))) await save();
 }
 
 /** Deletes the list, then unsaves each of its members that no other list holds. */

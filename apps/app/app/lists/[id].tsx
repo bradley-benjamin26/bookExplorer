@@ -65,7 +65,7 @@ export default function ListDetail() {
   };
   const confirmDelete = () => {
     if (!list) return;
-    const message = `Delete “${list.name}”? This can't be undone.`;
+    const message = `Delete “${list.name}”? Books and authors on no other list leave your library, with their notes. This can't be undone.`;
     if (Platform.OS === "web") {
       if (window.confirm(message)) doDelete();
     } else {

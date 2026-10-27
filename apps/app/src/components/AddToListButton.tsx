@@ -117,6 +117,7 @@ export function AddToListButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const holds = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
 
@@ -131,12 +132,14 @@ export function AddToListButton({
   /** Reads the lists; `reset` also restarts the draft from what each list holds. */
   const load = (reset: boolean) => {
     setLoadError("");
+    setLoading(true);
     return getLists(kind)
       .then((ls) => {
         setLists(ls);
         if (reset) setChecked(new Set(ls.filter(holds).map((l) => l.id)));
       })
-      .catch(() => setLoadError(LOAD_ERROR));
+      .catch(() => setLoadError(LOAD_ERROR))
+      .finally(() => setLoading(false));
   };
   const show = () => {
     setCreating(false);
@@ -172,7 +175,7 @@ export function AddToListButton({
 
   return (
     <>
-      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} tooltip="Save to one of your lists">
+      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -234,7 +237,7 @@ export function AddToListButton({
                 <Button variant="pill" onPress={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button variant="primary" onPress={done} disabled={busy || !!loadError} style={styles.doneButton}>
+                <Button variant="primary" onPress={done} disabled={busy || loading || !!loadError} style={styles.doneButton}>
                   Done
                 </Button>
               </View>

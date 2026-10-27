@@ -16,11 +16,17 @@ export default function Recommendations() {
   const [listId, setListId] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    getSavedItems().then(setItems);
-    getLists().then((all) => {
-      setLists(all);
-      setListId((id) => (all.some((l) => l.id === id) ? id : null)); // a list deleted elsewhere falls back to all
-    });
+    getSavedItems().then(setItems, () => {});
+    getLists().then(
+      (all) => {
+        setLists(all);
+        setListId((id) => (all.some((l) => l.id === id) ? id : null)); // a list deleted elsewhere falls back to all
+      },
+      () => {
+        setLists([]);
+        setListId(null);
+      }
+    );
   }, []);
   useFocusEffect(load);
 

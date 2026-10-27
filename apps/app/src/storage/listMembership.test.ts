@@ -35,6 +35,15 @@ describe("listMembership", () => {
     expect(await getSavedWork("OL1W")).toBeNull();
   });
 
+  it("applyListChanges with no changes still saves a listed but unsaved member", async () => {
+    const a = await createList({ name: "A", kind: "book" });
+    await addToList(a.id, emma);
+    const save = vi.fn(() => saveWorkFromApi(work));
+    await applyListChanges(emma, { add: [], remove: [] }, save);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(await getSavedWork("OL1W")).not.toBeNull();
+  });
+
   it("moving between lists keeps the record", async () => {
     const a = await createList({ name: "A", kind: "book" });
     const b = await createList({ name: "B", kind: "book" });
