@@ -48,7 +48,7 @@ Please change the app name officially to Shelf Thread. Use shelfweb.com as its a
 2. **Stale caches:** a client query cache or server cache written before Task 1 holds Book/Work objects with no `awards` field. The client must not throw a zod error on them. Task 1's `.default([])` handles this and Task 2's `CACHE_SCHEMA_VERSION` bump clears them. Task 1 includes a test that parses an awards-less Book.
 3. **A real subject that contains a colon** (for example "Science fiction: history") must not be dropped by the machine-tag filter. The test for this is in Task 1.
 4. **Legacy recents:** the home screen must keep working when the stored history is still the old `string[]` of ISBNs. It shows the ISBN until the book is opened again. The test is in Task 7.
-5. **CSV injection and quoting still apply to the new columns:** a list named `=HYPERLINK(...)` must be exported with a leading `'`. The test is in Task 12.
+5. **CSV injection and quoting still apply to the new columns:** a list named `=HYPERLINK(...)` exports as the shelf slug `hyperlink-...`, because the slug rule removes every formula character. The raw-text cells (title, author, notes) keep the leading-`'` rule, tested in `csv.test.ts` ("neutralizes cells a spreadsheet would run as formulas").
 
 ---
 
@@ -63,7 +63,7 @@ Please change the app name officially to Shelf Thread. Use shelfweb.com as its a
 **Interfaces:**
 - Produces: `splitSubjectTerms(labels: string[]): { subjects: string[]; awards: string[] }` and `subjectKey(label: string): string`, both exported from `@book-explorer/shared`. Also `Book.awards: string[]` and `Work.awards: string[]`, declared as `z.array(z.string()).default([])`.
 
-- [ ] **Step 1: Write the failing tests** in `apps/server/src/subjectTerms.test.ts`:
+- [x] **Step 1: Write the failing tests** in `apps/server/src/subjectTerms.test.ts`:
 
 ```ts
 import { BookSchema, splitSubjectTerms, subjectKey } from "@book-explorer/shared";
@@ -91,23 +91,23 @@ it("parses a cached Book that predates awards", () => {
 
 In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "science-fiction" (openLibrary) into one term with both sources`.
 
-- [ ] **Step 2: Run** `cd apps/server && npx vitest run src/subjectTerms.test.ts src/sources/loc.test.ts`. Expected: FAIL, because `splitSubjectTerms` is not exported.
+- [x] **Step 2: Run** `cd apps/server && npx vitest run src/subjectTerms.test.ts src/sources/loc.test.ts`. Expected: FAIL, because `splitSubjectTerms` is not exported.
 
-- [ ] **Step 3: Implement in `packages/shared/src/index.ts`**
+- [x] **Step 3: Implement in `packages/shared/src/index.ts`**
   - A machine tag is any label matching `/^[a-z_]+:\S/i`. The space after the colon in "Science fiction: history" is what saves that one.
   - An `award:` tag becomes an award. The name is the part before `=`, with `_` replaced by spaces. If there is a qualifier after `=`, it is appended as ` (Qualifier)` and keeps its own case. Awards are deduped case-insensitively, and the first spelling seen wins.
   - Every other machine tag is dropped.
   - `subjectKey` lowercases, turns `-` and `_` into spaces, collapses whitespace, and strips a trailing `/,\s*fiction$/`. If the result would be empty, it returns the plain lowercased label instead (so "Fiction" alone keeps a key).
   - Add `awards: z.array(z.string()).default([])` to `BookSchema` and `WorkSchema`.
 
-- [ ] **Step 4: Wire it into the server.**
+- [x] **Step 4: Wire it into the server.**
   - `mergeTaggedTerms` uses `subjectKey(label)` instead of `label.trim().toLowerCase()`.
   - In both services, compute `const olTerms = splitSubjectTerms(ol.subjects)`. Pass `olTerms.subjects` where `ol.subjects` was passed before, and set `awards: olTerms.awards` on the result.
   - LOC labels are not split: they are controlled headings and contain no machine tags.
 
-- [ ] **Step 5: Run** `cd apps/server && npx tsc --noEmit && npx vitest run`. Expected: PASS. `bookService.test.ts` mocks `loc.js`, so it still passes.
+- [x] **Step 5: Run** `cd apps/server && npx tsc --noEmit && npx vitest run`. Expected: PASS. `bookService.test.ts` mocks `loc.js`, so it still passes.
 
-- [ ] **Step 6: Commit** with the message `feat(server): drop machine subject tags, split awards, merge near-duplicate subjects`.
+- [x] **Step 6: Commit** with the message `feat(server): drop machine subject tags, split awards, merge near-duplicate subjects`.
 
 ### Task 2: Book/work pages: no source badges, an Awards section, a cache bump (items 2 and 4)
 
@@ -120,11 +120,11 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Consumes: `Book.awards` and `Work.awards` from Task 1.
 
-- [ ] **Step 1:** Remove every `<SourceBadge …/>` usage and import, then delete the component. Chip text becomes plain `titleCase(label)`.
-- [ ] **Step 2:** On the book and work pages, add an **"Awards"** section directly after Genres. It uses the same section, heading and chip styles as Genres. The chips are **not** pressable (`<View>` + `<Text>`), because awards have no subject page. Render `titleCase(award)`, and only when `awards.length > 0`.
-- [ ] **Step 3:** Set `CACHE_SCHEMA_VERSION = 2`, so persisted queries holding pre-cleanup tags are dropped. Run `cd apps/app && npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 4: Verify by eye.** Run `npm run dev:server` and `npm run dev:app`, then open Dune (ISBN 9780441013593). There should be no "OL/LC/WD" letters and no `Nyt:` or `Award:` chips, and an Awards section should list "Hugo Award (1966)".
-- [ ] **Step 5: Commit** with the message `feat(app): remove source badges, show awards section`.
+- [x] **Step 1:** Remove every `<SourceBadge …/>` usage and import, then delete the component. Chip text becomes plain `titleCase(label)`.
+- [x] **Step 2:** On the book and work pages, add an **"Awards"** section directly after Genres. It uses the same section, heading and chip styles as Genres. The chips are **not** pressable (`<View>` + `<Text>`), because awards have no subject page. Render `titleCase(award)`, and only when `awards.length > 0`.
+- [x] **Step 3:** Set `CACHE_SCHEMA_VERSION = 2`, so persisted queries holding pre-cleanup tags are dropped. Run `cd apps/app && npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 4: Verify by eye.** Run `npm run dev:server` and `npm run dev:app`, then open Dune (ISBN 9780441013593). There should be no "OL/LC/WD" letters and no `Nyt:` or `Award:` chips, and an Awards section should list "Hugo Award (1966)".
+- [x] **Step 5: Commit** with the message `feat(app): remove source badges, show awards section`.
 
 ### Task 3: Correct authors (§2.3: *House Corrino*, Atomic Habits)
 
@@ -137,16 +137,16 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `OpenLibraryAuthorWork` gains `authors: AuthorRef[]`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `getAuthorWorks returns each work's own authors`: mock a search doc with `author_name: ["Brian Herbert", "Kevin J. Anderson"]` and `author_key: ["OL1A", "OL2A"]`, then expect `authors` to equal both refs.
   - `getBookDetail falls back to the work's authors when the edition lists none`: add `vi.mock("./workService.js", () => ({ getWorkDetail: vi.fn() }))` at the top of the file, then mock `lookupByIsbn` returning `authors: []` and `workId: "OL1W"`, and mock `./workService.js` `getWorkDetail` resolving `{ authors: [{ openLibraryId: "OL9A", name: "James Clear" }] }`. Expect `book.authors` to equal that ref.
-- [ ] **Step 2: Run** `cd apps/server && npx vitest run src/sources/openLibrarySearch.test.ts src/services/bookService.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run** `cd apps/server && npx vitest run src/sources/openLibrarySearch.test.ts src/services/bookService.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - `getAuthorWorks` adds `author_name,author_key` to `fields` and zips them the same way `searchWorks` does.
   - `fetchMoreByAuthor` maps `authors: w.authors.length ? w.authors : [author]`, so it stops stamping the page's author onto every work.
   - In `getBookDetail`, after `lookupByIsbn`: `const authors = ol.authors.length || !ol.workId ? ol.authors : (await getWorkDetail(ol.workId).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];`. Use `authors` everywhere `ol.authors` was used, including `firstAuthorName`. Calling `getWorkDetail` shares the work cache with the work page.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `fix(server): real co-authors in more-by-author, work-author fallback for editions with none`.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 5: Commit** with the message `fix(server): real co-authors in more-by-author, work-author fallback for editions with none`.
 
 ### Task 4: Search puts study guides and summaries last (§2.3)
 
@@ -157,13 +157,13 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `isDerivativeTitle(title: string): boolean`, exported for tests.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `isDerivativeTitle` is true for "Summary of Becoming by Michelle Obama", "Study Guide: Project Hail Mary", "Workbook for Atomic Habits", "Analysis of Dune" and "SparkNotes: Dune". It is false for "Becoming", "The Summary Murders" and "Dune".
   - `searchBooks keeps relevance order but moves derivative titles after real ones`: searchWorks resolves `[Summary of X, X, Study Guide: X, Y]`. Expect the titles in the order `[X, Y, Summary of X, Study Guide: X]`.
-- [ ] **Step 2: Run** `npx vitest run src/services/searchService.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement** using the regex `/^(summary|study guide|analysis|workbook|sparknotes|cliffsnotes|quicklet|conversations on)\b|\b(summary|study guide|workbook|analysis) (of|for|on)\b/i`, then a stable partition (real titles first, derivative titles after) inside the cached fetcher. Results are demoted, not dropped.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `fix(server): rank study guides and summaries below the real book`.
+- [x] **Step 2: Run** `npx vitest run src/services/searchService.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement** using the regex `/^(summary|study guide|analysis|workbook|sparknotes|cliffsnotes|quicklet|conversations on)\b|\b(summary|study guide|workbook|analysis) (of|for|on)\b/i`, then a stable partition (real titles first, derivative titles after) inside the cached fetcher. Results are demoted, not dropped.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 5: Commit** with the message `fix(server): rank study guides and summaries below the real book`.
 
 ### Task 5: Sorting book lists on subject pages (item 5, §2.3, D2, D3)
 
@@ -177,16 +177,16 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 - Consumes: the existing `searchBooks(params: Record<string, string>)` from `src/api/client.ts`, with the existing server `subject` and `sort` filters.
 - Produces: `SUBJECT_SORTS: { value: SubjectSort; label: string }[]`, `type SubjectSort = "readinglog" | "rating" | "new" | "classic"`, `DEFAULT_SUBJECT_SORT: SubjectSort = "readinglog"`, and `subjectSortParams(subjectName: string, sort: SubjectSort): Record<string, string> | null` (null means "use the subject's own listing").
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - Server: `parseSearchFilters accepts sort=rating and sort=readinglog` and still rejects `sort=bogus`.
   - App: `subjectSortParams("Science Fiction", "rating")` equals `{ subject: "Science Fiction", sort: "rating" }`, and `subjectSortParams("Science Fiction", "classic")` is `null`. `SUBJECT_SORTS` labels are exactly `["Most read", "Top rated", "Newest", "Classic"]`.
-- [ ] **Step 2: Run** the tests in both workspaces. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run** the tests in both workspaces. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - `SEARCH_SORTS = ["relevance", "new", "old", "rating", "readinglog"]`, and the error message lists all five.
   - On the subject page, add a row of `Button variant="pill"` sort chips above "Books", with `active` on the current one (`useState(DEFAULT_SUBJECT_SORT)`).
   - When `subjectSortParams` is not null, a second `useQuery(["search", params], () => searchBooks(params))` supplies the FlatList data. Otherwise `data.books` does. Show an inline `ActivityIndicator` while it loads.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run` in both workspaces. Expected: PASS. Then open `/subject/science_fiction` and check that "Most read" isn't led by Alice in Wonderland.
-- [ ] **Step 5: Commit** with the message `feat: sort subject book lists by most read, top rated, newest`.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run` in both workspaces. Expected: PASS. Then open `/subject/science_fiction` and check that "Most read" isn't led by Alice in Wonderland.
+- [x] **Step 5: Commit** with the message `feat: sort subject book lists by most read, top rated, newest`.
 
 ### Task 6: Edition order: English, then newest, with a cover boost (item 8)
 
@@ -197,13 +197,13 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `publishYear(date: string | null): number | null`, `COVER_BOOST_YEARS = 2`, and `orderEditions<T extends { nonEnglish: boolean; publishDate: string | null; coverUrl: string | null }>(editions: T[]): T[]`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `publishYear("March 3, 2019")` is 2019, `publishYear("1965")` is 1965, and `publishYear("n.d.")` and `publishYear(null)` are null.
   - `orderEditions`: every English edition comes before any non-English one. Within a language group, 2019 without a cover comes before 2010 with a cover, but 2018 with a cover comes before 2019 without one (the 2-year boost). An edition with no year sorts after dated ones. Ties keep their input order.
-- [ ] **Step 2: Run** `npx vitest run src/editionOrder.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.** `publishYear` takes the last 4-digit match of `/\b(1[5-9]\d\d|20\d\d)\b/g`. The score is `(year ?? -Infinity) + (coverUrl ? COVER_BOOST_YEARS : 0)`, and the sort is stable by `[nonEnglish asc, score desc]`. In `openLibrary.ts`, replace `ordered` with `orderEditions(editions)` and update the comment above it.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `feat(server): order editions by English, then newest, cover as a small boost`.
+- [x] **Step 2: Run** `npx vitest run src/editionOrder.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.** `publishYear` takes the last 4-digit match of `/\b(1[5-9]\d\d|20\d\d)\b/g`. The score is `(year ?? -Infinity) + (coverUrl ? COVER_BOOST_YEARS : 0)`, and the sort is stable by `[nonEnglish asc, score desc]`. In `openLibrary.ts`, replace `ordered` with `orderEditions(editions)` and update the comment above it.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 5: Commit** with the message `feat(server): order editions by English, then newest, cover as a small boost`.
 
 ### Task 7: "Recently looked at" shows title and author (item 9, §2.4)
 
@@ -214,13 +214,13 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `interface RecentBook { isbn: string; title: string | null; authorNames: string[] }`, `getRecentBooks(): Promise<RecentBook[]>` and `addRecentBook(book: RecentBook): Promise<void>`. These replace `getRecentIsbns` and `addRecentIsbn`. The storage key and the 20-entry cap stay the same.
 
-- [ ] **Step 1: Write the failing tests.** Rewrite the existing three tests for the new API, then add:
+- [x] **Step 1: Write the failing tests.** Rewrite the existing three tests for the new API, then add:
   - `reads a legacy string[] history as untitled entries`: set the key to `'["123"]'`, then expect `[{ isbn: "123", title: null, authorNames: [] }]`.
   - `re-adding an ISBN replaces its old entry with the new title`.
-- [ ] **Step 2: Run** `cd apps/app && npx vitest run src/storage/history.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.** Each stored entry is either a string or a `RecentBook`, and is normalized on read. Dedupe by `isbn`. The book page calls `addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) })`.
-- [ ] **Step 4: Update the home screen.** Each row shows the title in the display font (falling back to the ISBN) and, when present, a second muted line with the author names joined by ", ". The accessibility label is `"<title>, <authors>"`, or the ISBN alone. Then run `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `feat(app): recently looked at shows title and author`.
+- [x] **Step 2: Run** `cd apps/app && npx vitest run src/storage/history.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.** Each stored entry is either a string or a `RecentBook`, and is normalized on read. Dedupe by `isbn`. The book page calls `addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) })`.
+- [x] **Step 4: Update the home screen.** Each row shows the title in the display font (falling back to the ISBN) and, when present, a second muted line with the author names joined by ", ". The accessibility label is `"<title>, <authors>"`, or the ISBN alone. Then run `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 5: Commit** with the message `feat(app): recently looked at shows title and author`.
 
 ### Task 8: Footer scrolls with content; header actions stop cutting off titles (item 7, §2.9)
 
@@ -233,10 +233,10 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `MyLibraryButton({ iconOnly }: { iconOnly?: boolean })` and `NewSearchButton({ iconOnly }: { iconOnly?: boolean })`. `HeaderActions` renders both with `iconOnly`.
 
-- [ ] **Step 1:** Render `<Footer />` as the last child of each ScrollView, or as `ListFooterComponent` of each FlatList. For index, use the recents FlatList's `ListFooterComponent`, or the end of the screen when there are no recents. The graph and scan screens get no footer, because they are full-screen tools.
-- [ ] **Step 2:** In icon-only mode, the buttons use lucide `Library` and `Search` icons at size 20 inside a 44×44 `Pressable`, with `accessibilityRole="button"` and `accessibilityLabel` "My Library" or "New search". The home screen keeps the text "My Library" pill, because it has room for it.
-- [ ] **Step 3: Run** `npx tsc --noEmit`. Expected: PASS. **Verify by eye** at 390×844: the graph header reads "Explore Graph" in full, "Find Connection" is untruncated, and the footer appears only at the bottom of a scrolled page.
-- [ ] **Step 4: Commit** with the message `feat(app): footer scrolls with content, icon header actions`.
+- [x] **Step 1:** Render `<Footer />` as the last child of each ScrollView, or as `ListFooterComponent` of each FlatList. For index, use the recents FlatList's `ListFooterComponent`, or the end of the screen when there are no recents. The graph and scan screens get no footer, because they are full-screen tools.
+- [x] **Step 2:** In icon-only mode, the buttons use lucide `Library` and `Search` icons at size 20 inside a 44×44 `Pressable`, with `accessibilityRole="button"` and `accessibilityLabel` "My Library" or "New search". The home screen keeps the text "My Library" pill, because it has room for it.
+- [x] **Step 3: Run** `npx tsc --noEmit`. Expected: PASS. **Verify by eye** at 390×844: the graph header reads "Explore Graph" in full, "Find Connection" is untruncated, and the footer appears only at the bottom of a scrolled page.
+- [x] **Step 4: Commit** with the message `feat(app): footer scrolls with content, icon header actions`.
 
 ### Task 9: Split My Library into Library, Recommendations and Settings; plain-language library setup (item 1, §2.6, §2.7)
 
@@ -248,15 +248,15 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `routes.recommendations(): Href` ("/recommendations") and `routes.settings(): Href` ("/settings"). The "Lists" row and `routes.lists()` are added in Task 11, because typed routes reject a path that has no screen yet.
 
-- [ ] **Step 1:** `recommendations.tsx` renders `<RecommendationsSection refreshKey={items} />` in a ScrollView, reloading `getSavedItems` on focus the same way `saved.tsx` does. `settings.tsx` gets `AppearanceSection`, `LibraryCard`, the Libraries section and `BackupSection`, moved verbatim with their styles. My Library keeps only Saved Books and Saved Authors. Both new screens end with `<Footer />`.
-- [ ] **Step 2:** At the top of My Library, add two navigation rows styled like the `recentItem` rows (ChevronRight, `accessibilityRole="button"`): **Recommendations** and **Settings & backup**. Stack titles are "Recommendations" and "Settings".
-- [ ] **Step 3: Rewrite the library-setup help** in `settings.tsx`. Keep the existing behaviour and change only the copy:
+- [x] **Step 1:** `recommendations.tsx` renders `<RecommendationsSection refreshKey={items} />` in a ScrollView, reloading `getSavedItems` on focus the same way `saved.tsx` does. `settings.tsx` gets `AppearanceSection`, `LibraryCard`, the Libraries section and `BackupSection`, moved verbatim with their styles. My Library keeps only Saved Books and Saved Authors. Both new screens end with `<Footer />`.
+- [x] **Step 2:** At the top of My Library, add two navigation rows styled like the `recentItem` rows (ChevronRight, `accessibilityRole="button"`): **Recommendations** and **Settings & backup**. Stack titles are "Recommendations" and "Settings".
+- [x] **Step 3: Rewrite the library-setup help** in `settings.tsx`. Keep the existing behaviour and change only the copy:
   - Section intro: "Add your library so book pages can link to its catalog."
   - ISBN field help: "1. Open your library's online catalog. 2. Search for any book's ISBN. 3. Copy the address of the results page and paste it here."
   - Title field help: the same three steps with "title" in place of "ISBN".
   - Keep one line about `{isbn}`/`{title}` placeholders, under a smaller "Advanced:" prefix.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye** that Export CSV is two taps from My Library (Settings → Export CSV).
-- [ ] **Step 5: Commit** with the message `feat(app): split My Library into library, recommendations and settings pages`.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye** that Export CSV is two taps from My Library (Settings → Export CSV).
+- [x] **Step 5: Commit** with the message `feat(app): split My Library into library, recommendations and settings pages`.
 
 ### Task 10: Named lists: storage, backup and merge (item 6, §2.6)
 
@@ -283,7 +283,7 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
   ```
   `Snapshot` gains `lists: SavedList[]`.
 
-- [ ] **Step 1: Write the failing tests** in `savedLists.test.ts`, using the existing `src/test/asyncStorageMock.ts`:
+- [x] **Step 1: Write the failing tests** in `savedLists.test.ts`, using the existing `src/test/asyncStorageMock.ts`:
   - `createList trims the name and rejects an empty one` (throws).
   - `getLists("book") excludes author lists and deleted lists`.
   - `addToList twice keeps one member`.
@@ -293,8 +293,8 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 
   In `mergeSnapshot.test.ts`: `lists merge by id, newer wins, tombstone beats an older edit`.
   In `backup.test.ts`: `a schemaVersion 2 backup with no lists imports with lists: []`, and `a schemaVersion 3 backup without lists is rejected`.
-- [ ] **Step 2: Run** `npx vitest run src/storage src/backup.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run** `npx vitest run src/storage src/backup.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - The storage key is `"book-explorer:saved-lists"`. Every write goes through `enqueueWrite`.
   - `id` is `` `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}` ``.
   - Name is at most 100 characters and description at most 1,000.
@@ -303,8 +303,8 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
   - `mergeSnapshots` adds `lists: sorted(mergeBy(a.lists, b.lists, (l) => l.id, newer))`.
   - `getSnapshot` and `applySnapshot` include lists.
   - `migrateStorage` needs no data change for v3. The version bump alone is enough.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run` in `apps/app` and `apps/server`, since server tests import shared. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `feat(app): named lists storage, backup and merge`.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run` in `apps/app` and `apps/server`, since server tests import shared. Expected: PASS.
+- [x] **Step 5: Commit** with the message `feat(app): named lists storage, backup and merge`.
 
 ### Task 11: Named lists: screens and "Add to list" (item 6)
 
@@ -317,17 +317,17 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 - Consumes: the Task 10 API.
 - Produces: `routes.lists(): Href` ("/lists"), `routes.list(id: string): Href` (`{ pathname: "/lists/[id]", params: { id } }`) and `AddToListButton({ member }: { member: Omit<ListMember, "addedAt"> })`. The kind is derived from the member: author → "author", anything else → "book".
 
-- [ ] **Step 1: AddToListButton.** A `Button variant="pill"` labelled "Add to list" opens a React Native `Modal` (transparent, slide). The modal contains:
+- [x] **Step 1: AddToListButton.** A `Button variant="pill"` labelled "Add to list" opens a React Native `Modal` (transparent, slide). The modal contains:
   - A "Choose a list" heading.
   - One row per `getLists(kind)` list, with `accessibilityRole="checkbox"` and `accessibilityState={{ checked }}`. Tapping a row toggles it with `addToList`/`removeFromList`.
   - A **"Create new list"** row that reveals Name (required) and Description (optional) inputs, plus a "Create and add" primary button. That button calls `createList`, then `addToList`, and the new list shows as checked.
   - A "Done" button.
 
   If `createList` throws, show the error inline with `accessibilityLiveRegion="polite"`.
-- [ ] **Step 2: Lists screen** (`/lists`). It has two sections, "Book lists" and "Author lists", with the existing empty-state copy style ("No book lists yet. Tap “Add to list” on a book page to start one."), plus a "New list" button that reuses the create form. Each row shows the name, the member count and a ChevronRight, and opens `routes.list(id)`.
-- [ ] **Step 3: List detail screen** (`/lists/[id]`). It shows the name as a header, then the description, then the members. A member row opens `routes.book`, `routes.work` or `routes.author` according to its type, and has a "Remove" pill. A "Delete list" danger pill asks for confirmation (web `confirm`, native `Alert.alert`) before calling `deleteList`, then goes back.
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye:** create "Book club" from Dune's page, add Atomic Habits to it, check that it shows on `/lists` and that an author can't be added to it (author pages only list author lists).
-- [ ] **Step 5: Commit** with the message `feat(app): lists pages and add-to-list sheet`.
+- [x] **Step 2: Lists screen** (`/lists`). It has two sections, "Book lists" and "Author lists", with the existing empty-state copy style ("No book lists yet. Tap “Add to list” on a book page to start one."), plus a "New list" button that reuses the create form. Each row shows the name, the member count and a ChevronRight, and opens `routes.list(id)`.
+- [x] **Step 3: List detail screen** (`/lists/[id]`). It shows the name as a header, then the description, then the members. A member row opens `routes.book`, `routes.work` or `routes.author` according to its type, and has a "Remove" pill. A "Delete list" danger pill asks for confirmation (web `confirm`, native `Alert.alert`) before calling `deleteList`, then goes back.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye:** create "Book club" from Dune's page, add Atomic Habits to it, check that it shows on `/lists` and that an author can't be added to it (author pages only list author lists).
+- [x] **Step 5: Commit** with the message `feat(app): lists pages and add-to-list sheet`.
 
 ### Task 12: CSV export: shelves from lists, not subjects (§2.8, confirmed bug)
 
@@ -339,19 +339,19 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 - Consumes: `SavedList` from Task 10.
 - Produces: `booksToCsv(books: SavedBookRecord[], lists: SavedList[]): string`. Header: `["Title", "Author", "Additional Authors", "ISBN", "ISBN13", "Bookshelves", "Exclusive Shelf", "Private Notes", "Date Added"]`.
 
-- [ ] **Step 1: Write the failing tests.**
+- [x] **Step 1: Write the failing tests.**
   - `Bookshelves holds the book's live book-list names as Goodreads shelf slugs, never subjects`: a record with subjects `["Award:Hugo_Award=1966"]` that is in list "Book Club 2026" exports `Bookshelves = "book-club-2026"` and `Exclusive Shelf = "to-read"`.
   - `a book in no list exports an empty Bookshelves`.
-  - `a list named "=HYPERLINK(x)" is neutralised`: the field starts with `'`.
+  - a list named `=HYPERLINK(x)` exports as the shelf slug `hyperlink-x`, because the slug rule removes every formula character. The raw-text cells (title, author, notes) keep the leading-`'` rule, tested by "neutralizes cells a spreadsheet would run as formulas" in `csv.test.ts`.
   - The existing round-trip test still reads back through `readBookCsv`.
-- [ ] **Step 2: Run** `npx vitest run src/csv.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 2: Run** `npx vitest run src/csv.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - A shelf slug is the name lowercased, with each run of non-alphanumeric characters replaced by `-` and leading/trailing `-` trimmed.
   - Membership means a live `kind: "book"` list with a member `{ type: "book", id: isbn }`.
   - `backup.ts` passes `snapshot.lists`.
   - New help text: "CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup."
-- [ ] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 5: Commit** with the message `fix(app): CSV export uses list names as shelves, not subjects`.
+- [x] **Step 4: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 5: Commit** with the message `fix(app): CSV export uses list names as shelves, not subjects`.
 
 ### Task 13: Explain the graph and Find Connection (§2.5)
 
@@ -363,15 +363,15 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: `legendEntries(nodes: GraphNode[]): { types: GraphNode["type"][]; showUnlinked: boolean }`, in `graphLabels.ts`. It returns the node types present, in `NODE_COLORS` key order, and whether any node has `navigable: false`.
 
-- [ ] **Step 1: Write the failing test.** `legendEntries` for nodes `[author, work, subject(navigable: false)]` returns `{ types: ["author", "work", "subject"], showUnlinked: true }`, and for nodes with no genre and all navigable it returns no "genre" and `showUnlinked: false`.
-- [ ] **Step 2: Run** `npx vitest run src/graphLabels.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Implement.**
+- [x] **Step 1: Write the failing test.** `legendEntries` for nodes `[author, work, subject(navigable: false)]` returns `{ types: ["author", "work", "subject"], showUnlinked: true }`, and for nodes with no genre and all navigable it returns no "genre" and `showUnlinked: false`.
+- [x] **Step 2: Run** `npx vitest run src/graphLabels.test.ts`. Expected: FAIL.
+- [x] **Step 3: Implement.**
   - The legend renders only `legendEntries(graph.nodes)`. The faded swatch gets `borderWidth: 1, borderColor: colors.inkFaint` with opacity raised to 0.6.
   - The visible hint becomes: "Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page." The screen-reader instruction moves to the graph container's `accessibilityHint`.
   - Node label `fontSize` goes from 9.5 to 12 and from 11 to 13. Then check that `graphLayout.test.ts` still passes. If the layout uses label width, adjust its constant in the same commit.
-- [ ] **Step 4: Update Find Connection.** Under the "Connect {label} to…" heading, add muted text at `typeScale.sm`: "Pick a second book and we'll show how the two are linked: through shared authors, subjects, series or influences." On the book page, the Find Connection button gets `accessibilityHint="Shows how this book links to another book you pick"`.
-- [ ] **Step 5: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
-- [ ] **Step 6: Commit** with the message `feat(app): explain graph and Find Connection, legend shows only present types`.
+- [x] **Step 4: Update Find Connection.** Under the "Connect {label} to…" heading, add muted text at `typeScale.sm`: "Pick a second book and we'll show how the two are linked: through shared authors, subjects, series or influences." On the book page, the Find Connection button gets `accessibilityHint="Shows how this book links to another book you pick"`.
+- [x] **Step 5: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS.
+- [x] **Step 6: Commit** with the message `feat(app): explain graph and Find Connection, legend shows only present types`.
 
 ### Task 14: Contrast and control-state fixes in both themes (§3, §2.10)
 
@@ -384,7 +384,7 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
 **Interfaces:**
 - Produces: a new token `pillBorder` in `ThemeColors`, `primary`/`primaryText` repurposed as the primary-button colours (both are currently unused), and `CoverPlaceholder({ width, height }: { width: number; height: number })`.
 
-- [ ] **Step 1: Write the failing test** `theme.test.ts`, with a local `contrast(a, b)` helper using the WCAG relative-luminance formula. For **each** theme it asserts:
+- [x] **Step 1: Write the failing test** `theme.test.ts`, with a local `contrast(a, b)` helper using the WCAG relative-luminance formula. For **each** theme it asserts:
   - `primaryText` on `primary` ≥ 4.5
   - `primary` vs `paper` ≥ 3
   - `pillBorder` vs `paper` ≥ 3
@@ -394,28 +394,28 @@ In `loc.test.ts`, add `mergeTaggedTerms merges "Science Fiction" (lcsh) and "sci
   - `chipTextSubject` on `chipBackgroundSubject` ≥ 4.5
 
   It also asserts `typeScale.xs >= 14`.
-- [ ] **Step 2: Run** `npx vitest run src/theme.test.ts`. Expected: FAIL.
-- [ ] **Step 3: Set the values.** Each one was checked against its pair.
+- [x] **Step 2: Run** `npx vitest run src/theme.test.ts`. Expected: FAIL.
+- [x] **Step 3: Set the values.** Each one was checked against its pair.
   - Light: `primary: "#2B5951"`, `primaryText: "#FFFFFF"`, `pillBorder: "#8C877B"` (3.35:1 on paper, 3.2:1 on chip), `inkFaint: "#5C5B66"` (6.24:1).
   - Dark: `primary: "#3A7F70"`, `primaryText: "#FFFFFF"` (4.72:1, and 3.65:1 vs paper), `pillBorder: "#6B6B7B"` (3.29:1).
   - `typeScale.xs: 14`.
-- [ ] **Step 4: Apply them to the components.**
+- [x] **Step 4: Apply them to the components.**
   - `Button` primary uses `primary`/`primaryText`, and so does the home scan button.
   - `pill` gets `borderWidth: 1, borderColor: colors.pillBorder`.
   - `pillActive` becomes `{ backgroundColor: colors.primary, borderColor: colors.primary }` with `primaryText` text and star. This fixes both the faint Appearance selection and "★ Saved" not feeling confirmed, and it takes rust off "Saved", so rust only means "subject".
   - The Remove pills get `borderWidth: 1, borderColor: colors.danger`.
   - Subject and genre chips get `borderWidth: 1` in their own text colour.
-- [ ] **Step 5: Add `CoverPlaceholder`.** It is a `View` with a 1px `pillBorder` border on `chipBackground` and a centered lucide `BookOpen` icon (size 18, `inkFaint`), marked `accessibilityElementsHidden`. Use it in `WorkListRow`.
-- [ ] **Step 6: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye** in light and dark: the secondary pills read as buttons, the selected Appearance option is obvious, placeholders read as "no cover", and the dark-mode primary buttons have white text.
-- [ ] **Step 7: Commit** with the message `feat(app): contrast and control-state fixes for light and dark themes`.
+- [x] **Step 5: Add `CoverPlaceholder`.** It is a `View` with a 1px `pillBorder` border on `chipBackground` and a centered lucide `BookOpen` icon (size 18, `inkFaint`), marked `accessibilityElementsHidden`. Use it in `WorkListRow`.
+- [x] **Step 6: Run** `npx tsc --noEmit && npx vitest run`. Expected: PASS. **Verify by eye** in light and dark: the secondary pills read as buttons, the selected Appearance option is obvious, placeholders read as "no cover", and the dark-mode primary buttons have white text.
+- [x] **Step 7: Commit** with the message `feat(app): contrast and control-state fixes for light and dark themes`.
 
 ### Task 15: Apply the app name (only if D1 picks a new name)
 
 **Files:** `apps/app/app/index.tsx:32` (heading), `apps/app/app/_layout.tsx` (`index` Stack title), `apps/app/app.json` (`expo.name`), `README.md` (title line). Leave `slug`, `scheme` and the storage keys alone, because changing them would orphan installed data and deep links.
 
-- [ ] **Step 1:** Replace the visible "Book Explorer" in those four places. Keep the "find your next read" tagline.
-- [ ] **Step 2:** Run `grep -rn "Book Explorer" apps/app/app apps/app/src`. Expected: no user-visible matches.
-- [ ] **Step 3: Commit** with the message `chore: rename app to <name>`.
+- [x] **Step 1:** Replace the visible "Book Explorer" in those four places. Keep the "find your next read" tagline.
+- [x] **Step 2:** Run `grep -rn "Book Explorer" apps/app/app apps/app/src`. Expected: no user-visible matches.
+- [x] **Step 3: Commit** with the message `chore: rename app to <name>`.
 
 ---
 
