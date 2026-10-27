@@ -49,11 +49,9 @@ Then `sudo caddy validate --config /etc/caddy/Caddyfile` and `sudo systemctl rel
 
 Today the site answers non-browser requests with a challenge (403, `cf-mitigated: challenge`), which also blocks these crawlers.
 
-1. Find what issues it: Security > Events, filter on a challenged request, and read the "Service" column (managed rules, Bot Fight Mode, Browser Integrity Check, security level…).
-2. Add a WAF custom rule for shelfthread.com: expression `(cf.client.bot)` ("Known Bots" in the rule builder), action **Skip**, and tick every component the events showed.
+1. Find what issues it: Security > Events, filter on a challenged request, and read the "Service" column (managed rules, Bot Fight Mode, Browser Integrity Check, security level…). To reproduce it, paste a page URL into Facebook's Sharing Debugger (developers.facebook.com/tools/debug) and opengraph.xyz, then look in Security > Events for challenged requests from those fetches.
+2. Add a WAF custom rule for shelfthread.com: expression `(cf.client.bot)` ("Known Bots" in the rule builder), action **Skip**, and tick every component the events showed. Verified bots only: the rule can't be spoofed with a User-Agent.
 3. If the service is **Bot Fight Mode** on the Free plan, a Skip rule can't bypass it; turn it off under Security > Bots, or previews stay blocked.
-
-To confirm crawlers get through: paste a page URL into Facebook's Sharing Debugger (developers.facebook.com/tools/debug) and opengraph.xyz, then open Security > Events and look for challenged requests from those fetches. If they were challenged, add the rule from step 2 above, and for Bot Fight Mode see step 3. Verified bots only: the rule can't be spoofed with a User-Agent. Skip both Managed Challenge and Bot Fight Mode when `cf.client.bot` is true.
 
 Discord, Telegram, WhatsApp and Mastodon fetchers aren't all Cloudflare "known bots". If their previews fail while X and Facebook work, add their User-Agents to the Skip rule's expression, e.g. `(cf.client.bot or http.user_agent contains "Discordbot" or http.user_agent contains "TelegramBot")`. User-Agents can be faked, so this lets anyone using those strings past the challenge; they still only reach static pages and `/og`.
 
