@@ -11,6 +11,7 @@ import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
 import { seriesRoutes } from "./routes/series.js";
 import { pathRoutes } from "./routes/path.js";
+import { suggestRoutes } from "./routes/suggest.js";
 import { ogRoutes } from "./routes/og.js";
 import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
 import { initPersistentCache } from "./cache.js";
@@ -70,6 +71,7 @@ await app.register(graphRoutes);
 await app.register(searchRoutes);
 await app.register(seriesRoutes);
 await app.register(pathRoutes);
+await app.register(suggestRoutes);
 if (process.env.WEB_INDEX_HTML) {
   await app.register(ogRoutes, { indexHtml: process.env.WEB_INDEX_HTML, origin: process.env.PUBLIC_WEB_URL });
 }

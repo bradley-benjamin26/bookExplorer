@@ -134,3 +134,8 @@ export function fetchSeries(qid: string): Promise<Series> {
 export function fetchPath(from: string, to: string, signal?: AbortSignal): Promise<PathResult> {
   return getJson(`/api/path?${new URLSearchParams({ from, to })}`, PathResultSchema, signal);
 }
+
+/** LCSH subject or LC genre headings matching what's being typed (at most 8). */
+export function suggestTerms(kind: "subjects" | "genres", q: string, signal?: AbortSignal): Promise<string[]> {
+  return getJson(`/api/suggest/${kind}?${new URLSearchParams({ q })}`, z.array(z.string()), signal);
+}
