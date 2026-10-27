@@ -10,8 +10,13 @@ describe("titleRef", () => {
   it("ignores null, native-like nodes and undefined text", () => {
     expect(() => titleRef("Zoom in")(null)).not.toThrow();
     expect(() => titleRef("Zoom in")({})).not.toThrow();
-    const el = { setAttribute: vi.fn() };
+    expect(() => titleRef(undefined)({})).not.toThrow();
+    expect(() => titleRef(undefined)(null)).not.toThrow();
+  });
+  it("removes a stale data-tooltip when text is undefined", () => {
+    const el = { setAttribute: vi.fn(), removeAttribute: vi.fn() };
     titleRef(undefined)(el);
+    expect(el.removeAttribute).toHaveBeenCalledWith("data-tooltip");
     expect(el.setAttribute).not.toHaveBeenCalled();
   });
 });

@@ -71,6 +71,8 @@ export default function WorkDetail() {
     record: savedRecord,
     onUpdate: (c) => updateSavedWork(savedId, c).then((r) => r && setSavedRecord(r)),
     onRequestSave: (notice) => {
+      // Already saved as an edition: edit it on its book page instead of asking to save again.
+      if (savedEdition) return router.push(routes.book(savedEdition.isbn, { edit: true }));
       editAfterSave.current = true;
       saveSheet.current?.open(notice);
     },
@@ -132,7 +134,7 @@ export default function WorkDetail() {
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (
-        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" onPress={() => router.push(routes.book(savedEdition.isbn))}>
+        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
         </Pressable>
       )}
@@ -221,7 +223,8 @@ function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm, alignSelf: "center", textDecorationLine: "underline" },
+    savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
+    savedEditionLink: { marginTop: spacing.sm, alignSelf: "center" },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },

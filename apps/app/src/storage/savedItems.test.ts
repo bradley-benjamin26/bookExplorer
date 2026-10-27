@@ -15,7 +15,9 @@ describe("savedItems", () => {
 
   it("keys items by type as well as id", async () => {
     await ensureSaved({ type: "work", id: "OL1W", title: "A work" });
-    expect((await getSavedItems()).some((i) => i.type === "author" && i.id === "OL1W")).toBe(false);
+    const items = await getSavedItems();
+    expect(items).toHaveLength(1);
+    expect(items.some((i) => i.type === "author" && i.id === "OL1W")).toBe(false);
   });
 
   it("lists the newest save first and removes by type and id", async () => {

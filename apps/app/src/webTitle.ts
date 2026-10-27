@@ -3,7 +3,9 @@ export const TOOLTIP_DELAY_MS = 500;
 
 /** Callback ref that marks a control for WebTooltip. React Native Web host nodes are DOM elements; native nodes lack `setAttribute`, so this is a no-op there. Not `title`: the browser's own tooltip is slow and would show as well. */
 export const titleRef = (text: string | undefined) => (el: unknown) => {
-  if (text && el && typeof (el as Element).setAttribute === "function") (el as Element).setAttribute("data-tooltip", text);
+  const node = el as Element | null;
+  if (text && typeof node?.setAttribute === "function") node.setAttribute("data-tooltip", text);
+  else if (!text && typeof node?.removeAttribute === "function") node.removeAttribute("data-tooltip");
 };
 
 type Size = { width: number; height: number };
