@@ -428,9 +428,11 @@ export default function GraphExplorer() {
           href={routes.graph(center.type, center.id, filterToParams(filter))}
         />
       </View>
-      <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
-        <View style={styles.sheetBackdrop}>
-          <ScrollView style={styles.sheet} accessibilityViewIsModal>
+      <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setFilterOpen(false)} accessibilityLabel="Close filter">
+          {/* The empty onPress keeps presses inside the popup from reaching the backdrop. */}
+          <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+          <ScrollView accessibilityViewIsModal>
             <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
             <Text style={styles.sheetHeading}>Node types</Text>
             {[...new Set([...(data.nodes.map((n) => n.type) as string[]), ...filter.hiddenTypes])].map((t) => (
@@ -454,7 +456,8 @@ export default function GraphExplorer() {
               Done
             </Button>
           </ScrollView>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
       {history.length > 0 && (
         <Pressable
@@ -813,13 +816,14 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     },
     pressed: { opacity: 0.6 },
     toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
-    sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+    sheetBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {
+      width: "100%",
+      maxWidth: 360,
       maxHeight: "70%",
       backgroundColor: colors.paper,
       padding: spacing.lg,
-      borderTopLeftRadius: radii.sm,
-      borderTopRightRadius: radii.sm,
+      borderRadius: radii.sm,
     },
     sheetTitle: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
     sheetHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md },
