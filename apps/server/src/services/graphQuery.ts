@@ -20,6 +20,8 @@ export const MAX_PATHS = 3;
 // genre passed through, so a hop through "Fiction" (~10^6 works) costs as
 // much as several hops through people and books, and the most specific
 // chain ranks first. A subject not yet fetched is guessed at ~1000 works.
+// Awards are never fetched (no graph of their own), so they always take that
+// guess: a big award like the Hugo links hundreds of winners.
 const HOP_COST = 1;
 const UNPROBED_SUBJECT_PENALTY = 3;
 
@@ -111,7 +113,7 @@ export function findPath(
   let upstreamDown = false;
 
   const penalty = (id: string) => {
-    if (!/^(subject|genre):/.test(id)) return 0;
+    if (!/^(subject|genre|award):/.test(id)) return 0;
     const count = breadth.get(id);
     return count === undefined ? UNPROBED_SUBJECT_PENALTY : Math.log10(1 + count);
   };

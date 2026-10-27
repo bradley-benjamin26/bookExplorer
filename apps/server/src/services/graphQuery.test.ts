@@ -229,6 +229,20 @@ describe("findPath", () => {
     expect(result.found && result.paths.map((p) => p.summary)).toEqual(["Both: subject:tudor_england", "Both: subject:history"]);
   });
 
+  it("ranks a shared award like a broad subject, below a specific one", async () => {
+    const graph = fixture(
+      [
+        ["work:W1", "won", "award:hugo_award"],
+        ["work:W2", "won", "award:hugo_award"],
+        ["work:W1", "subject", "subject:tudor_england"],
+        ["work:W2", "subject", "subject:tudor_england"],
+      ],
+      { "subject:tudor_england": 300 }
+    );
+    const result = await findPath("work:W1", "work:W2", graph, LIMITS);
+    expect(result.found && result.paths.map((p) => p.nodes[1].id)).toEqual(["subject:tudor_england", "award:hugo_award"]);
+  });
+
   it("returns at most three distinct paths, most specific first", async () => {
     const counts = [10, 100_000, 100, 1_000_000, 1000];
     const graph = fixture(
