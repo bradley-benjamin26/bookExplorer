@@ -62,3 +62,32 @@ describe("getWorkLinks", () => {
     await expect(getWorkLinks("OL4W")).rejects.toBeInstanceOf(UpstreamUnavailableError);
   });
 });
+
+describe("getWorkDetail LOC summary", () => {
+  const withLoc = (loc: { lccn: string | null; summary: string | null }) => {
+    vi.mocked(openLibrary.getWork).mockReset().mockResolvedValue({
+      title: "Dune", authors: [], coverUrl: null, description: null, subjects: [], isbn: null, isbnCandidates: [], editions: [],
+    });
+    vi.mocked(startCommonEnrichment).mockReset().mockReturnValue({
+      locMetadataPromise: Promise.resolve({ subjects: [], genres: [], lcc: "PS1", ddc: "813", ...loc }),
+      hardcoverPromise: Promise.resolve(null),
+      olRatingsPromise: Promise.resolve(null),
+    } as unknown as ReturnType<typeof startCommonEnrichment>);
+  };
+
+  it("uses the LOC summary, credited to loc, when Open Library has no description", async () => {
+    withLoc({ lccn: "2001012345", summary: "A summary from the catalog." });
+    const work = await getWorkDetail("OL10W");
+    expect(work?.description).toBe("A summary from the catalog.");
+    expect(work?.descriptionSource).toBe("loc");
+    expect(work?.loc).toEqual({ lcc: "PS1", ddc: "813", lccn: "2001012345" });
+  });
+
+  it("omits loc, and ignores the LOC summary, when there is no LCCN", async () => {
+    withLoc({ lccn: null, summary: "An uncredited summary." });
+    const work = await getWorkDetail("OL11W");
+    expect(work?.loc).toBeUndefined();
+    expect(work?.description).toBeNull();
+    expect(work?.descriptionSource).toBeNull();
+  });
+});

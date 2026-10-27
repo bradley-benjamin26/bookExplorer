@@ -83,7 +83,8 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // Wikipedia's extract is always English; the other two are checked.
     const gbDescription = englishOrNull(gb?.description ?? null);
     const olDescription = englishOrNull(ol.description);
-    const locSummary = englishOrNull(locMetadata.summary);
+    // Only with an LCCN, since the summary is credited to (and linked from) its catalog record.
+    const locSummary = locMetadata.lccn ? englishOrNull(locMetadata.summary) : null;
     const description = wikipedia?.text ?? gbDescription ?? olDescription ?? locSummary;
     const descriptionSource = wikipedia
       ? "wikipedia"

@@ -78,7 +78,8 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
 
     const olTerms = splitSubjectTerms(ol.subjects);
     const olDescription = englishOrNull(ol.description);
-    const locSummary = englishOrNull(locMetadata.summary);
+    // Only with an LCCN, since the summary is credited to (and linked from) its catalog record.
+    const locSummary = locMetadata.lccn ? englishOrNull(locMetadata.summary) : null;
     const result: Work = {
       openLibraryWorkId: workId,
       ...ol,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as openLibrary from "../sources/openLibrary.js";
+import { startCommonEnrichment } from "./bookEnrichment.js";
 import { getBookDetail } from "./bookService.js";
 import { getWorkDetail } from "./workService.js";
 
@@ -97,5 +98,37 @@ describe("getBookDetail authors", () => {
     const book = await getBookDetail("9780000000002");
 
     expect(book?.authors).toEqual([{ openLibraryId: "OL9A", name: "James Clear" }]);
+  });
+});
+
+describe("getBookDetail LOC summary", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const withLoc = (loc: { lccn: string | null; summary: string | null }) => {
+    vi.mocked(openLibrary.lookupByIsbn).mockResolvedValue({
+      title: "T", authors: [{ name: "A" }], subjects: [], coverUrl: "ol.jpg", description: null, workId: "OL1W",
+    } as never);
+    vi.mocked(googleBooks.lookupByIsbn).mockResolvedValue(null);
+    vi.mocked(startCommonEnrichment).mockReturnValueOnce({
+      locMetadataPromise: Promise.resolve({ subjects: [], genres: [], lcc: "PS1", ddc: "813", ...loc }),
+      hardcoverPromise: Promise.resolve(null),
+      olRatingsPromise: Promise.resolve(null),
+    } as unknown as ReturnType<typeof startCommonEnrichment>);
+  };
+
+  it("uses the LOC summary, credited to loc, when no other source has a description", async () => {
+    withLoc({ lccn: "2001012345", summary: "A summary from the catalog." });
+    const book = await getBookDetail("9780000000010");
+    expect(book?.description).toBe("A summary from the catalog.");
+    expect(book?.descriptionSource).toBe("loc");
+    expect(book?.loc).toEqual({ lcc: "PS1", ddc: "813", lccn: "2001012345" });
+  });
+
+  it("omits loc, and ignores the LOC summary, when there is no LCCN", async () => {
+    withLoc({ lccn: null, summary: "An uncredited summary." });
+    const book = await getBookDetail("9780000000011");
+    expect(book?.loc).toBeUndefined();
+    expect(book?.description).toBeNull();
+    expect(book?.descriptionSource).toBeNull();
   });
 });
