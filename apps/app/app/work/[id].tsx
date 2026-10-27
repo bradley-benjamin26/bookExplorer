@@ -15,11 +15,13 @@ import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
-import { AddToListButton } from "../../src/components/AddToListButton";
+import { WorkSaveButton } from "../../src/components/WorkSaveButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { savedEditionOf } from "../../src/editionChoice";
+import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { addRecent } from "../../src/storage/history";
-import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
+import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 import { titleRef } from "../../src/webTitle";
@@ -49,6 +51,14 @@ export default function WorkDetail() {
   useFocusEffect(
     useCallback(() => {
       if (savedId) getSavedWork(savedId).then(setSavedRecord);
+    }, [savedId])
+  );
+
+  // The edition of this work saved as a book, if any; re-read on focus like the work's own record.
+  const [savedEdition, setSavedEdition] = useState<SavedBookRecord | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (savedId) getAllSavedBooks().then((books) => setSavedEdition(savedEditionOf(books, savedId)));
     }, [savedId])
   );
 
@@ -88,16 +98,16 @@ export default function WorkDetail() {
       </View>
       <View style={styles.actions}>
         <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
-        <AddToListButton
-          member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
-          onSave={async () => {
-            // Keeps the cover on disk so the saved work still shows it offline.
-            if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-            return saveWork(data);
-          }}
-          onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
+        <WorkSaveButton
+          work={data}
+          onSaved={(isbn) => (isbn ? router.push(routes.book(isbn)) : getSavedWork(data.openLibraryWorkId).then(setSavedRecord))}
         />
       </View>
+      {savedEdition && (
+        <Pressable onPress={() => router.push(routes.book(savedEdition.isbn))}>
+          <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
+        </Pressable>
+      )}
 
       <Button
         variant="primary"
@@ -238,6 +248,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       color: colors.chipTextGenre,
     },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
+    savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm, alignSelf: "center", textDecorationLine: "underline" },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
