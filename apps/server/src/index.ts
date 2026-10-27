@@ -78,6 +78,10 @@ if (process.env.WEB_INDEX_HTML) {
 
 if (process.env.CACHE_DB_PATH) initPersistentCache(process.env.CACHE_DB_PATH);
 
+if (process.env.NODE_ENV === "production" && !process.env.GOOGLE_BOOKS_API_KEY) {
+  app.log.warn("GOOGLE_BOOKS_API_KEY is not set; the keyless Google Books quota is usually exhausted, so cover/description fallbacks will fail");
+}
+
 const port = Number(process.env.PORT ?? 3001);
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err);
