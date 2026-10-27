@@ -1,4 +1,4 @@
-import type { AuthorRelation, Series, SubjectConcept } from "@book-explorer/shared";
+import type { AuthorRelation, Series, SeriesMember, SubjectConcept } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
@@ -440,7 +440,11 @@ export async function fetchWorkSeries(
 const NON_WORK_PARTS = new Set(["Q920285"]); // prologue
 
 /** Every item that is part of the series (P179 -> seriesQid), in series order. */
-export async function fetchSeries(seriesQid: string): Promise<Series | null> {
+export type SeriesWithAuthors = Omit<Series, "members"> & {
+  members: (Omit<SeriesMember, "coverUrl"> & { authorName: string | null })[];
+};
+
+export async function fetchSeries(seriesQid: string): Promise<SeriesWithAuthors | null> {
   if (!isValidQid(seriesQid)) return null;
   const [memberQids, seriesResolved] = await Promise.all([
     searchReverseStatementQids("P179", seriesQid, 100),
@@ -452,6 +456,8 @@ export async function fetchSeries(seriesQid: string): Promise<Series | null> {
   const [entities, resolved] = await Promise.all([wbGetEntities(memberQids, "claims"), resolveItems(memberQids)]);
   const seen = new Set<string>();
   const memberSet = new Set(memberQids);
+  const authorQidOf = (qid: string) => claimItemIds(entities[qid], "P50")[0];
+  const authors = await resolveItems([...new Set(memberQids.flatMap((q) => authorQidOf(q) ?? []))]);
   const members = [...new Set(memberQids)].flatMap((qid) => {
     const item = resolved.get(qid);
     // A volume's inner books are part of another member, and a prologue is not a work of its own.
@@ -464,7 +470,7 @@ export async function fetchSeries(seriesQid: string): Promise<Series | null> {
     if (item.openLibraryId) seen.add(item.openLibraryId);
     // P648 can hold an edition id (OL…M), which the work page can't open.
     const openLibraryWorkId = item.openLibraryId && /^OL\d+W$/.test(item.openLibraryId) ? item.openLibraryId : null;
-    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId }];
+    return [{ wikidataId: qid, title: item.label, position: seriesOrdinal(entities[qid], seriesQid), openLibraryWorkId, authorName: authors.get(authorQidOf(qid) ?? "")?.label ?? null }];
   });
   members.sort((a, b) => compareOrdinals(a.position, b.position));
   return { wikidataId: seriesQid, name, members };

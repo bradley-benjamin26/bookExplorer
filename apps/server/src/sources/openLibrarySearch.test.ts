@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAuthorWorks, searchWorks } from "./openLibrary.js";
+import { findWork, getAuthorWorks, searchWorks } from "./openLibrary.js";
 
 function mockSearchResponse(docs: unknown[]) {
-  return vi.fn(async () => ({
+  return vi.fn(async (..._args: unknown[]) => ({
     ok: true,
     json: async () => ({ docs }),
   }));
@@ -95,5 +95,21 @@ describe("getAuthorWorks", () => {
       { openLibraryId: "OL1A", name: "Brian Herbert" },
       { openLibraryId: "OL2A", name: "Kevin J. Anderson" },
     ]);
+  });
+});
+
+describe("findWork", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("searches by title and author and returns the first work with its cover", async () => {
+    const fetch = mockSearchResponse([{ key: "/works/OL15056578W", title: "Tehanu (The Earthsea Cycle, Book 4)", cover_i: 3347790 }]);
+    vi.stubGlobal("fetch", fetch);
+    expect(await findWork("Tehanu", "Ursula K. Le Guin")).toEqual({ workId: "OL15056578W", coverUrl: "https://covers.openlibrary.org/b/id/3347790-M.jpg" });
+    const url = new URL(fetch.mock.calls[0][0] as string);
+    expect(url.searchParams.get("title")).toBe("Tehanu");
+    expect(url.searchParams.get("author")).toBe("Ursula K. Le Guin");
+  });
+  it("returns null when nothing matches", async () => {
+    vi.stubGlobal("fetch", mockSearchResponse([]));
+    expect(await findWork("Nope", "Nobody")).toBeNull();
   });
 });

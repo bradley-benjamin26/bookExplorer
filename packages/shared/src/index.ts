@@ -392,6 +392,7 @@ export const SeriesMemberSchema = z.object({
   position: z.string().nullable(),
   // Wikidata doesn't always know the Open Library id, so not every member is navigable.
   openLibraryWorkId: z.string().nullable(),
+  coverUrl: z.string().nullable(),
 });
 export type SeriesMember = z.infer<typeof SeriesMemberSchema>;
 

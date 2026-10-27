@@ -470,6 +470,16 @@ export async function getAuthorWorks(openLibraryId: string, limit = 15): Promise
     }));
 }
 
+/** Best-effort match of a title plus author name to an Open Library work (Wikidata's P648 can be a stale, merged id). */
+export async function findWork(title: string, authorName: string): Promise<{ workId: string; coverUrl: string | null } | null> {
+  const params = new URLSearchParams({ title, author: authorName, fields: "key,cover_i", limit: "1" });
+  const res = await fetchWithTimeout(`https://openlibrary.org/search.json?${params}`, { headers: { "User-Agent": USER_AGENT } });
+  if (!res.ok) throw new Error(`Open Library search request failed: ${res.status}`);
+  const doc = ((await res.json()) as { docs?: { key?: string; cover_i?: number }[] }).docs?.[0];
+  if (!doc?.key) return null;
+  return { workId: doc.key.replace("/works/", ""), coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null };
+}
+
 interface AuthorSearchResult {
   docs?: { key: string; name: string }[];
 }
