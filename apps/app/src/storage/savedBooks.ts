@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Book } from "@book-explorer/shared";
 import { ensureSaved, removeSaved } from "./savedItems";
+import { ensureOnAList } from "./savedLists";
 import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -125,6 +126,7 @@ export function removeSavedBook(isbn: string): Promise<void> {
 export async function saveBook(book: Book): Promise<SavedBookRecord> {
   const record = await saveBookFromApi(book);
   await ensureSaved({ type: "book", id: book.isbn, title: book.title });
+  await ensureOnAList({ type: "book", id: book.isbn, title: book.title });
   return record;
 }
 

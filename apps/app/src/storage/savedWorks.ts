@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Work } from "@book-explorer/shared";
 import { withoutContent } from "./savedBooks";
 import { ensureSaved, removeSaved } from "./savedItems";
+import { ensureOnAList } from "./savedLists";
 import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -112,6 +113,7 @@ export function removeSavedWork(workId: string): Promise<void> {
 export async function saveWork(work: Work): Promise<SavedWorkRecord> {
   const record = await saveWorkFromApi(work);
   await ensureSaved({ type: "work", id: work.openLibraryWorkId, title: work.title });
+  await ensureOnAList({ type: "work", id: work.openLibraryWorkId, title: work.title });
   return record;
 }
 

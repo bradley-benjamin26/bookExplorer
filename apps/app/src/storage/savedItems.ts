@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ensureOnAList } from "./savedLists";
 import { stamp, type Unversioned, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -76,4 +77,10 @@ export function removeSaved(type: SavedItem["type"], id: string): Promise<void> 
 /** Replaces the whole stored list (snapshot import). */
 export function replaceSavedItems(items: SavedItem[]): Promise<void> {
   return enqueueWrite(SAVED_KEY, () => write(items));
+}
+
+/** Saves an author and puts them on a list (Saved authors unless already on one). */
+export async function saveAuthor(id: string, name: string): Promise<void> {
+  await ensureSaved({ type: "author", id, title: name });
+  await ensureOnAList({ type: "author", id, title: name });
 }

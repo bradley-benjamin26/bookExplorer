@@ -85,11 +85,11 @@ describe("JSON backup", () => {
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
   });
 
-  it("exports v3 with lists", async () => {
+  it("exports v4 with lists", async () => {
     await seed();
     const v3 = JSON.parse(await exportJson());
-    expect(v3.schemaVersion).toBe(3);
-    expect(v3.lists).toMatchObject([{ name: "Favourites", kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] }]);
+    expect(v3.schemaVersion).toBe(4);
+    expect(v3.lists.find((l: { name: string }) => l.name === "Favourites")).toMatchObject({ kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] });
   });
 
   it("a schemaVersion 2 backup with no lists imports with lists: []", async () => {
@@ -99,9 +99,10 @@ describe("JSON backup", () => {
     expect(parsed.lists).toEqual([]);
     // Merging it keeps the local lists; replacing with it leaves none.
     await importSnapshot(parsed, "merge");
-    expect((await getLists()).map((l) => l.name)).toEqual(["Favourites"]);
+    expect((await getLists()).map((l) => l.name).sort()).toEqual(["Favourites", "Saved books"]);
+    // Its unlisted saves land on Saved books rather than vanishing from the list-based UI.
     await importSnapshot(parsed, "replace");
-    expect(await getLists()).toEqual([]);
+    expect((await getLists()).map((l) => l.name)).toEqual(["Saved books"]);
   });
 
   it("a schemaVersion 3 backup without lists is rejected", async () => {
