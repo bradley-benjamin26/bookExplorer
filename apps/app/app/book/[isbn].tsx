@@ -20,7 +20,6 @@ import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
 import { addRecentBook } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -120,7 +119,7 @@ export default function BookDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <ShareButton title={data.title} href={routes.book(data.isbn)} publicUrl={openLibraryUrl.book(data.isbn)} />
+      <ShareButton title={data.title} href={routes.book(data.isbn)} style={{ marginTop: 8 }} />
       <AddToListButton
         member={{ type: "book", id: data.isbn, title: data.title }}
         onSave={async () => {

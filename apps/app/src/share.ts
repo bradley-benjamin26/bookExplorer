@@ -1,10 +1,16 @@
 import type { Href } from "expo-router";
 
-const SCHEME = "bookexplorer://";
+export const WEB_ORIGIN = "https://shelfthread.com";
 
-/** Builds the `bookexplorer://` deep link for a `routes.*` href (object form, or a plain path like "/saved"). */
-export function schemeUrl(href: Href): string {
-  if (typeof href === "string") return SCHEME + href.replace(/^\//, "");
+/** The page's own origin on web (so dev and preview hosts share their own links); native has none, so it uses WEB_ORIGIN. */
+function currentOrigin(): string {
+  const origin = (globalThis as { location?: { origin?: unknown } }).location?.origin;
+  return typeof origin === "string" && /^https?:\/\//.test(origin) ? origin : WEB_ORIGIN;
+}
+
+/** Builds the public web URL for a `routes.*` href (object form, or a plain path like "/saved"). */
+export function webUrl(href: Href, origin: string = currentOrigin()): string {
+  if (typeof href === "string") return origin + "/" + href.replace(/^\//, "");
   const { pathname, params = {} } = href as { pathname: string; params?: Record<string, string> };
   const rest = { ...params };
   const path = pathname.replace(/\[(\w+)\]/g, (_, key) => {
@@ -13,22 +19,7 @@ export function schemeUrl(href: Href): string {
     return encodeURIComponent(value);
   });
   const query = new URLSearchParams(rest).toString();
-  return SCHEME + path.replace(/^\//, "") + (query ? `?${query}` : "");
-}
-
-const OPEN_LIBRARY = "https://openlibrary.org";
-
-/** Public Open Library pages for the shareable entity types. */
-export const openLibraryUrl = {
-  book: (isbn: string) => `${OPEN_LIBRARY}/isbn/${encodeURIComponent(isbn)}`,
-  work: (id: string) => `${OPEN_LIBRARY}/works/${encodeURIComponent(id)}`,
-  author: (id: string) => `${OPEN_LIBRARY}/authors/${encodeURIComponent(id)}`,
-  subject: (slug: string) => `${OPEN_LIBRARY}/subjects/${encodeURIComponent(slug)}`,
-};
-
-/** Text shared for an entity: its title, the in-app deep link, then the Open Library page (which works for people without the app). */
-export function shareMessage(title: string, href: Href, publicUrl: string): string {
-  return `${title}\n${schemeUrl(href)}\n${publicUrl}`;
+  return origin + "/" + path.replace(/^\//, "") + (query ? `?${query}` : "");
 }
 
 /**

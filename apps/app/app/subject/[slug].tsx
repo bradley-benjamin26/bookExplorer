@@ -11,7 +11,6 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
@@ -64,7 +63,7 @@ export default function SubjectDetail() {
           <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           {data.description && <Text style={styles.description}>{data.description}</Text>}
 
-          <ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} publicUrl={openLibraryUrl.subject(data.slug)} />
+          <ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} style={{ marginTop: 8 }} />
 
           {!data.wikidataId && (
             <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>

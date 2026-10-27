@@ -18,7 +18,6 @@ import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSectio
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
 import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -79,7 +78,7 @@ export default function WorkDetail() {
         </Pressable>
       ))}
       <RatingBadge rating={data.rating} />
-      <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
+      <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
       <AddToListButton
         member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
         onSave={async () => {

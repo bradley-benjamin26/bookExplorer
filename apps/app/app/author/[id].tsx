@@ -12,7 +12,6 @@ import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -55,7 +54,7 @@ export default function AuthorDetail() {
           {data.birthDate ?? "?"} – {data.deathDate ?? "present"}
         </Text>
       )}
-      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} publicUrl={openLibraryUrl.author(data.openLibraryId)} />
+      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} style={{ marginTop: 8 }} />
       <AddToListButton
         member={{ type: "author", id: data.openLibraryId, title: data.name }}
         onSave={() => saveAuthor(data.openLibraryId, data.name)}

@@ -20,7 +20,6 @@ import { ShareButton } from "../../../src/components/ShareButton";
 import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
-import { openLibraryUrl } from "../../../src/share";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { CENTER_NODE_RADIUS, LABEL_LINE_HEIGHT, layoutGraph, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
 
@@ -422,7 +421,6 @@ export default function GraphExplorer() {
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
           href={routes.graph(center.type, center.id, filterToParams(filter))}
-          publicUrl={center.type === "work" ? openLibraryUrl.work(center.id) : center.type === "author" ? openLibraryUrl.author(center.id) : openLibraryUrl.subject(center.id)}
         />
       </View>
       <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
