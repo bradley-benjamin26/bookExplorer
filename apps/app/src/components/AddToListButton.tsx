@@ -167,10 +167,10 @@ export function AddToListButton({
       return next;
     });
   const done = async () => {
-    if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
     setError("");
-    setBusy(true);
+    setBusy(true); // also blocks a second tap while the confirm is up
     try {
+      if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
       await applyListChanges(member, listChanges(lists, member, checked), onSave);
       onChange?.();
       setOpen(false);
