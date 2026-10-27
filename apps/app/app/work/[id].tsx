@@ -70,9 +70,9 @@ export default function WorkDetail() {
   const lock = useEditLock({
     record: savedRecord,
     onUpdate: (c) => updateSavedWork(savedId, c).then((r) => r && setSavedRecord(r)),
-    onRequestSave: () => {
+    onRequestSave: (notice) => {
       editAfterSave.current = true;
-      saveSheet.current?.open();
+      saveSheet.current?.open(notice);
     },
   });
 

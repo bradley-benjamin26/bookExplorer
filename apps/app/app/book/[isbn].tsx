@@ -80,7 +80,7 @@ export default function BookDetail() {
   const lock = useEditLock({
     record: savedRecord,
     onUpdate: (c) => updateSavedBook(savedIsbn, c).then((r) => r && setSavedRecord(r)),
-    onRequestSave: () => saveSheet.current?.open(),
+    onRequestSave: (notice) => saveSheet.current?.open(notice),
     startUnlocked: edit === "1",
   });
 

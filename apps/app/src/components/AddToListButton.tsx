@@ -90,7 +90,7 @@ export function CreateListForm({
 }
 
 /** Lets a parent open the list sheet itself. */
-export type SaveSheetHandle = { open: () => void };
+export type SaveSheetHandle = { open: (notice?: string) => void };
 
 const LOAD_ERROR = "Couldn't load your lists. Try again.";
 
@@ -127,6 +127,8 @@ export function AddToListButton({
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Why the sheet was opened for the user, e.g. the lock asking to save first. The pill clears it.
+  const [notice, setNotice] = useState("");
 
   const holds = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
 
@@ -150,7 +152,8 @@ export function AddToListButton({
       .catch(() => setLoadError(LOAD_ERROR))
       .finally(() => setLoading(false));
   };
-  const show = () => {
+  const show = (why = "") => {
+    setNotice(why);
     setCreating(false);
     setError("");
     setOpen(true);
@@ -176,7 +179,7 @@ export function AddToListButton({
       refreshStar();
     }
   };
-  useImperativeHandle(ref, () => ({ open: show }));
+  useImperativeHandle(ref, () => ({ open: (why) => show(why) }));
   const handleCreated = async (list: SavedList) => {
     setChecked((prev) => new Set(prev).add(list.id));
     setCreating(false);
@@ -185,7 +188,7 @@ export function AddToListButton({
 
   return (
     <>
-      {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
+      {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={() => show()} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -195,6 +198,11 @@ export function AddToListButton({
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
               </Text>
+              {!!notice && (
+                <Text style={styles.notice} accessibilityLiveRegion="polite">
+                  {notice}
+                </Text>
+              )}
               {loadError ? (
                 <>
                   <Text style={styles.error} accessibilityLiveRegion="polite">
@@ -275,6 +283,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     },
     sheetContent: { padding: spacing.lg },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
+    notice: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.md },
     row: {
       flexDirection: "row",
       alignItems: "center",

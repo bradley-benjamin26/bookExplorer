@@ -2,6 +2,8 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { draftChanged, type Terms } from "./termsDraft";
 
+export const SAVE_FIRST_NOTICE = "Save this book to a list before editing its genres, subjects and notes.";
+
 /**
  * The one lock on a book or work page. Unlocking edits a local draft of genres and subjects that is
  * saved when locked again, or when the screen loses focus or unmounts, so leaving without relocking
@@ -15,7 +17,7 @@ export function useEditLock({
 }: {
   record: Terms | null;
   onUpdate: (c: Terms) => Promise<unknown>;
-  onRequestSave: () => void;
+  onRequestSave: (notice: string) => void;
   startUnlocked?: boolean;
 }) {
   const [unlocked, setUnlocked] = useState(false);
@@ -61,7 +63,7 @@ export function useEditLock({
       if (record) unlock(record);
       else {
         setPendingUnlock(true);
-        onRequestSave();
+        onRequestSave(SAVE_FIRST_NOTICE);
       }
       return;
     }

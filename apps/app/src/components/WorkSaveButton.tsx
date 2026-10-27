@@ -24,18 +24,21 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
   const [choosing, setChoosing] = useState(false);
   // A new object per pick, so picking the same edition again reopens the list sheet.
   const [target, setTarget] = useState<{ isbn: string | null } | null>(null);
+  // Why the sheet was opened (the lock asking to save first); shown in the edition popup and passed on.
+  const [notice, setNotice] = useState<string | undefined>();
   const isbn = target?.isbn ?? null;
   // Done also runs with nothing ticked or only unticking, so follow the save only when onSave ran.
   const saved = useRef(false);
 
   useEffect(() => {
-    if (target) sheet.current?.open();
+    if (target) sheet.current?.open(notice);
   }, [target]);
 
-  const open = () => {
+  const open = (why?: string) => {
     saved.current = false;
+    setNotice(why);
     if (editions.length > 0) setChoosing(true);
-    else sheet.current?.open();
+    else sheet.current?.open(why);
   };
   useImperativeHandle(ref, () => ({ open }));
   const pick = (isbn: string | null) => {
@@ -47,7 +50,7 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
   return (
     <>
       {editions.length > 0 && (
-        <Button variant="pill" starIcon active={isSaved} onPress={open} accessibilityLabel={isSaved ? "Save to list, saved" : "Save to list"} tooltip="Save an edition to one of your lists">
+        <Button variant="pill" starIcon active={isSaved} onPress={() => open()} accessibilityLabel={isSaved ? "Save to list, saved" : "Save to list"} tooltip="Save an edition to one of your lists">
           Save to list
         </Button>
       )}
@@ -75,6 +78,7 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
           <View style={styles.popup}>
             <ScrollView style={{ flexShrink: 1 }} accessibilityViewIsModal>
               <Text accessibilityRole="header" style={styles.title}>Choose an edition</Text>
+              {!!notice && <Text style={styles.notice} accessibilityLiveRegion="polite">{notice}</Text>}
               {editions.map((e) => (
                 <EditionRow key={e.isbn} edition={e} onPress={() => pick(e.isbn)} />
               ))}
@@ -117,6 +121,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     backdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     popup: { width: "100%", maxWidth: 360, maxHeight: "70%", backgroundColor: colors.paper, padding: spacing.lg, borderRadius: radii.sm },
     title: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
+    notice: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.sm },
     row: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
     cover: { width: 40, height: 58, backgroundColor: colors.border },
     rowText: { flex: 1 },
