@@ -9,6 +9,8 @@ import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
+import { AboutSection } from "../../src/components/AboutSection";
+import { DetailTop } from "../../src/components/DetailTop";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
@@ -65,20 +67,16 @@ export default function SubjectDetail() {
       ListHeaderComponent={
         <View>
           <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-          <Text style={styles.name} accessibilityRole="header">{titleCase(data.name)}</Text>
-          <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
-          {data.description && <Text style={styles.description}>{data.description}</Text>}
-
-          <ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} style={{ marginTop: 8 }} />
-
-          {!data.wikidataId && (
-            <Text style={styles.noMatch}>No Wikidata concept match found for this subject.</Text>
-          )}
+          <DetailTop title={titleCase(data.name)} actions={<ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} />}>
+            <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
+          </DetailTop>
+          {data.description && <AboutSection text={data.description} />}
 
           <Button
             variant="primary"
             onPress={() => router.push(routes.graph("subject", data.slug))}
             style={styles.graphButton}
+            tooltip="See this subject's books and related subjects as a graph"
           >
             View as Graph
           </Button>
@@ -137,14 +135,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
-    name: {
-      fontFamily: fonts.display,
-      fontSize: typeScale.lg,
-      letterSpacing: -0.3,
-      color: colors.ink,
-    },
     workCount: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
-    description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24, marginTop: spacing.sm },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
     graphButton: { marginTop: spacing.lg },
     sortSpinner: { marginTop: spacing.md },

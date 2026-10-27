@@ -9,7 +9,8 @@ import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
-import { ExpandableText } from "../../src/components/ExpandableText";
+import { AboutSection } from "../../src/components/AboutSection";
+import { DetailTop } from "../../src/components/DetailTop";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
@@ -85,9 +86,26 @@ export default function WorkDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      <View style={styles.header}>
-        {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
-        <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
+      <DetailTop
+        image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" /> : undefined}
+        title={data.title}
+        actions={
+          <>
+            <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
+            <WorkSaveButton
+              ref={saveSheet}
+              work={data}
+              saved={!!savedRecord || !!savedEdition}
+              onSaved={(isbn) => {
+                const edit = editAfterSave.current;
+                editAfterSave.current = false;
+                if (isbn) router.push(routes.book(isbn, { edit }));
+                else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
+              }}
+            />
+          </>
+        }
+      >
         {data.authors.map((author) => (
           <Pressable
             ref={titleRef(`View ${author.name}`)}
@@ -100,24 +118,24 @@ export default function WorkDetail() {
           </Pressable>
         ))}
         <RatingBadge rating={data.rating} />
-      </View>
-      <View style={styles.actions}>
-        <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
-        <WorkSaveButton
-          ref={saveSheet}
-          work={data}
-          onSaved={(isbn) => {
-            const edit = editAfterSave.current;
-            editAfterSave.current = false;
-            if (isbn) router.push(routes.book(isbn, { edit }));
-            else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
-          }}
-        />
-      </View>
+      </DetailTop>
       {savedEdition && (
         <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
         </Pressable>
+      )}
+
+      {data.description && (
+        <AboutSection
+          text={data.description}
+          credit={
+            data.descriptionSource === "loc" && data.loc ? (
+              <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+                <Text style={styles.descriptionSource}>via Library of Congress</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
       )}
 
       <Button
@@ -161,18 +179,6 @@ export default function WorkDetail() {
         }}
       />
 
-      {data.description && (
-        <View style={styles.aboutSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
-          <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
-          {data.descriptionSource === "loc" && data.loc && (
-            <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
-              <Text style={styles.descriptionSource}>via Library of Congress</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
       <SeriesSection seriesQid={data.series?.wikidataId} currentWorkId={data.openLibraryWorkId} />
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
@@ -188,9 +194,6 @@ function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
-    header: { alignItems: "center", width: "100%" },
-    actions: { flexDirection: "row", justifyContent: "center", gap: spacing.sm, marginTop: spacing.md, width: "100%" },
-    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "center", letterSpacing: -0.3, color: colors.ink },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,
@@ -198,13 +201,9 @@ function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    aboutSection: { marginTop: spacing.xxl, width: "100%" },
     savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm, alignSelf: "center", textDecorationLine: "underline" },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
-    description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
-    viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
-    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
   });
 }

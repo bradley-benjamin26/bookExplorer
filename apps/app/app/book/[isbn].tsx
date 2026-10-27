@@ -11,7 +11,8 @@ import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
-import { ExpandableText } from "../../src/components/ExpandableText";
+import { AboutSection } from "../../src/components/AboutSection";
+import { DetailTop } from "../../src/components/DetailTop";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
@@ -101,36 +102,90 @@ export default function BookDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
-      {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
-      {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
-        <GoogleBooksAttribution label="Cover image" />
+      <DetailTop
+        image={
+          <>
+            {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
+            {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
+            {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
+              <GoogleBooksAttribution label="Cover image" />
+            )}
+          </>
+        }
+        title={data.title}
+        actions={
+          <>
+            <ShareButton title={data.title} href={routes.book(data.isbn)} />
+            <AddToListButton
+              ref={saveSheet}
+              member={{ type: "book", id: data.isbn, title: data.title }}
+              onSave={async () => {
+                // Keeps the cover on disk so the saved book still shows it offline.
+                if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+                return saveBook(data);
+              }}
+              onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
+            />
+          </>
+        }
+      >
+        {data.authors.map((author) => (
+          <Pressable
+            ref={titleRef(`View ${author.name}`)}
+            accessibilityRole="button"
+            key={author.openLibraryId}
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => router.push(routes.author(author.openLibraryId))}
+          >
+            <Text style={styles.author}>{author.name}</Text>
+          </Pressable>
+        ))}
+        <RatingBadge rating={data.rating} />
+      </DetailTop>
+
+      {data.description && (
+        <AboutSection
+          text={data.description}
+          credit={
+            // Wikipedia and Google Books content require attribution on reuse.
+            data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
+              <Pressable ref={titleRef("Read the source on Wikipedia")} accessibilityRole="link" onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
+                <Text style={styles.descriptionSource}>via Wikipedia</Text>
+              </Pressable>
+            ) : data.descriptionSource === "loc" && data.loc ? (
+              <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+                <Text style={styles.descriptionSource}>via Library of Congress</Text>
+              </Pressable>
+            ) : data.descriptionSource === "googleBooks" ? (
+              <GoogleBooksAttribution label={data.coverSource === "googleBooks" ? "Description, Cover image" : "Description"} />
+            ) : undefined
+          }
+        />
       )}
-      <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
-      {data.authors.map((author) => (
-        <Pressable
-          ref={titleRef(`View ${author.name}`)}
-          accessibilityRole="button"
-          key={author.openLibraryId}
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => router.push(routes.author(author.openLibraryId))}
-        >
-          <Text style={styles.author}>{author.name}</Text>
-        </Pressable>
-      ))}
-      <RatingBadge rating={data.rating} />
-      <ShareButton title={data.title} href={routes.book(data.isbn)} style={{ marginTop: 8 }} />
-      <AddToListButton
-        ref={saveSheet}
-        style={{ marginTop: 8 }}
-        member={{ type: "book", id: data.isbn, title: data.title }}
-        onSave={async () => {
-          // Keeps the cover on disk so the saved book still shows it offline.
-          if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-          return saveBook(data);
-        }}
-        onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
-      />
+
+      {data.openLibraryWorkId && (
+        <>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
+            style={styles.graphButton}
+            tooltip="See this book's authors, subjects and links as a graph"
+          >
+            View as Graph
+          </Button>
+          <Button
+            variant="primary"
+            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+            style={styles.graphButton}
+            accessibilityLabel={`Find a connection from ${data.title}`}
+            accessibilityHint="Shows how this book links to another book you pick"
+            tooltip="Find how this book links to another"
+          >
+            Find Connection
+          </Button>
+        </>
+      )}
+
       {savedRecord && (
         <SavedRecordEditor record={savedRecord} update={(c) => updateSavedBook(savedRecord.isbn, c)} onChange={setSavedRecord} />
       )}
@@ -160,29 +215,6 @@ export default function BookDetail() {
           <Text style={styles.description}>{savedRecord.notes}</Text>
         </View>
       ) : null}
-
-      {data.openLibraryWorkId && (
-        <>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
-            style={styles.graphButton}
-            tooltip="See this book's authors, subjects and links as a graph"
-          >
-            View as Graph
-          </Button>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
-            style={styles.graphButton}
-            accessibilityLabel={`Find a connection from ${data.title}`}
-            accessibilityHint="Shows how this book links to another book you pick"
-            tooltip="Find how this book links to another"
-          >
-            Find Connection
-          </Button>
-        </>
-      )}
 
       <View style={styles.findSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
@@ -244,27 +276,6 @@ export default function BookDetail() {
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
 
-      {data.description && (
-        <View style={styles.aboutSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
-          <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
-          {/* Wikipedia and Google Books content require attribution on reuse. */}
-          {data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
-            <Pressable ref={titleRef("Read the source on Wikipedia")} accessibilityRole="link" onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
-              <Text style={styles.descriptionSource}>via Wikipedia</Text>
-            </Pressable>
-          ) : data.descriptionSource === "loc" && data.loc ? (
-            <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
-              <Text style={styles.descriptionSource}>via Library of Congress</Text>
-            </Pressable>
-          ) : data.descriptionSource === "googleBooks" ? (
-            <GoogleBooksAttribution
-              label={data.coverSource === "googleBooks" ? "Description, Cover image" : "Description"}
-            />
-          ) : null}
-        </View>
-      )}
-
       <ReviewsSection reviews={data.reviews} />
       <Footer />
     </ScrollView>
@@ -277,7 +288,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
-    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,
@@ -299,9 +309,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderColor: colors.cardBorder,
     },
     formatTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink, textTransform: "capitalize" },
-    aboutSection: { marginTop: spacing.xxl, width: "100%" },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
-    viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     callNumber: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginBottom: spacing.sm },
     findSection: { marginTop: spacing.xxl, width: "100%" },

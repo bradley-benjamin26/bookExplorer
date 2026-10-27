@@ -16,7 +16,7 @@ import { Button } from "./Button";
  * "Save to list" on a work: asks which ISBN edition to save and saves that edition as a book.
  * A work with no ISBN edition is saved as a work. `onSaved` gets the saved edition's ISBN, or null for a work.
  */
-export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (isbn: string | null) => void; ref?: Ref<SaveSheetHandle> }) {
+export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: Work; saved: boolean; onSaved: (isbn: string | null) => void; ref?: Ref<SaveSheetHandle> }) {
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const sheet = useRef<SaveSheetHandle>(null);
@@ -47,7 +47,7 @@ export function WorkSaveButton({ work, onSaved, ref }: { work: Work; onSaved: (i
   return (
     <>
       {editions.length > 0 && (
-        <Button variant="pill" starIcon onPress={open} accessibilityLabel="Save to list" tooltip="Save an edition to one of your lists">
+        <Button variant="pill" starIcon active={isSaved} onPress={open} accessibilityLabel={isSaved ? "Save to list, saved" : "Save to list"} tooltip="Save an edition to one of your lists">
           Save to list
         </Button>
       )}
