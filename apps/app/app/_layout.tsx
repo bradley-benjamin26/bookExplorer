@@ -101,7 +101,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               contentStyle: { backgroundColor: theme.colors.paper },
             }}
           >
-            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<MyLibraryButton />) }} />
+            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerTitle: "", headerRight: inHeader(<MyLibraryButton />) }} />
             <Stack.Screen
               name="scan"
               options={{ title: "Scan Barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}
@@ -120,11 +120,11 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             />
             <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
-            <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
-            <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
-            <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
-            <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
-            <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
+            <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />
           </Stack>
         </View>
       </View>
