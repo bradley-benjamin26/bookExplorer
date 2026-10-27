@@ -21,6 +21,7 @@ import { routes } from "../../src/navigation";
 import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
+import { titleRef } from "../../src/webTitle";
 
 export default function WorkDetail() {
   const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
@@ -128,6 +129,7 @@ export default function WorkDetail() {
           <View style={styles.genreTags}>
             {data.genres.map((genre) => (
               <Pressable
+                ref={titleRef(`View ${titleCase(genre.label)}`)}
                 key={genre.label}
                 style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
@@ -162,6 +164,7 @@ export default function WorkDetail() {
           <View style={styles.subjectTags}>
             {data.subjects.slice(0, 12).map((subject) => (
               <Pressable
+                ref={titleRef(`View ${titleCase(subject.label)}`)}
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}

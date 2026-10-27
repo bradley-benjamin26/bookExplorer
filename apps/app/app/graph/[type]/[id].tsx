@@ -490,7 +490,7 @@ export default function GraphExplorer() {
             return (
               <View key={node.id} style={styles.listRow}>
                 <Pressable
-                  ref={titleRef(href ? `Open ${node.label}` : `${node.label} has no page yet`)}
+                  ref={titleRef(href ? (isCenter ? `Open ${node.label}` : `View ${node.label}`) : `${node.label} has no page yet`)}
                   onPress={() => href && router.push(href)}
                   disabled={!href}
                   accessibilityRole="button"
@@ -683,7 +683,7 @@ export default function GraphExplorer() {
           return (
             <Pressable
               key={node.id}
-              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `Center the graph on ${node.label}`)}
+              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `View ${node.label}`)}
               onPress={() => handleNodePress(node)}
               disabled={!node.navigable}
               accessibilityRole="button"
@@ -752,6 +752,7 @@ function FilterRow({ label, checked, onPress }: { label: string; checked: boolea
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable
+      ref={titleRef(checked ? `Hide ` : `Show `)}
       onPress={onPress}
       accessibilityRole="checkbox"
       accessibilityLabel={label}

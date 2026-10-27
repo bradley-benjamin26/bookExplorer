@@ -14,6 +14,7 @@ import { routes } from "../../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
+import { titleRef } from "../../src/webTitle";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -88,6 +89,7 @@ export default function SubjectDetail() {
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
+                        ref={titleRef(`View ${titleCase(concept.label)}`)}
                         key={concept.label}
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}

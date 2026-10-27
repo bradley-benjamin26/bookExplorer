@@ -98,6 +98,7 @@ export default function Home() {
               keyExtractor={(item) => item.isbn}
               renderItem={({ item }) => (
                 <Pressable
+                  ref={titleRef(`View ${item.title ?? item.isbn}`)}
                   style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
                   onPress={() => router.push(routes.book(item.isbn))}
                   accessibilityRole="button"

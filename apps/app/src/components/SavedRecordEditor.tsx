@@ -2,6 +2,7 @@ import { MAX_TAG_LENGTH, MAX_TEXT_LENGTH } from "@book-explorer/shared";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 import { Button } from "./Button";
 import { titleCase } from "../titleCase";
 
@@ -27,6 +28,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
         <View style={styles.tagRow}>
           {tags.map((tag) => (
             <Pressable
+              ref={titleRef(`Remove `)}
               key={tag}
               style={styles.tag}
               onPress={() => onChange(tags.filter((t) => t !== tag))}

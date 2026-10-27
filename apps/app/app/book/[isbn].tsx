@@ -24,6 +24,7 @@ import { addRecentBook } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
+import { titleRef } from "../../src/webTitle";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
 const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
@@ -153,6 +154,7 @@ export default function BookDetail() {
               <View style={styles.genreTags}>
                 {displayGenres.map((genre) => (
                   <Pressable
+                    ref={titleRef(`View ${titleCase(genre.label)}`)}
                     key={genre.label}
                     style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
                     onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
@@ -189,6 +191,7 @@ export default function BookDetail() {
           <View style={styles.subjectTags}>
             {displaySubjects.slice(0, 12).map((subject) => (
               <Pressable
+                ref={titleRef(`View ${titleCase(subject.label)}`)}
                 key={subject.label}
                 style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
                 onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
@@ -237,6 +240,7 @@ export default function BookDetail() {
       <View style={styles.findSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
         <Pressable
+          ref={titleRef("View this book on Open Library")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
           accessibilityRole="button"
@@ -248,6 +252,7 @@ export default function BookDetail() {
           </View>
         </Pressable>
         <Pressable
+          ref={titleRef("Search Bookshop.org for this book")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${BOOKSHOP_URL}${data.isbn}`)}
           accessibilityRole="button"
@@ -259,6 +264,7 @@ export default function BookDetail() {
           </View>
         </Pressable>
         <Pressable
+          ref={titleRef("Search WorldCat for this book")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${WORLDCAT_URL}${data.isbn}`)}
           accessibilityRole="button"
