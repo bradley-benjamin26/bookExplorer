@@ -70,6 +70,18 @@ describe("findPath", () => {
     expect(pathIds(result)).toEqual(["work:W", "author:A"]);
   });
 
+  it("never routes through a catch-all subject like Fiction, but does through a specific one", async () => {
+    const via = (subject: string) => fixture([["work:A", "subject", subject], ["work:B", "subject", subject]]);
+    expect(await findPath("work:A", "work:B", via("subject:fiction"), LIMITS)).toMatchObject({ found: false });
+    expect(await findPath("work:A", "work:B", via("genre:fiction_general"), LIMITS)).toMatchObject({ found: false });
+    expect(pathIds(await findPath("work:A", "work:B", via("subject:space_opera"), LIMITS))).toEqual(["work:A", "subject:space_opera", "work:B"]);
+  });
+
+  it("still runs a search whose own end is a catch-all subject", async () => {
+    const graph = fixture([["work:A", "subject", "subject:fiction"]]);
+    expect(pathIds(await findPath("subject:fiction", "work:A", graph, LIMITS))).toEqual(["subject:fiction", "work:A"]);
+  });
+
   it("reports noPath when the two ends are in separate components", async () => {
     const graph = fixture([
       ["author:A", "wrote", "work:W1"],
@@ -206,15 +218,15 @@ describe("findPath", () => {
   it("ranks a path through a specific subject above one through a generic subject", async () => {
     const graph = fixture(
       [
-        ["work:W1", "subject", "subject:fiction"],
-        ["work:W2", "subject", "subject:fiction"],
+        ["work:W1", "subject", "subject:history"],
+        ["work:W2", "subject", "subject:history"],
         ["work:W1", "subject", "subject:tudor_england"],
         ["work:W2", "subject", "subject:tudor_england"],
       ],
-      { "subject:fiction": 1_000_000, "subject:tudor_england": 300 }
+      { "subject:history": 1_000_000, "subject:tudor_england": 300 }
     );
     const result = await findPath("work:W1", "work:W2", graph, LIMITS);
-    expect(result.found && result.paths.map((p) => p.summary)).toEqual(["Both: subject:tudor_england", "Both: subject:fiction"]);
+    expect(result.found && result.paths.map((p) => p.summary)).toEqual(["Both: subject:tudor_england", "Both: subject:history"]);
   });
 
   it("returns at most three distinct paths, most specific first", async () => {

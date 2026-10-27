@@ -227,6 +227,7 @@ export function findPath(
         for (const edge of hood.edges) {
           if (edge.source !== id && edge.target !== id) continue;
           const next = edge.source === id ? edge.target : edge.source;
+          if (isGenericSubject(next) && next !== from && next !== to) continue;
           // Started nodes never change, so a recorded chain stays valid.
           if (side.started.has(next) || (side.seen.get(next)?.cost ?? Infinity) <= cost) continue;
           side.seen.set(next, { cost, hops: entry.hops + 1, prev: id, edge });
@@ -245,6 +246,17 @@ function toPath(p: Found, nodes: Map<string, GraphNode>): GraphPath {
   // cleanGraph guarantees every edge endpoint has a node in the same graph.
   const pathNodes = p.ids.map((id) => nodes.get(id)!);
   return { nodes: pathNodes, edges: p.edges, summary: summarise(pathNodes) };
+}
+
+// shortcut: a fixed list of broad terms, a work-count cut-off is the upgrade if more show up.
+export const GENERIC_SUBJECT_SLUGS: ReadonlySet<string> = new Set([
+  "fiction", "juvenile_fiction", "fiction_general", "young_adult_fiction", "juvenile_literature", "literature", "novels", "general",
+]);
+
+/** A `subject:` or `genre:` id too broad to say anything as a link between two nodes. */
+export function isGenericSubject(nodeId: string): boolean {
+  const m = /^(?:subject|genre):(.*)$/.exec(nodeId);
+  return !!m && GENERIC_SUBJECT_SLUGS.has(m[1]);
 }
 
 /** What links the two ends, in a line: the one node between them, or the chain. */
