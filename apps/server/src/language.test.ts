@@ -4,7 +4,10 @@ import { englishOrNull, looksEnglish } from "./language.js";
 describe("looksEnglish", () => {
   it.each([
     "Bilbo Baggins, a respectable, well-to-do hobbit, lives comfortably in his hobbit-hole until the day the wandering wizard Gandalf chooses him.",
-    "A novel.", // under 5 words: kept, too short to judge
+    "A novel.", // 8 words or fewer: kept, too short to judge
+    "Harry Potter Hogwarts wizard series",
+    "Pulitzer Prize winning novel Beloved Toni Morrison",
+    "Charlotte Brontë's Jane Eyre follows Thornfield Hall governess",
   ])("keeps English: %s", (t) => expect(looksEnglish(t)).toBe(true));
   it.each([
     "Bilbo Bessac est un hobbit qui vit tranquillement dans son trou jusqu'au jour où le magicien Gandalf le choisit pour une aventure.",

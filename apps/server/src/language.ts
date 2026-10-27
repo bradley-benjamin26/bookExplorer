@@ -10,8 +10,8 @@ export function looksEnglish(text: string): boolean {
   const letters = text.match(/\p{L}/gu) ?? [];
   const nonLatin = letters.filter((c) => !/\p{Script=Latin}/u.test(c)).length;
   if (nonLatin > letters.length * 0.2) return false;
-  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
-  if (words.length < 5) return true;
+  const words = text.toLowerCase().match(/[\p{L}']+/gu) ?? [];
+  if (words.length < 9) return true;
   return words.filter((w) => STOPWORDS.has(w)).length >= words.length * 0.08;
 }
 
