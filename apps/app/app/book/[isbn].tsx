@@ -20,7 +20,7 @@ import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { addRecentBook } from "../../src/storage/history";
+import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -53,7 +53,7 @@ export default function BookDetail() {
   const [savedRecord, setSavedRecord] = useState<SavedBookRecord | null>(null);
 
   useEffect(() => {
-    if (data) addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) });
+    if (data) addRecent({ kind: "book", id: data.isbn, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
   }, [data]);
 
   // Re-read on every focus, not just on first load — this screen stays

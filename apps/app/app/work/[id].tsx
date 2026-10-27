@@ -18,6 +18,7 @@ import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSectio
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { addRecent } from "../../src/storage/history";
 import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
@@ -33,6 +34,10 @@ export default function WorkDetail() {
     queryFn: () => fetchWork(id),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (data) addRecent({ kind: "work", id: data.openLibraryWorkId, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
+  }, [data]);
 
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);

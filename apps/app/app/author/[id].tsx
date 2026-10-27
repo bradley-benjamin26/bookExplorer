@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,6 +13,7 @@ import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { addRecent } from "../../src/storage/history";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -32,6 +34,10 @@ export default function AuthorDetail() {
     queryFn: () => fetchAuthor(id),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (data) addRecent({ kind: "author", id: data.openLibraryId, title: data.name, subtitle: null });
+  }, [data]);
 
   if (isLoading) {
     return (

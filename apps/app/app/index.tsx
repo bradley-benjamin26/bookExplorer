@@ -3,24 +3,40 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
+import { NODE_LABELS } from "../src/graphLabels";
 import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
-import { getRecentBooks, type RecentBook } from "../src/storage/history";
+import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+
+type RecentFilter = "all" | "books" | "authors" | "subjects";
+const FILTERS: { value: RecentFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "books", label: "Books" },
+  { value: "authors", label: "Authors" },
+  { value: "subjects", label: "Subjects" },
+];
+const typeLabel = (item: RecentItem) => NODE_LABELS[item.kind === "book" ? "work" : item.kind];
 
 export default function Home() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState("");
-  const [recent, setRecent] = useState<RecentBook[]>([]);
+  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const [filter, setFilter] = useState<RecentFilter>("all");
 
   useFocusEffect(
     useCallback(() => {
-      getRecentBooks().then(setRecent);
+      getRecent().then(setRecent);
     }, [])
   );
+
+  // A pill shows only when that kind is present; if the chosen kind empties, fall back to everything.
+  const filters = FILTERS.filter((f) => f.value === "all" || recentOfKind(recent, f.value).length > 0);
+  const shown = recentOfKind(recent, filters.some((f) => f.value === filter) ? filter : "all");
 
   const submitSearch = () => {
     const trimmed = query.trim();
@@ -92,32 +108,36 @@ export default function Home() {
             <Text style={styles.recentTitle} accessibilityRole="header">
               Recently looked at
             </Text>
+            <View style={styles.filterRow}>
+              {filters.map((f) => (
+                <Button key={f.value} variant="pill" active={f.value === filter} onPress={() => setFilter(f.value)}>
+                  {f.label}
+                </Button>
+              ))}
+            </View>
             <FlatList
-              data={recent}
+              data={shown}
               contentContainerStyle={{ flexGrow: 1 }}
-              keyExtractor={(item) => item.isbn}
+              keyExtractor={(item) => `${item.kind}:${item.id}`}
               renderItem={({ item }) => (
                 <Pressable
-                  ref={titleRef(`View ${item.title ?? item.isbn}`)}
+                  ref={titleRef(`Open ${item.title ?? item.id}`)}
                   style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
-                  onPress={() => router.push(routes.book(item.isbn))}
+                  onPress={() => router.push(recentHref(item))}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    item.title
-                      ? item.authorNames.length > 0
-                        ? `${item.title}, ${item.authorNames.join(", ")}`
-                        : item.title
-                      : item.isbn
+                    item.title ? `${item.title}, ${item.subtitle ? `${item.subtitle}, ` : ""}${typeLabel(item)}` : item.id
                   }
                 >
                   <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <View style={styles.node} />
                   </View>
                   <View style={styles.recentText}>
-                    <Text style={styles.recentItemText}>{item.title ?? item.isbn}</Text>
-                    {item.authorNames.length > 0 && (
-                      <Text style={styles.recentAuthor}>{item.authorNames.join(", ")}</Text>
-                    )}
+                    <Text style={styles.recentItemText}>{item.title ?? item.id}</Text>
+                    <Text style={styles.recentAuthor}>
+                      {typeLabel(item)}
+                      {item.subtitle ? ` · ${item.subtitle}` : ""}
+                    </Text>
                   </View>
                   <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <ChevronRight size={18} color={theme.colors.inkFaint} />
@@ -183,6 +203,7 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       color: colors.ink,
       paddingVertical: spacing.md,
     },
+    filterRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm },
     recentSection: { marginTop: spacing.xxl, flex: 1 },
     recentTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
     recentItem: {
