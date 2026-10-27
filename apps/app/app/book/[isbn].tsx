@@ -20,11 +20,12 @@ import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton, type SaveSheetHandle } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
-import { TermsSection } from "../../src/components/TermsSection";
+import { AwardsSection, LockButton, TermsSection } from "../../src/components/TermsSection";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
@@ -76,6 +77,12 @@ export default function BookDetail() {
   // on this fetch — that's the whole point of saving a book's data locally.
   const displaySubjects = savedRecord?.subjects ?? data?.subjects.map((t) => t.label) ?? [];
   const displayGenres = savedRecord?.genres ?? data?.genres.map((t) => t.label) ?? [];
+  const lock = useEditLock({
+    record: savedRecord,
+    onUpdate: (c) => updateSavedBook(savedIsbn, c).then((r) => r && setSavedRecord(r)),
+    onRequestSave: () => saveSheet.current?.open(),
+    startUnlocked: edit === "1",
+  });
 
   if (isLoading) {
     return (
@@ -126,6 +133,7 @@ export default function BookDetail() {
               }}
               onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
             />
+            <LockButton unlocked={lock.unlocked} onPress={lock.toggle} />
           </>
         }
       >
@@ -142,6 +150,7 @@ export default function BookDetail() {
         ))}
         <RatingBadge rating={data.rating} />
       </DetailTop>
+      {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
 
       {data.description && (
         <AboutSection
@@ -186,10 +195,6 @@ export default function BookDetail() {
         </>
       )}
 
-      {savedRecord && (
-        <SavedRecordEditor record={savedRecord} update={(c) => updateSavedBook(savedRecord.isbn, c)} onChange={setSavedRecord} />
-      )}
-
       {data.format && (
         <View style={styles.subjectsSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">Format</Text>
@@ -200,16 +205,23 @@ export default function BookDetail() {
       )}
 
       <TermsSection
-        subjects={displaySubjects}
-        genres={displayGenres}
-        awards={data.awards}
-        record={savedRecord}
-        onUpdate={(c) => updateSavedBook(data.isbn, c).then((r) => r && setSavedRecord(r))}
-        onRequestSave={() => saveSheet.current?.open()}
-        startUnlocked={edit === "1"}
+        kind="genres"
+        labels={lock.unlocked ? lock.draft.genres : displayGenres}
+        unlocked={lock.unlocked}
+        onEdit={(change) => lock.edit("genres", change)}
       />
+      <TermsSection
+        kind="subjects"
+        labels={lock.unlocked ? lock.draft.subjects : displaySubjects}
+        unlocked={lock.unlocked}
+        onEdit={(change) => lock.edit("subjects", change)}
+        tagged={data.subjects}
+      />
+      <AwardsSection awards={data.awards} />
 
-      {savedRecord?.notes ? (
+      {lock.unlocked && savedRecord ? (
+        <SavedRecordEditor record={savedRecord} update={(c) => updateSavedBook(savedRecord.isbn, c)} onChange={setSavedRecord} />
+      ) : savedRecord?.notes ? (
         <View style={styles.subjectsSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">Your Notes</Text>
           <Text style={styles.description}>{savedRecord.notes}</Text>
@@ -324,6 +336,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
     graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
+    lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
   });

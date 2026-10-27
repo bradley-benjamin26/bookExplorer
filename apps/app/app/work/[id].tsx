@@ -17,7 +17,7 @@ import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { WorkSaveButton } from "../../src/components/WorkSaveButton";
 import { ShareButton } from "../../src/components/ShareButton";
-import { TermsSection } from "../../src/components/TermsSection";
+import { AwardsSection, LockButton, TermsSection } from "../../src/components/TermsSection";
 import type { SaveSheetHandle } from "../../src/components/AddToListButton";
 import { routes } from "../../src/navigation";
 import { savedEditionOf } from "../../src/editionChoice";
@@ -25,6 +25,7 @@ import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedB
 import { addRecent } from "../../src/storage/history";
 import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
 export default function WorkDetail() {
@@ -45,7 +46,7 @@ export default function WorkDetail() {
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
   const saveSheet = useRef<SaveSheetHandle>(null);
-  // Set when the Subjects & Genres lock asked for the save, so a saved edition opens ready to edit.
+  // Set when the lock asked for the save, so a saved edition opens ready to edit.
   const editAfterSave = useRef(false);
 
   // Re-read on every focus: this screen stays mounted under others, so an edit
@@ -65,6 +66,15 @@ export default function WorkDetail() {
       if (savedId) getAllSavedBooks().then((books) => setSavedEdition(savedEditionOf(books, savedId)));
     }, [savedId])
   );
+
+  const lock = useEditLock({
+    record: savedRecord,
+    onUpdate: (c) => updateSavedWork(savedId, c).then((r) => r && setSavedRecord(r)),
+    onRequestSave: () => {
+      editAfterSave.current = true;
+      saveSheet.current?.open();
+    },
+  });
 
   // A record from the migration or a v1 import starts blank; give it the API's tags once they load.
   useEffect(() => {
@@ -103,6 +113,7 @@ export default function WorkDetail() {
                 else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
               }}
             />
+            <LockButton unlocked={lock.unlocked} onPress={lock.toggle} />
           </>
         }
       >
@@ -119,6 +130,7 @@ export default function WorkDetail() {
         ))}
         <RatingBadge rating={data.rating} />
       </DetailTop>
+      {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (
         <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
@@ -159,25 +171,33 @@ export default function WorkDetail() {
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
-      {savedRecord ? (
+      <TermsSection
+        kind="genres"
+        labels={lock.unlocked ? lock.draft.genres : savedRecord?.genres ?? data.genres.map((t) => t.label)}
+        unlocked={lock.unlocked}
+        onEdit={(change) => lock.edit("genres", change)}
+      />
+      <TermsSection
+        kind="subjects"
+        labels={lock.unlocked ? lock.draft.subjects : savedRecord?.subjects ?? data.subjects.map((t) => t.label)}
+        unlocked={lock.unlocked}
+        onEdit={(change) => lock.edit("subjects", change)}
+        tagged={data.subjects}
+      />
+      <AwardsSection awards={data.awards} />
+
+      {lock.unlocked && savedRecord ? (
         <SavedRecordEditor
           record={savedRecord}
           update={(changes) => updateSavedWork(savedRecord.openLibraryWorkId, changes)}
           onChange={setSavedRecord}
         />
+      ) : savedRecord?.notes ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Your Notes</Text>
+          <Text style={styles.notes}>{savedRecord.notes}</Text>
+        </View>
       ) : null}
-
-      <TermsSection
-        subjects={savedRecord?.subjects ?? data.subjects.map((t) => t.label)}
-        genres={savedRecord?.genres ?? data.genres.map((t) => t.label)}
-        awards={data.awards}
-        record={savedRecord}
-        onUpdate={(c) => updateSavedWork(data.openLibraryWorkId, c).then((r) => r && setSavedRecord(r))}
-        onRequestSave={() => {
-          editAfterSave.current = true;
-          saveSheet.current?.open();
-        }}
-      />
 
       <SeriesSection seriesQid={data.series?.wikidataId} currentWorkId={data.openLibraryWorkId} />
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
@@ -205,5 +225,9 @@ function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
+    lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
+    section: { marginTop: spacing.xxl, width: "100%" },
+    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
+    notes: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
   });
 }
