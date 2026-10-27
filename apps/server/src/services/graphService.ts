@@ -4,9 +4,9 @@ import { normalizeTitle, slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
-import { getAuthorDetail } from "./authorService.js";
+import { getAuthorDetail, getAuthorLinks, type AuthorLinks } from "./authorService.js";
 import { getSubjectBooks, getSubjectDetail } from "./subjectService.js";
-import { getWorkDetail } from "./workService.js";
+import { getWorkDetail, getWorkLinks, type WorkLinks } from "./workService.js";
 
 // Caps keep the force-directed layout on the client legible — a subject can
 // have thousands of books, and rendering them all would just produce a
@@ -97,8 +97,16 @@ function influenceNodeTypeAndId(r: { openLibraryId: string | null; wikidataId: s
 
 export async function buildAuthorGraph(openLibraryId: string): Promise<Graph | null> {
   const author = await getAuthorDetail(openLibraryId);
-  if (!author) return null;
+  return author && authorGraph(author);
+}
 
+/** Path search's author graph: the same links from a lighter lookup (see getAuthorLinks). */
+export async function buildAuthorLinksGraph(openLibraryId: string): Promise<Graph | null> {
+  const author = await getAuthorLinks(openLibraryId);
+  return author && authorGraph(author);
+}
+
+async function authorGraph(author: AuthorLinks): Promise<Graph> {
   const centerId = `author:${author.openLibraryId}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "author", label: author.name, navigable: true }];
   const edges: GraphEdge[] = [];
@@ -218,8 +226,16 @@ function subjectGraph(subject: Subject): Graph {
 
 export async function buildWorkGraph(workId: string): Promise<Graph | null> {
   const work = await getWorkDetail(workId);
-  if (!work) return null;
+  return work && workGraph(work);
+}
 
+/** Path search's work graph: the same links from a lighter lookup (see getWorkLinks). */
+export async function buildWorkLinksGraph(workId: string): Promise<Graph | null> {
+  const work = await getWorkLinks(workId);
+  return work && workGraph(work);
+}
+
+function workGraph(work: WorkLinks): Graph {
   const centerId = `work:${work.openLibraryWorkId}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "work", label: work.title, navigable: true }];
   const edges: GraphEdge[] = [];

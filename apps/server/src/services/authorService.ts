@@ -9,6 +9,33 @@ import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 // author lookups are cached longer than book lookups.
 const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24, 1000, "author");
 
+/** The parts of an author that path search links through. */
+export type AuthorLinks = Pick<Author, "openLibraryId" | "name" | "relations" | "pseudonyms">;
+
+const authorLinksCache = new TtlCache<AuthorLinks | null>(1000 * 60 * 60 * 24, 1000, "authorLinks");
+
+/**
+ * Path search's lighter author lookup: getAuthorDetail without the Wikipedia
+ * extract and "more by this author". A full author already cached is used
+ * instead. Kept apart from authorCache so the author page never gets this subset.
+ */
+export function getAuthorLinks(openLibraryId: string): Promise<AuthorLinks | null> {
+  // shortcut: an author only in the persistent tier gets the lighter lookup; read that tier too if it shows up in timings
+  const full = authorCache.get(openLibraryId);
+  if (full !== undefined) return Promise.resolve(full);
+  return authorLinksCache.wrap(openLibraryId, async () => {
+    const ol = await openLibrary.getAuthor(openLibraryId);
+    if (!ol) return null;
+    const qid = ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name));
+    const [relations, rawPseudonyms] = qid
+      ? await Promise.all([wikidata.fetchAuthorRelations(qid), wikidata.fetchPseudonyms(qid)])
+      : [[], []];
+    return { openLibraryId, name: ol.name, relations, pseudonyms: ownPseudonyms(rawPseudonyms, ol.name) };
+  });
+}
+
+const ownPseudonyms = (names: string[], name: string) => names.filter((p) => p.toLowerCase() !== name.toLowerCase());
+
 /**
  * Shared by the /api/authors and /api/graph/author routes so both hit the
  * same cache.
@@ -52,7 +79,7 @@ export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
       birthDate: ol.birthDate,
       deathDate: ol.deathDate,
       relations,
-      pseudonyms: rawPseudonyms.filter((p) => p.toLowerCase() !== ol.name.toLowerCase()),
+      pseudonyms: ownPseudonyms(rawPseudonyms, ol.name),
       ...(moreByAuthor?.length && { moreByAuthor }),
     };
     return result;

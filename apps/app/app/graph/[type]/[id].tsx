@@ -17,7 +17,7 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { routes } from "../../../src/navigation";
 import { openLibraryUrl } from "../../../src/share";
@@ -315,7 +315,7 @@ export default function GraphExplorer() {
     );
   }
 
-  if (!data || !layout || !center) {
+  if (!data || !visible || !layout || !center) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
@@ -390,7 +390,6 @@ export default function GraphExplorer() {
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
-        Screen reader users get a list of every connection; switch with the List button.
       </Text>
       <View style={styles.legend}>
         {legend.types.map((nodeType) => (
@@ -443,7 +442,7 @@ export default function GraphExplorer() {
             {[...new Set([...data.edges.map((e) => e.relation), ...filter.hiddenRelations])].map((r) => (
               <FilterRow
                 key={r}
-                label={RELATION_LABELS[r] ?? r}
+                label={relationLabel(r)}
                 checked={!filter.hiddenRelations.includes(r)}
                 onPress={() => updateFilter({ ...filter, hiddenRelations: toggle(filter.hiddenRelations, r) })}
               />
@@ -470,15 +469,16 @@ export default function GraphExplorer() {
       )}
       {showList ? (
         <ScrollView style={styles.list}>
-          <Text accessibilityRole="header" style={styles.listHeading}>
-            {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
-          </Text>
-          {orderedNodes.length <= 1 && (
+          {orderedNodes.length > 1 ? (
+            <Text accessibilityRole="header" style={styles.listHeading}>
+              {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
+            </Text>
+          ) : (
             <Text style={styles.listRelations}>Nothing left after filtering. Change the filter to see connections.</Text>
           )}
           {orderedNodes.length > 1 && orderedNodes.map((node) => {
             const isCenter = node.id === data.centerId;
-            const relations = isCenter ? "" : nodeRelations(visible!, node.id).join(". ");
+            const relations = isCenter ? "" : nodeRelations(visible, node.id).join(". ");
             return (
               <Pressable
                 key={node.id}
@@ -506,7 +506,7 @@ export default function GraphExplorer() {
       <GestureDetector gesture={composedGesture}>
         <View
           style={[styles.viewport, { width }]}
-          accessibilityHint="Swipe to move between nodes. Activate the highlighted center node for full details."
+          accessibilityHint="Swipe to move between nodes. Activate the highlighted center node for full details. For a list of every connection, use the List button."
           onLayout={(e) => {
             const h = Math.round(e.nativeEvent.layout.height);
             if (h > 0 && h !== measuredHeight) setMeasuredHeight(h);
@@ -646,7 +646,7 @@ export default function GraphExplorer() {
           const isCenter = node.id === data.centerId;
           const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
           // A screen reader landing on one node in isolation can't see its edges, so spell them out.
-          const relations = nodeRelations(visible!, node.id).join(". ");
+          const relations = nodeRelations(visible, node.id).join(". ");
           const label = [
             `${node.label}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",

@@ -1,7 +1,8 @@
 import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-explorer/shared";
+import { dehydrate, hydrate, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Book, Work } from "@book-explorer/shared";
-import { buildTasteProfile, explain, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import { buildTasteProfile, detailLanded, explain, mapWithConcurrency, rankRecommendations, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -234,5 +235,33 @@ describe("mapWithConcurrency", () => {
     });
     expect(out).toEqual([10, 20, 30, 40, 50]);
     expect(peak).toBe(2);
+  });
+});
+
+describe("detailLanded", () => {
+  const watch = () => {
+    const client = new QueryClient();
+    const landed: unknown[] = [];
+    client.getQueryCache().subscribe((e) => {
+      if (detailLanded(e)) landed.push(e.query.queryKey);
+    });
+    return { client, landed };
+  };
+
+  it("ignores a detail query added without data, as useQuery does mid-render, until its data arrives", () => {
+    const { client, landed } = watch();
+    client.getQueryCache().build(client, { queryKey: ["work", "OL1W"] });
+    expect(landed).toEqual([]);
+    client.setQueryData(["work", "OL1W"], { title: "Dune" });
+    expect(landed).toEqual([["work", "OL1W"]]);
+  });
+
+  it("counts a detail restored from the persisted cache, and nothing but book and work details", () => {
+    const source = new QueryClient();
+    source.setQueryData(["book", "9780441013593"], { title: "Dune" });
+    source.setQueryData(["subject", "deserts"], { name: "Deserts" });
+    const { client, landed } = watch();
+    hydrate(client, dehydrate(source));
+    expect(landed).toEqual([["book", "9780441013593"]]);
   });
 });

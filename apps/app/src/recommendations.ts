@@ -1,4 +1,5 @@
 import { normalizeTitle, slugifySubject, type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
+import type { QueryCacheNotifyEvent } from "@tanstack/react-query";
 import { toAlternateIsbn } from "./isbn";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -84,6 +85,19 @@ export function seedsFromCache(snapshot: Snapshot, cachedBook: (isbn: string) =>
 }
 
 /** A subject must be shared by this many saved items to count, so one-off tags (e.g. "baggers") don't head a group. */
+/**
+ * Whether a cache event brought a book or work detail's data. Hydration adds
+ * queries with data or overwrites them ("setState"); a fetch ends in "success".
+ * A query added without data is useQuery creating it mid-render (another
+ * component's), so reacting to it would set state during that render.
+ */
+export function detailLanded(e: QueryCacheNotifyEvent): boolean {
+  const kind = e.query.queryKey[0];
+  if (kind !== "book" && kind !== "work") return false;
+  if (e.type === "added") return e.query.state.data !== undefined;
+  return e.type === "updated" && (e.action.type === "success" || e.action.type === "setState");
+}
+
 export const MIN_SHARED_SUBJECT = 2;
 
 /**

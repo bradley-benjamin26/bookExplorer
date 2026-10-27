@@ -3,13 +3,15 @@ import { describe, expect, it, vi } from "vitest";
 import type { PathResult } from "@book-explorer/shared";
 import { findPath, graphNeighbours, summarise, type Neighbours, type PathLimits } from "./graphQuery.js";
 import { UpstreamUnavailableError } from "../httpClient.js";
-import { buildSubjectBooksGraph, buildSubjectGraph, buildWorkGraph } from "./graphService.js";
+import { buildAuthorGraph, buildAuthorLinksGraph, buildSubjectBooksGraph, buildSubjectGraph, buildWorkGraph, buildWorkLinksGraph } from "./graphService.js";
 
 vi.mock("./graphService.js", () => ({
   buildAuthorGraph: vi.fn(),
+  buildAuthorLinksGraph: vi.fn(),
   buildSubjectGraph: vi.fn(),
   buildSubjectBooksGraph: vi.fn(),
   buildWorkGraph: vi.fn(),
+  buildWorkLinksGraph: vi.fn(),
 }));
 
 const LIMITS: PathLimits = { maxDepth: 4, maxVisited: 300, maxExpansions: 40, timeBudgetMs: 1000, concurrency: 2 };
@@ -270,7 +272,7 @@ describe("summarise", () => {
 
 describe("graphNeighbours", () => {
   it("renames a centre that came back under another id to the id asked for", async () => {
-    vi.mocked(buildWorkGraph).mockResolvedValue({
+    vi.mocked(buildWorkLinksGraph).mockResolvedValue({
       centerId: "work:OL2W",
       nodes: [
         { id: "work:OL2W", type: "work", label: "Dune", navigable: true },
@@ -282,6 +284,28 @@ describe("graphNeighbours", () => {
     expect(hood?.nodes.map((n) => n.id)).toEqual(["work:OL1W", "author:OL3A"]);
     expect(hood?.edges).toEqual([{ source: "author:OL3A", target: "work:OL1W", relation: "author" }]);
     expect(hood?.workCount).toBeUndefined();
+  });
+
+  it("opens a work through its links only, without the enrichment lookups", async () => {
+    vi.mocked(buildWorkLinksGraph).mockResolvedValue({
+      centerId: "work:OL1W",
+      nodes: [{ id: "work:OL1W", type: "work", label: "Dune", navigable: true }],
+      edges: [],
+    });
+    await graphNeighbours("work:OL1W");
+    expect(buildWorkLinksGraph).toHaveBeenCalledWith("OL1W");
+    expect(buildWorkGraph).not.toHaveBeenCalled();
+  });
+
+  it("opens an author through its links only", async () => {
+    vi.mocked(buildAuthorLinksGraph).mockResolvedValue({
+      centerId: "author:OL2A",
+      nodes: [{ id: "author:OL2A", type: "author", label: "Frank Herbert", navigable: true }],
+      edges: [],
+    });
+    await graphNeighbours("author:OL2A");
+    expect(buildAuthorLinksGraph).toHaveBeenCalledWith("OL2A");
+    expect(buildAuthorGraph).not.toHaveBeenCalled();
   });
 
   it("opens a subject or genre as its book list and work count only, without the related-concept lookups", async () => {

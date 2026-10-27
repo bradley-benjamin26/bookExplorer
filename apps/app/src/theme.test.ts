@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { darkColors, lightColors } from "./themeColors";
 
 vi.mock("react-native", () => ({ useColorScheme: () => "light" }));
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
-const { darkColors, lightColors, typeScale } = await import("./theme");
+const { typeScale } = await import("./theme");
 
 // WCAG 2.x relative luminance / contrast ratio for "#RRGGBB" colours.
 function luminance(hex: string): number {
