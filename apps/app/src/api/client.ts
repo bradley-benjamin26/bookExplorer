@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { z, type ZodType, type ZodTypeDef } from "zod";
 import {
+  AuthorRefSchema,
   AuthorSchema,
   BookSchema,
   GraphSchema,
@@ -11,6 +12,7 @@ import {
   WorkRefSchema,
   WorkSchema,
   type Author,
+  type AuthorRef,
   type Book,
   type Graph,
   type Series,
@@ -138,4 +140,9 @@ export function fetchPath(from: string, to: string, signal?: AbortSignal): Promi
 /** LCSH subject or LC genre headings matching what's being typed (at most 8). */
 export function suggestTerms(kind: "subjects" | "genres", q: string, signal?: AbortSignal): Promise<string[]> {
   return getJson(`/api/suggest/${kind}?${new URLSearchParams({ q })}`, z.array(z.string()), signal);
+}
+
+/** Authors matching a name being typed (at most 5). */
+export function searchAuthors(q: string): Promise<AuthorRef[]> {
+  return getJson(`/api/search/authors?${new URLSearchParams({ q })}`, z.array(AuthorRefSchema));
 }
