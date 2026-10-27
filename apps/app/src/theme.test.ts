@@ -42,6 +42,7 @@ describe.each([
     ["inputBorder vs background", c.inputBorder, c.background, 3],
     ["textFaint on background", c.textFaint, c.background, 4.5],
     ["warning on background", c.warning, c.background, 4.5],
+    ["graphAward on paper", c.graphAward, c.paper, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });

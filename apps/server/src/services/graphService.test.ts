@@ -143,6 +143,10 @@ describe("buildWorkLinksGraph", () => {
     expect(a?.nodes).toContainEqual(node);
     expect(a?.edges).toContainEqual({ source: "author:OL3A", target: "award:hugo_award", relation: "won" });
     expect(w?.nodes).toContainEqual(node);
+    vi.mocked(getWorkLinks).mockResolvedValueOnce({
+      openLibraryWorkId: "OL13W", title: "U", authors: [], subjects: [], genres: [], editions: [], awards: ["hugo award (1966)"],
+    } as never);
+    expect((await buildWorkLinksGraph("OL13W"))?.nodes).toContainEqual(node);
     expect(w?.edges).toContainEqual({ source: "work:OL12W", target: "award:hugo_award", relation: "won" });
   });
 });

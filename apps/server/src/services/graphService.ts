@@ -78,7 +78,8 @@ export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: Gra
 }
 
 function awardNode(label: string): GraphNode {
-  const family = awardFamily(label);
+  // Open Library tags arrive lowercase; title-case so the label reads the same whichever source is seen first.
+  const family = awardFamily(label).replace(/(^|\s)\S/g, (m) => m.toUpperCase());
   return { id: `award:${slugifySubject(family)}`, type: "award", label: family, navigable: false };
 }
 
