@@ -9,6 +9,12 @@ describe("memberHref", () => {
   });
 });
 
+describe("routes", () => {
+  it("has an About page", () => {
+    expect(routes.about()).toBe("/about");
+  });
+});
+
 describe("nodeHref", () => {
   it("routes each node type to its page", () => {
     expect(nodeHref("author:OL1A")).toEqual(routes.author("OL1A"));

@@ -38,6 +38,14 @@ export default function Home() {
               Shelf Thread
             </Text>
             <Text style={styles.subtitle}>find your next read</Text>
+            <Pressable
+              ref={titleRef("Read about this project")}
+              onPress={() => router.push(routes.about())}
+              accessibilityRole="link"
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.aboutLink}>About Shelf Thread</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -140,6 +148,13 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     },
     title: { fontFamily: fonts.display, fontSize: typeScale.xl, color: colors.ink },
     subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
+    aboutLink: {
+      fontFamily: fonts.body,
+      fontSize: typeScale.xs,
+      color: colors.cover,
+      textDecorationLine: "underline",
+      marginTop: spacing.sm,
+    },
     pressed: { opacity: 0.6 },
     focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
     scanButton: {

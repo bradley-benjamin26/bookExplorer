@@ -123,6 +123,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />
           </Stack>
