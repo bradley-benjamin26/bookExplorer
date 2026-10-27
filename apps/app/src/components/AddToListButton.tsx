@@ -11,6 +11,7 @@ import {
 } from "../storage/savedLists";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { titleRef } from "../webTitle";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -210,6 +211,7 @@ export function AddToListButton({
                     const Icon = isChecked ? SquareCheck : Square;
                     return (
                       <Pressable
+                        ref={titleRef(`Add to or remove from ${list.name}`)}
                         key={list.id}
                         style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                         onPress={() => toggle(list)}
@@ -225,6 +227,7 @@ export function AddToListButton({
                     );
                   })}
                   <Pressable
+                    ref={titleRef("Create a new list")}
                     style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                     onPress={() => setCreating((c) => !c)}
                     accessibilityRole="button"

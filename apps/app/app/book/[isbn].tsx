@@ -109,6 +109,8 @@ export default function BookDetail() {
       <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
       {data.authors.map((author) => (
         <Pressable
+          ref={titleRef(`View ${author.name}`)}
+          accessibilityRole="button"
           key={author.openLibraryId}
           style={({ pressed }) => pressed && styles.pressed}
           onPress={() => router.push(routes.author(author.openLibraryId))}
@@ -227,6 +229,7 @@ export default function BookDetail() {
         </Pressable>
         {data.loc && (
           <Pressable
+            ref={titleRef("View this book in the LOC catalog")}
             style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
             onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}
             accessibilityRole="button"
@@ -247,11 +250,11 @@ export default function BookDetail() {
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
           {/* Wikipedia and Google Books content require attribution on reuse. */}
           {data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
-            <Pressable onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
+            <Pressable ref={titleRef("Read the source on Wikipedia")} accessibilityRole="link" onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
               <Text style={styles.descriptionSource}>via Wikipedia</Text>
             </Pressable>
           ) : data.descriptionSource === "loc" && data.loc ? (
-            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+            <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
               <Text style={styles.descriptionSource}>via Library of Congress</Text>
             </Pressable>
           ) : data.descriptionSource === "googleBooks" ? (

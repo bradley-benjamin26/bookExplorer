@@ -115,6 +115,7 @@ export default function ListDetail() {
             list.members.map((member) => (
               <View key={`${member.type}:${member.id}`} style={styles.row}>
                 <Pressable
+                  ref={titleRef(`Open ${member.title}`)}
                   style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}
                   onPress={() => router.push(memberHref(member))}
                   accessibilityRole="button"

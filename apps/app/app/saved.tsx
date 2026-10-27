@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Footer } from "../src/components/Footer";
 import { routes } from "../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { titleRef } from "../src/webTitle";
 
 export default function Saved() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function Saved() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {([["Lists", routes.lists()], ["Recommendations", routes.recommendations()], ["Find Connection", routes.connection()], ["Import & Export", routes.backup()], ["Settings", routes.settings()]] as const).map(([label, href]) => (
         <Pressable
+          ref={titleRef(`Open ${label}`)}
           key={label}
           style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}
           onPress={() => router.push(href)}

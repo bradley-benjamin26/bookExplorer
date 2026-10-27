@@ -5,6 +5,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { collapseSelfPublished } from "../editions";
 import { routes } from "../navigation";
 import { useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 function EditionCard({ edition }: { edition: Edition }) {
   const styles = useThemedStyles(createStyles);
@@ -41,6 +42,7 @@ function EditionCard({ edition }: { edition: Edition }) {
 
   return (
     <Pressable
+      ref={titleRef("View this edition")}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => router.push(routes.book(isbn))}
       accessibilityRole="button"
@@ -67,6 +69,7 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
         ))}
         {hiddenCount > 0 && (
           <Pressable
+            ref={titleRef(showAll ? "Show fewer editions" : "Show more editions")}
             style={({ pressed }) => [styles.moreCard, pressed && styles.pressed]}
             onPress={() => setShowAll((v) => !v)}
             accessibilityRole="button"

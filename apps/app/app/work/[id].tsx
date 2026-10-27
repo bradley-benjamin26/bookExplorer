@@ -24,6 +24,7 @@ import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedB
 import { addRecent } from "../../src/storage/history";
 import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleRef } from "../../src/webTitle";
 
 export default function WorkDetail() {
   const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
@@ -89,6 +90,8 @@ export default function WorkDetail() {
         <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
         {data.authors.map((author) => (
           <Pressable
+            ref={titleRef(`View ${author.name}`)}
+            accessibilityRole="button"
             key={author.openLibraryId}
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => router.push(routes.author(author.openLibraryId))}
@@ -112,7 +115,7 @@ export default function WorkDetail() {
         />
       </View>
       {savedEdition && (
-        <Pressable onPress={() => router.push(routes.book(savedEdition.isbn))}>
+        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
         </Pressable>
       )}
@@ -163,7 +166,7 @@ export default function WorkDetail() {
           <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
           {data.descriptionSource === "loc" && data.loc && (
-            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+            <Pressable ref={titleRef("Read the source at the Library of Congress")} accessibilityRole="link" onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
               <Text style={styles.descriptionSource}>via Library of Congress</Text>
             </Pressable>
           )}

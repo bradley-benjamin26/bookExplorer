@@ -14,6 +14,7 @@ import {
 import { stamp, type Unversioned } from "../src/storage/schema";
 import { useTheme, useThemedStyles, useThemePreference, type Theme } from "../src/theme";
 import type { ThemePreference } from "../src/storage/themePreference";
+import { titleRef } from "../src/webTitle";
 
 function LibraryCard({
   library,
@@ -51,6 +52,7 @@ function LibraryCard({
       <View style={styles.libraryCardHeader}>
         <Text style={styles.fieldLabel}>Library Name</Text>
         <Pressable
+          ref={titleRef("Remove this library")}
           onPress={() => onRemove(library.id)}
           style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
           hitSlop={8}
@@ -200,6 +202,7 @@ export default function Settings() {
       ))}
 
       <Pressable
+        ref={titleRef("Add a library to Find This Book")}
         style={({ pressed }) => [styles.addLibraryRow, pressed && styles.pressed]}
         onPress={handleAddLibrary}
         accessibilityRole="button"

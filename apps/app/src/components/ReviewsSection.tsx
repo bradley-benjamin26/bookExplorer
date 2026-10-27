@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Star } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 function ReviewCard({ review }: { review: Review }) {
   const theme = useTheme();
@@ -26,7 +27,7 @@ function ReviewCard({ review }: { review: Review }) {
       {revealed ? (
         <Text style={styles.text}>{review.text}</Text>
       ) : (
-        <Pressable onPress={() => setRevealed(true)} accessibilityRole="button">
+        <Pressable ref={titleRef("Reveal this review")} onPress={() => setRevealed(true)} accessibilityRole="button">
           <Text style={styles.spoilerText}>Contains spoilers — tap to reveal</Text>
         </Pressable>
       )}
@@ -43,6 +44,7 @@ export function ReviewsSection({ reviews }: { reviews: Review[] }) {
   return (
     <View style={styles.section}>
       <Pressable
+        ref={titleRef(open ? "Hide reviews" : "Show reviews")}
         style={({ pressed }) => [styles.header, pressed && styles.pressed]}
         onPress={() => setOpen((v) => !v)}
         hitSlop={8}

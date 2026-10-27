@@ -17,6 +17,7 @@ import { Button } from "../src/components/Button";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { HeaderTitle } from "../src/components/HeaderTitle";
 import { MyLibraryButton } from "../src/components/MyLibraryButton";
+import { WebTooltip } from "../src/components/WebTooltip";
 import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
@@ -130,6 +131,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />
           </Stack>
         </View>
+        <WebTooltip />
       </View>
     </View>
   );

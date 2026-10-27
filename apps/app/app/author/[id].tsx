@@ -17,6 +17,7 @@ import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { titleRef } from "../../src/webTitle";
 
 const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
   { relation: "influencedBy", title: "Influenced by" },
@@ -66,7 +67,7 @@ export default function AuthorDetail() {
           />
           {/* Commons images carry their own licences; the Wikipedia page credits them. */}
           {data.bioSourceUrl && (
-            <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
+            <Pressable ref={titleRef("Photo source on Wikipedia")} accessibilityRole="link" style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
               <Text style={styles.photoCredit}>Photo via Wikipedia</Text>
             </Pressable>
           )}
@@ -88,6 +89,8 @@ export default function AuthorDetail() {
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
       {data.bioSource === "wikipedia" && data.bioSourceUrl && (
         <Pressable
+          ref={titleRef("Read the source on Wikipedia")}
+          accessibilityRole="link"
           style={({ pressed }) => pressed && styles.pressed}
           onPress={() => Linking.openURL(data.bioSourceUrl!)}
         >
@@ -103,6 +106,8 @@ export default function AuthorDetail() {
       )}
 
       <Pressable
+        ref={titleRef("View this author on Open Library")}
+        accessibilityRole="link"
         style={({ pressed }) => [styles.openLibraryLink, pressed && styles.pressed]}
         onPress={() => Linking.openURL(`https://openlibrary.org/authors/${data.openLibraryId}`)}
       >
@@ -147,6 +152,7 @@ export default function AuthorDetail() {
               );
               return isNavigable ? (
                 <Pressable
+                  ref={titleRef(`View ${item.label}`)}
                   key={item.wikidataId}
                   style={({ pressed }) => pressed && styles.pressed}
                   onPress={() => router.push(item.openLibraryId!.endsWith("W") ? routes.work(item.openLibraryId!) : routes.author(item.openLibraryId!))}
