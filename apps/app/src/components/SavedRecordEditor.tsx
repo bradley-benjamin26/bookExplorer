@@ -1,64 +1,7 @@
-import { MAX_TAG_LENGTH, MAX_TEXT_LENGTH } from "@book-explorer/shared";
+import { MAX_TEXT_LENGTH } from "@book-explorer/shared";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
-import { titleRef } from "../webTitle";
-import { Button } from "./Button";
-import { titleCase } from "../titleCase";
-
-function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; onChange: (next: string[]) => void }) {
-  const styles = useThemedStyles(createStyles);
-  const theme = useTheme();
-  const [draft, setDraft] = useState("");
-
-  const handleAdd = () => {
-    const value = draft.trim();
-    if (!value || tags.includes(value)) {
-      setDraft("");
-      return;
-    }
-    onChange([...tags, value]);
-    setDraft("");
-  };
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">{label}</Text>
-      {tags.length > 0 && (
-        <View style={styles.tagRow}>
-          {tags.map((tag) => (
-            <Pressable
-              ref={titleRef(`Remove ${tag}`)}
-              key={tag}
-              style={styles.tag}
-              onPress={() => onChange(tags.filter((t) => t !== tag))}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${tag}`}
-            >
-              <Text style={styles.tagText}>{titleCase(tag)} ×</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-      <View style={styles.addRow}>
-        <TextInput
-          style={styles.input}
-          placeholder={`Add a ${label.toLowerCase().replace(/s$/, "")}`}
-          placeholderTextColor={theme.colors.inkFaint}
-          value={draft}
-          onChangeText={setDraft}
-          onSubmitEditing={handleAdd}
-          returnKeyType="done"
-          maxLength={MAX_TAG_LENGTH}
-        />
-        <Button variant="pill" onPress={handleAdd} style={styles.addButton}>
-          Add
-        </Button>
-      </View>
-    </View>
-  );
-}
 
 // Notes are written once typing pauses this long, so a write doesn't happen
 // on every keystroke. Saving only on blur (as this used to) lost notes when
@@ -66,14 +9,12 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
 // input first — any still-pending save is also flushed on unmount.
 const NOTES_SAVE_DELAY_MS = 600;
 
-type EditableFields = { subjects: string[]; genres: string[]; notes: string };
+type EditableFields = { notes: string };
 
-/** Shown for a saved book or work once it's saved, in place of the read-only
- * subject/genre tags — lets the user add to or remove from this saved
- * record's own subjects/genres and keep freeform notes. Tag changes are
- * persisted immediately (through `update`, the record kind's own storage
- * function) and notes shortly after typing pauses, rather than needing an
- * explicit save step, matching how the rest of the app behaves. */
+/** Shown for a saved book or work once it's saved: freeform notes, persisted
+ * (through `update`, the record kind's own storage function) shortly after
+ * typing pauses, rather than needing an explicit save step, matching how the
+ * rest of the app behaves. Subjects and genres are edited in TermsSection. */
 export function SavedRecordEditor<R extends EditableFields>({
   record,
   update,
@@ -85,12 +26,6 @@ export function SavedRecordEditor<R extends EditableFields>({
 }) {
   const styles = useThemedStyles(createStyles);
   const theme = useTheme();
-  // Tags are tracked locally (updated synchronously on each tap) rather than
-  // read back from `record`, which only updates once the async write
-  // finishes — otherwise two quick taps would both build on the same old
-  // list, and the second would undo the first.
-  const [subjects, setSubjects] = useState(record.subjects);
-  const [genres, setGenres] = useState(record.genres);
   const [notes, setNotes] = useState(record.notes);
 
   // The latest unsaved notes, if any — a ref so the unmount flush below sees
@@ -116,11 +51,9 @@ export function SavedRecordEditor<R extends EditableFields>({
   // (e.g. the Saved screen's row collapsed with Done, then reopened) is still
   // landing, so its initial state can predate that write. Picking up `record`
   // whenever it changes and nothing of this instance's own is pending keeps
-  // it from showing — and then building the next edit on — stale tags.
+  // it from showing — and then building the next edit on — stale notes.
   useEffect(() => {
     if (inFlightWrites.current > 0) return;
-    setSubjects(record.subjects);
-    setGenres(record.genres);
     if (pendingNotes.current === null) setNotes(record.notes);
   }, [record]);
 
@@ -148,22 +81,6 @@ export function SavedRecordEditor<R extends EditableFields>({
 
   return (
     <View style={styles.container}>
-      <TagEditor
-        label="Subjects"
-        tags={subjects}
-        onChange={(next) => {
-          setSubjects(next);
-          persist({ subjects: next });
-        }}
-      />
-      <TagEditor
-        label="Genres"
-        tags={genres}
-        onChange={(next) => {
-          setGenres(next);
-          persist({ genres: next });
-        }}
-      />
       <View style={styles.section}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Notes</Text>
         <TextInput
@@ -186,22 +103,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     container: { width: "100%", marginTop: spacing.xl },
     section: { marginBottom: spacing.lg },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: 10 },
-    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: 10 },
-    tag: { backgroundColor: colors.chipBackground, borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: 7 },
-    tagText: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
-    addRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
-    input: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: radii.sm,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 9,
-      fontSize: 14,
-      fontFamily: fonts.body,
-      color: colors.ink,
-    },
-    addButton: { alignSelf: "auto" },
     notesInput: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
