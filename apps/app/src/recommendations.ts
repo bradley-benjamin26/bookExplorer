@@ -2,6 +2,7 @@ import { normalizeTitle, slugifySubject, type Book, type Graph, type Subject, ty
 import type { QueryCacheNotifyEvent } from "@tanstack/react-query";
 import { toAlternateIsbn } from "./isbn";
 import type { Snapshot } from "./storage/snapshot";
+import { subjectSortParams } from "./subjectSort";
 
 // Bounds on the candidate fetch: one /api/subjects call per top subject and one
 // /api/graph/author call per top author, FETCH_CONCURRENCY at a time.
@@ -162,7 +163,7 @@ interface Evidence {
  */
 export function rankRecommendations(
   profile: TasteProfile,
-  subjectResults: Map<string, Subject>,
+  subjectResults: Map<string, { books: WorkRef[] }>,
   authorGraphs: Map<string, Graph>,
   ratings: Map<string, number> = new Map(),
   limit = MAX_RECOMMENDATIONS
@@ -226,6 +227,20 @@ export function rankRecommendations(
 export function explain(reasons: Evidence["reasons"]): { reason: Reason; shares: string[] } {
   const [{ kind, label, seedTitles }] = [...reasons].sort((a, b) => b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.label, b.label));
   return { reason: { kind, label, seedTitles }, shares: reasons.map((r) => r.share) };
+}
+
+/**
+ * A subject's candidate books: its most-read listing (what the subject page's "Most read" shows), since the
+ * subject's own order leads with old classics. Falls back to that classic order when the search is empty or fails.
+ * `label` is a public subject label (see buildTasteProfile), the only thing sent to the search.
+ */
+export async function loadSubjectBooks(
+  label: string,
+  slug: string,
+  deps: { searchSorted: (params: Record<string, string>) => Promise<WorkRef[] | null>; classic: (slug: string) => Promise<{ books: WorkRef[] } | null> }
+): Promise<{ books: WorkRef[] } | null> {
+  const popular = await deps.searchSorted(subjectSortParams(label, "readinglog")!);
+  return popular?.length ? { books: popular } : deps.classic(slug);
 }
 
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

@@ -1,14 +1,15 @@
-import { type Book, type Graph, type Subject, type Work } from "@book-explorer/shared";
+import { type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
 import { useIsRestoring, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { fetchGraph, fetchSubject } from "../api/client";
+import { fetchGraph, fetchSubject, searchBooks } from "../api/client";
 import { routes } from "../navigation";
 import {
   buildTasteProfile,
   detailLanded,
   FETCH_CONCURRENCY,
+  loadSubjectBooks,
   mapWithConcurrency,
   rankRecommendations,
   seedsFromCache,
@@ -57,7 +58,8 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
     return buildTasteProfile(snapshot, seeds, publicSlugs);
   }, [snapshot, queryClient, cacheVersion]);
 
-  const slugs = profile?.subjects.map((s) => s.slug) ?? [];
+  const subjectTerms = profile?.subjects ?? [];
+  const slugs = subjectTerms.map((s) => s.slug);
   const authorIds = profile?.authors.map((a) => a.id) ?? [];
   const seedCount = slugs.length + authorIds.length;
   const { data, isFetching } = useQuery({
@@ -68,18 +70,24 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
       // Shares the detail screens' cache keys, so those entries (and their persisted copies) are reused both ways.
       const fetchOne = <T,>(queryKey: QueryKey, queryFn: () => Promise<T>) =>
         queryClient.fetchQuery({ queryKey, queryFn, staleTime: STALE_MS }).catch(() => queryClient.getQueryData<T>(queryKey) ?? null);
-      const jobs: (() => Promise<Subject | Graph | null>)[] = [
-        ...slugs.map((slug) => () => fetchOne<Subject>(["subject", slug], () => fetchSubject(slug))),
+      const jobs: (() => Promise<{ books: WorkRef[] } | Graph | null>)[] = [
+        ...subjectTerms.map((s) => () =>
+          loadSubjectBooks(s.label, s.slug, {
+            // The subject page's "Most read" key, so that cache is shared.
+            searchSorted: (p) => fetchOne<WorkRef[]>(["search", p], () => searchBooks(p)),
+            classic: (slug) => fetchOne<Subject>(["subject", slug], () => fetchSubject(slug)),
+          })
+        ),
         ...authorIds.map((id) => () => fetchOne<Graph>(["graph", "author", id], () => fetchGraph("author", id))),
       ];
       const results = await mapWithConcurrency(jobs, FETCH_CONCURRENCY, (job) => job());
-      return { subjects: results.slice(0, slugs.length) as (Subject | null)[], graphs: results.slice(slugs.length) as (Graph | null)[] };
+      return { subjects: results.slice(0, slugs.length) as ({ books: WorkRef[] } | null)[], graphs: results.slice(slugs.length) as (Graph | null)[] };
     },
   });
 
   const recommendations = useMemo(() => {
     if (!profile || !data) return [];
-    const subjects = new Map<string, Subject>();
+    const subjects = new Map<string, { books: WorkRef[] }>();
     data.subjects.forEach((s, i) => s && subjects.set(slugs[i], s));
     const graphs = new Map<string, Graph>();
     data.graphs.forEach((g, i) => g && graphs.set(authorIds[i], g));

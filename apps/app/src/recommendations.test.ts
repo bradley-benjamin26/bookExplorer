@@ -2,7 +2,7 @@ import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-ex
 import { dehydrate, hydrate, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Book, Work } from "@book-explorer/shared";
-import { buildTasteProfile, detailLanded, explain, mapWithConcurrency, rankRecommendations, recommendationsStatus, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import { buildTasteProfile, detailLanded, explain, loadSubjectBooks, mapWithConcurrency, rankRecommendations, recommendationsStatus, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -275,5 +275,26 @@ describe("recommendationsStatus", () => {
     expect(recommendationsStatus({ ...base, count: 0 })).toBe("empty");
     expect(recommendationsStatus({ ...base, fetching: true })).toBe("list");
     expect(recommendationsStatus(base)).toBe("list");
+  });
+});
+
+describe("loadSubjectBooks", () => {
+  const classic = [work("OLD")];
+  const popular = [work("NEW")];
+  it("prefers the most-read listing", async () => {
+    let classicCalls = 0;
+    const searched: Record<string, string>[] = [];
+    const out = await loadSubjectBooks("Juvenile fiction", "juvenile_fiction", {
+      searchSorted: async (p) => (searched.push(p), popular),
+      classic: async () => (classicCalls++, { books: classic }),
+    });
+    expect(out).toEqual({ books: popular });
+    expect(searched).toEqual([{ subject: "Juvenile fiction", sort: "readinglog" }]);
+    expect(classicCalls).toBe(0);
+  });
+  it("falls back to the classic listing when the search is empty", async () => {
+    const deps = (found: ReturnType<typeof work>[] | null) => ({ searchSorted: async () => found, classic: async () => ({ books: classic }) });
+    expect(await loadSubjectBooks("X", "x", deps([]))).toEqual({ books: classic });
+    expect(await loadSubjectBooks("X", "x", deps(null))).toEqual({ books: classic });
   });
 });
