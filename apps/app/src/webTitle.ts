@@ -17,3 +17,13 @@ export function tooltipPosition(target: Size & { x: number; y: number }, tip: Si
   const top = below + tip.height + edge > viewport.height ? target.y - gap - tip.height : below;
   return { left, top };
 }
+
+/** What WebTooltip does for an event. `pressed` is true from a pointer press until the next keypress: the focus a click causes must not re-arm the tip. */
+export function tooltipAction(
+  event: "pointerover" | "focusin" | "pointerdown" | "escape",
+  { pointerType, pressed }: { pointerType?: string; pressed?: boolean } = {}
+): "show" | "hide" | "ignore" {
+  if (event === "pointerdown" || event === "escape") return "hide";
+  if (event === "pointerover") return pointerType === "mouse" ? "show" : "ignore";
+  return pressed ? "ignore" : "show";
+}

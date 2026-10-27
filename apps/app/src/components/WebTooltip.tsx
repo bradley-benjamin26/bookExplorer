@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Platform, Text } from "react-native";
 import { useTheme } from "../theme";
-import { TOOLTIP_DELAY_MS, tooltipPosition } from "../webTitle";
+import { TOOLTIP_DELAY_MS, tooltipAction, tooltipPosition } from "../webTitle";
 
 type Tip = { text: string; target: DOMRect };
 
@@ -20,9 +20,11 @@ function WebTooltipInner() {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let current: Element | null = null;
-    const hide = () => {
+    let pressed = false;
+    // keepCurrent: after a press the control stays "current", so moving over its children doesn't re-arm the tip.
+    const hide = (keepCurrent = false) => {
       clearTimeout(timer);
-      current = null;
+      if (!keepCurrent) current = null;
       setTip(null);
       setPos(null);
     };
@@ -31,32 +33,44 @@ function WebTooltipInner() {
       if (!el || el === current) return;
       hide();
       current = el;
-      timer = setTimeout(() => setTip({ text: el.getAttribute("data-tooltip") ?? "", target: el.getBoundingClientRect() }), TOOLTIP_DELAY_MS);
+      timer = setTimeout(() => {
+        // A click may have removed the control (navigation) before the delay ended.
+        if (el.isConnected) setTip({ text: el.getAttribute("data-tooltip") ?? "", target: el.getBoundingClientRect() });
+      }, TOOLTIP_DELAY_MS);
     };
     const onOver = (e: PointerEvent) => {
-      if (e.pointerType === "mouse") start(e);
+      if (tooltipAction("pointerover", { pointerType: e.pointerType }) === "show") start(e);
     };
+    const onFocusIn = (e: FocusEvent) => {
+      if (tooltipAction("focusin", { pressed }) === "show") start(e);
+    };
+    const onDown = () => {
+      pressed = true;
+      if (tooltipAction("pointerdown") === "hide") hide(true);
+    };
+    const onFocusOut = () => hide();
     const onOut = (e: PointerEvent) => {
-      if (current && !current.contains(e.relatedTarget as Node | null)) hide();
+      if (current && current.contains(e.target as Node) && !current.contains(e.relatedTarget as Node | null)) hide();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") hide();
+      pressed = false;
+      if (e.key === "Escape" && tooltipAction("escape") === "hide") hide();
     };
     document.addEventListener("pointerover", onOver);
-    document.addEventListener("focusin", start);
+    document.addEventListener("focusin", onFocusIn);
     document.addEventListener("pointerout", onOut);
-    document.addEventListener("focusout", hide);
-    document.addEventListener("pointerdown", hide);
-    document.addEventListener("scroll", hide, true);
+    document.addEventListener("focusout", onFocusOut);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("scroll", onFocusOut, true);
     document.addEventListener("keydown", onKey);
     return () => {
       clearTimeout(timer);
       document.removeEventListener("pointerover", onOver);
-      document.removeEventListener("focusin", start);
+      document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("pointerout", onOut);
-      document.removeEventListener("focusout", hide);
-      document.removeEventListener("pointerdown", hide);
-      document.removeEventListener("scroll", hide, true);
+      document.removeEventListener("focusout", onFocusOut);
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("scroll", onFocusOut, true);
       document.removeEventListener("keydown", onKey);
     };
   }, []);
@@ -70,7 +84,9 @@ function WebTooltipInner() {
   }, [tip]);
 
   if (!tip) return null;
-  return (
+  // Portalled to <body> and above RN Web's Modal (zIndex 9999), so tips inside sheets show.
+  const { createPortal } = require("react-dom") as { createPortal: (node: ReactNode, to: Element) => ReactNode }; // no @types/react-dom
+  return createPortal(
     <Text
       ref={(el) => {
         tipEl.current = el as unknown as HTMLElement | null;
@@ -84,7 +100,7 @@ function WebTooltipInner() {
         maxWidth: 240,
         padding: 6,
         pointerEvents: "none",
-        zIndex: 1000,
+        zIndex: 100000,
         color: colors.ink,
         backgroundColor: colors.paper,
         borderColor: colors.border,
@@ -95,6 +111,7 @@ function WebTooltipInner() {
       }}
     >
       {tip.text}
-    </Text>
+    </Text>,
+    document.body
   );
 }
