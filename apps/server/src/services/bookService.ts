@@ -83,8 +83,17 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     // Wikipedia's extract is always English; the other two are checked.
     const gbDescription = englishOrNull(gb?.description ?? null);
     const olDescription = englishOrNull(ol.description);
-    const description = wikipedia?.text ?? gbDescription ?? olDescription;
-    const descriptionSource = wikipedia ? "wikipedia" : gbDescription ? "googleBooks" : olDescription ? "openLibrary" : null;
+    const locSummary = englishOrNull(locMetadata.summary);
+    const description = wikipedia?.text ?? gbDescription ?? olDescription ?? locSummary;
+    const descriptionSource = wikipedia
+      ? "wikipedia"
+      : gbDescription
+        ? "googleBooks"
+        : olDescription
+          ? "openLibrary"
+          : locSummary
+            ? "loc"
+            : null;
     // Google Books' rating is only used on its own, as a last resort, when
     // neither Hardcover nor Open Library has one at all — it's never
     // blended in, since folding it in would mean an extra request against
@@ -112,6 +121,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       format: ol.format,
       rating,
       reviews: hc?.reviews ?? [],
+      ...(locMetadata.lccn && { loc: { lcc: locMetadata.lcc, ddc: locMetadata.ddc, lccn: locMetadata.lccn } }),
     };
     return result;
   });

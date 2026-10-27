@@ -75,10 +75,14 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     ]);
 
     const olTerms = splitSubjectTerms(ol.subjects);
+    const olDescription = englishOrNull(ol.description);
+    const locSummary = englishOrNull(locMetadata.summary);
     const result: Work = {
       openLibraryWorkId: workId,
       ...ol,
-      description: englishOrNull(ol.description),
+      description: olDescription ?? locSummary,
+      descriptionSource: olDescription ? "openLibrary" : locSummary ? "loc" : null,
+      ...(locMetadata.lccn && { loc: { lcc: locMetadata.lcc, ddc: locMetadata.ddc, lccn: locMetadata.lccn } }),
       // Same Open-Library-then-Hardcover cover fallback as a scanned book —
       // no Google Books here (see above), so a work whose edition Open
       // Library has no cover recorded for just has none instead of falling

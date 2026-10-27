@@ -11,7 +11,7 @@ describe("parseModsRecord", () => {
   it("returns empty metadata when the record's own identifier doesn't match the searched ISBN", () => {
     // The SRU index isn't a strict equality match, so an unrelated record can come back for a bad ISBN.
     const xml = record(`<subject authority="lcsh"><topic>Fiction</topic></subject>`, "0000000000000");
-    expect(parseModsRecord(xml, isbn)).toEqual({ subjects: [], genres: [] });
+    expect(parseModsRecord(xml, isbn)).toEqual({ subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null });
   });
 
   it("extracts an lcsh subject heading, joining its parts with ' -- '", () => {
@@ -55,6 +55,28 @@ describe("parseModsRecord", () => {
     const result = parseModsRecord(xml, isbn);
     expect(result.subjects).toEqual(["Rock & roll"]);
     expect(result.genres).toEqual(["Horror & suspense fiction"]);
+  });
+});
+
+describe("parseModsRecord catalog fields", () => {
+  const isbn = "9780547928227";
+  const xml = `<mods><identifier type="isbn">${isbn}</identifier>
+<classification authority="lcc">PZ7.T5744 Ho 2012</classification>
+<classification authority="ddc" edition="23">[Fic]</classification>
+<identifier type="lccn">2012545250</identifier>
+<abstract>Bilbo Baggins, a hobbit &amp; homebody, sets out.</abstract>
+<subject authority="lcsh"><topic>Hobbits</topic></subject></mods>`;
+
+  it("reads call number, Dewey, LCCN and summary alongside the subjects", () => {
+    expect(parseModsRecord(xml, isbn)).toEqual({
+      subjects: ["Hobbits"], genres: [], lcc: "PZ7.T5744 Ho 2012", ddc: "[Fic]", lccn: "2012545250",
+      summary: "Bilbo Baggins, a hobbit & homebody, sets out.",
+    });
+  });
+
+  it("returns null for any catalog field the record lacks", () => {
+    const bare = `<mods><identifier type="isbn">${isbn}</identifier></mods>`;
+    expect(parseModsRecord(bare, isbn)).toMatchObject({ lcc: null, ddc: null, lccn: null, summary: null });
   });
 });
 

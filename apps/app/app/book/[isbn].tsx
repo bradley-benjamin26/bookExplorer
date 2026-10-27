@@ -239,6 +239,11 @@ export default function BookDetail() {
 
       <View style={styles.findSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        {data.loc && (data.loc.lcc || data.loc.ddc) && (
+          <Text style={styles.callNumber}>
+            {[data.loc.lcc && `LC call number ${data.loc.lcc}`, data.loc.ddc && `Dewey ${data.loc.ddc}`].filter(Boolean).join(" · ")}
+          </Text>
+        )}
         <Pressable
           ref={titleRef("View this book on Open Library")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
@@ -275,6 +280,19 @@ export default function BookDetail() {
             <ChevronRight size={18} color={theme.colors.inkFaint} />
           </View>
         </Pressable>
+        {data.loc && (
+          <Pressable
+            style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+            onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}
+            accessibilityRole="button"
+            accessibilityLabel="View in LOC catalog"
+          >
+            <Text style={styles.findRowText}>View in LOC catalog</Text>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <ChevronRight size={18} color={theme.colors.inkFaint} />
+            </View>
+          </Pressable>
+        )}
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
 
@@ -286,6 +304,10 @@ export default function BookDetail() {
           {data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
             <Pressable onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
               <Text style={styles.descriptionSource}>via Wikipedia</Text>
+            </Pressable>
+          ) : data.descriptionSource === "loc" && data.loc ? (
+            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+              <Text style={styles.descriptionSource}>via Library of Congress</Text>
             </Pressable>
           ) : data.descriptionSource === "googleBooks" ? (
             <GoogleBooksAttribution
@@ -359,6 +381,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
+    callNumber: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginBottom: spacing.sm },
     findSection: { marginTop: spacing.xxl, width: "100%" },
     findRow: {
       flexDirection: "row",

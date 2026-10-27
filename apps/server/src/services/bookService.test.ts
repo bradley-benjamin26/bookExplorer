@@ -12,7 +12,7 @@ vi.mock("../sources/wikipedia.js", () => ({ fetchWikipediaExtract: vi.fn() }));
 vi.mock("../sources/loc.js", () => ({ mergeTaggedTerms: vi.fn(() => []) }));
 vi.mock("./bookEnrichment.js", () => ({
   startCommonEnrichment: vi.fn(() => ({
-    locMetadataPromise: Promise.resolve({ subjects: [], genres: [] }),
+    locMetadataPromise: Promise.resolve({ subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null }),
     hardcoverPromise: Promise.resolve({ coverUrl: "hc.jpg", rating: 4, ratingsCount: 10 }),
     olRatingsPromise: Promise.resolve(null),
   })),

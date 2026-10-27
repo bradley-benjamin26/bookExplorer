@@ -3,7 +3,7 @@ import { slugifySubject } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
@@ -189,6 +189,11 @@ export default function WorkDetail() {
         <View style={styles.aboutSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
+          {data.descriptionSource === "loc" && data.loc && (
+            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+              <Text style={styles.descriptionSource}>via Library of Congress</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -233,6 +238,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       color: colors.chipTextGenre,
     },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
+    descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     graphButton: { width: "100%", marginTop: spacing.lg },

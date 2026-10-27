@@ -68,6 +68,10 @@ export function subjectKey(label: string): string {
   return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
 }
 
+// The Library of Congress catalog record's call number, Dewey class and
+// control number; present only when LOC has catalogued the book (an LCCN).
+export const LocCatalogSchema = z.object({ lcc: z.string().nullable(), ddc: z.string().nullable(), lccn: z.string() });
+
 export const BookSchema = z.object({
   isbn: z.string(),
   title: z.string(),
@@ -84,7 +88,7 @@ export const BookSchema = z.object({
   // Wikipedia and Google Books content require attribution on reuse — the
   // client shows a source credit (linking to descriptionSourceUrl, when
   // one exists) whenever description didn't come from Open Library itself.
-  descriptionSource: z.enum(["wikipedia", "googleBooks", "openLibrary"]).nullable(),
+  descriptionSource: z.enum(["wikipedia", "googleBooks", "openLibrary", "loc"]).nullable(),
   descriptionSourceUrl: z.string().nullable(),
   coverUrl: z.string().nullable(),
   // Google Books' terms require attribution whenever its cover image is
@@ -108,6 +112,7 @@ export const BookSchema = z.object({
   format: z.string().nullable(),
   rating: RatingSchema.nullable(),
   reviews: z.array(ReviewSchema),
+  loc: LocCatalogSchema.nullable().optional(),
 });
 export type Book = z.infer<typeof BookSchema>;
 
@@ -170,6 +175,8 @@ export type Edition = z.infer<typeof EditionSchema>;
 
 export const WorkSchema = WorkRefSchema.extend({
   description: z.string().nullable(),
+  descriptionSource: z.enum(["openLibrary", "loc"]).nullable().optional(),
+  loc: LocCatalogSchema.nullable().optional(),
   subjects: z.array(TaggedTermSchema),
   awards: z.array(z.string()).default([]),
   genres: z.array(TaggedTermSchema),

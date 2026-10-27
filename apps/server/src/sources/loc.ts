@@ -14,9 +14,14 @@ const SRU_URL = "https://lx2.loc.gov/sru/lcdb";
 export interface LocMetadata {
   subjects: string[];
   genres: string[];
+  /** Library of Congress call number, Dewey class, catalog control number and cataloguer's summary. */
+  lcc: string | null;
+  ddc: string | null;
+  lccn: string | null;
+  summary: string | null;
 }
 
-const EMPTY_METADATA: LocMetadata = { subjects: [], genres: [] };
+export const EMPTY_METADATA: LocMetadata = { subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null };
 
 function decodeXmlEntities(text: string): string {
   return text
@@ -44,6 +49,16 @@ const SUBJECT_PART_RE = /<(?:topic|geographic|temporal|genre)>([\s\S]*?)<\/(?:to
 // expected, not a bug, and is exactly why Wikidata's P136 is used alongside
 // it as a second, nonfiction-inclusive source.
 const GSAFD_GENRE_RE = /<genre\b([^>]*)>([\s\S]*?)<\/genre>/g;
+
+const LCC_RE = /<classification\b[^>]*authority="lcc"[^>]*>([^<]*)<\/classification>/;
+const DDC_RE = /<classification\b[^>]*authority="ddc"[^>]*>([^<]*)<\/classification>/;
+const LCCN_RE = /<identifier\b[^>]*type="lccn"[^>]*>([^<]*)<\/identifier>/;
+const ABSTRACT_RE = /<abstract\b[^>]*>([\s\S]*?)<\/abstract>/;
+
+function firstText(xml: string, re: RegExp): string | null {
+  const m = xml.match(re);
+  return m ? decodeXmlEntities(m[1]).trim() || null : null;
+}
 
 /**
  * Parses the handful of MODS fields this needs out of an SRU response with
@@ -79,7 +94,14 @@ export function parseModsRecord(xml: string, isbn: string): LocMetadata {
     .filter(([, attrs]) => /authority="gsafd"/.test(attrs))
     .map(([, , body]) => decodeXmlEntities(body).trim().replace(/\.$/, ""));
 
-  return { subjects, genres: [...new Set(genres)] };
+  return {
+    subjects,
+    genres: [...new Set(genres)],
+    lcc: firstText(xml, LCC_RE),
+    ddc: firstText(xml, DDC_RE),
+    lccn: firstText(xml, LCCN_RE),
+    summary: firstText(xml, ABSTRACT_RE),
+  };
 }
 
 /**
@@ -104,8 +126,8 @@ export async function fetchMetadataByIsbn(isbn: string): Promise<LocMetadata> {
 }
 
 /**
- * Tries each ISBN in turn, returning the first result with any subjects or
- * genres. Meant for a "work" (edition-agnostic in this app's own model
+ * Tries each ISBN in turn, returning the first result with any subjects,
+ * genres or LCCN. Meant for a "work" (edition-agnostic in this app's own model
  * already), where any one of several editions being LOC-catalogued is as
  * good as another — the alternative, only ever trying whichever edition Open
  * Library happened to list first, misses catalogued editions further down
@@ -118,7 +140,7 @@ export async function fetchMetadataByIsbn(isbn: string): Promise<LocMetadata> {
 export function fetchMetadataByAnyIsbn(isbns: string[], maxAttempts = 5): Promise<LocMetadata> {
   return tryEachIsbn(isbns, fetchMetadataByIsbn, {
     sourceName: "loc",
-    isEmpty: (metadata) => metadata.subjects.length === 0 && metadata.genres.length === 0,
+    isEmpty: (metadata) => metadata.subjects.length === 0 && metadata.genres.length === 0 && !metadata.lccn,
     fallback: EMPTY_METADATA,
     maxAttempts,
   });

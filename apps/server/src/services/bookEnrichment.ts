@@ -1,7 +1,7 @@
 import * as openLibrary from "../sources/openLibrary.js";
 import * as hardcover from "../sources/hardcover.js";
 import * as wikidata from "../sources/wikidata.js";
-import { fetchMetadataByAnyIsbn } from "../sources/loc.js";
+import { EMPTY_METADATA, fetchMetadataByAnyIsbn } from "../sources/loc.js";
 import { UpstreamUnavailableError } from "../httpClient.js";
 import { combineRatings } from "../ratings.js";
 import type { HardcoverBookData } from "../sources/hardcover.js";
@@ -42,7 +42,7 @@ export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, 
  */
 export function startCommonEnrichment(isbnCandidates: string[], workId: string | null, entry: CacheEntryOptions) {
   const locMetadataPromise = fetchMetadataByAnyIsbn(isbnCandidates).catch(
-    optionalSource(entry, "loc", { subjects: [] as string[], genres: [] as string[] })
+    optionalSource(entry, "loc", EMPTY_METADATA)
   );
   const hardcoverPromise = hardcover
     .lookupByAnyIsbn(isbnCandidates)
