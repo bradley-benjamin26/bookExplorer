@@ -7,6 +7,35 @@ import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByA
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
+/** The parts of a work that path search links through. */
+export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "editions">;
+
+const workLinksCache = new TtlCache<WorkLinks | null>(1000 * 60 * 60, 1000, "workLinks");
+
+/**
+ * Path search's lighter work lookup: just the Open Library record and its
+ * author names, so no editions, LOC, Hardcover, ratings or Wikidata calls.
+ * A full work already cached is used instead, keeping its LCSH subjects and
+ * genres. Kept apart from workCache so the work page never gets this subset.
+ */
+export function getWorkLinks(workId: string): Promise<WorkLinks | null> {
+  // shortcut: a work only in the persistent tier gets the lighter lookup; read that tier too if paths miss LCSH links after restarts
+  const full = workCache.get(workId);
+  if (full !== undefined) return Promise.resolve(full);
+  return workLinksCache.wrap(workId, async () => {
+    const ol = await openLibrary.getWork(workId, { editions: false });
+    if (!ol) return null;
+    return {
+      openLibraryWorkId: workId,
+      title: ol.title,
+      authors: ol.authors,
+      subjects: mergeTaggedTerms({ source: "openLibrary", labels: ol.subjects }),
+      genres: [],
+      editions: [],
+    };
+  });
+}
+
 /** Shared by the /api/works and /api/graph/work routes so both hit the same cache. */
 export function getWorkDetail(workId: string): Promise<Work | null> {
   return workCache.wrap(workId, async (entry) => {

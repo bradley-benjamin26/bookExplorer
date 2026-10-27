@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SavedList } from "./storage/savedLists";
 import { booksToCsv, parseCsv, readBookCsv, toCsv } from "./csv";
 import type { SavedBookRecord } from "./storage/savedBooks";
+import type { SavedWorkRecord } from "./storage/savedWorks";
 
 describe("parseCsv", () => {
   it("handles quoted commas, escaped quotes, newlines in fields and CRLF", () => {
@@ -67,6 +68,18 @@ describe("booksToCsv", () => {
   const list = (name: string, over: Partial<SavedList> = {}): SavedList => ({
     schemaVersion: 1, updatedAt: 1, id: name, name, description: "", kind: "book", createdAt: 1,
     members: [{ type: "book", id: record.isbn, title: "Dune", addedAt: 1 }], ...over,
+  });
+
+  it("a saved work is a row with no ISBN, shelved by its lists", () => {
+    const work: SavedWorkRecord = {
+      schemaVersion: 1, updatedAt: 1, openLibraryWorkId: "OL1W", title: "Emma", authorNames: ["Jane Austen"],
+      subjects: [], genres: [], notes: "n", savedAt: Date.UTC(2024, 0, 15),
+    };
+    const lists = [list("Classics", { members: [{ type: "work", id: "OL1W", title: "Emma", addedAt: 1 }] }), list("Other")];
+    const [header, row] = parseCsv(booksToCsv([], lists, [work, { ...work, openLibraryWorkId: "OL2W", deletedAt: 2 }]));
+    expect(parseCsv(booksToCsv([], lists, [work])).length).toBe(2);
+    const cell = (name: string) => row[header.indexOf(name)];
+    expect([cell("Title"), cell("Author"), cell("ISBN"), cell("ISBN13"), cell("Bookshelves"), cell("Private Notes")]).toEqual(["Emma", "Jane Austen", "", "", "classics", "n"]);
   });
 
   it("Bookshelves holds the book's live book-list names as Goodreads shelf slugs, never subjects", () => {

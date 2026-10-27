@@ -3,7 +3,7 @@ import { OPEN_LIBRARY_WORK_ID } from "@book-explorer/shared";
 import { getLibraries, replaceLibraries, type Library } from "./librarySettings";
 import { getAllSavedBooks, replaceSavedBooks, type SavedBookRecord } from "./savedBooks";
 import { getAllSavedItems, replaceSavedItems, type SavedItem } from "./savedItems";
-import { getAllLists, replaceLists, type SavedList } from "./savedLists";
+import { DEFAULT_LIST_NAMES, getAllLists, newListId, replaceLists, type ListMember, type SavedList } from "./savedLists";
 import { getAllSavedWorks, replaceSavedWorks, type SavedWorkRecord } from "./savedWorks";
 import { SCHEMA_VERSION, stamp } from "./schema";
 
@@ -57,7 +57,7 @@ export async function applySnapshot(snapshot: Snapshot): Promise<void> {
 /** One-time upgrade of data saved before versioning; call once at startup. Safe to call repeatedly. */
 export async function migrateStorage(): Promise<void> {
   if (Number(await AsyncStorage.getItem(VERSION_KEY)) >= SCHEMA_VERSION) return;
-  await applySnapshot(withWorkRecords(await getSnapshot()));
+  await applySnapshot(withWorkRecords(withListedSaves(await getSnapshot())));
   await AsyncStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
 }
 
@@ -75,4 +75,48 @@ export function withWorkRecords(snapshot: Snapshot): Snapshot {
       stamp({ openLibraryWorkId: i.id, title: i.title, authorNames: [], subjects: [], genres: [], notes: "", savedAt: i.updatedAt, updatedAt: i.updatedAt })
     );
   return { ...snapshot, works: [...snapshot.works, ...missing] };
+}
+
+/**
+ * v4: every live saved item sits on a live list of its kind, so lists can replace saves.
+ * Anything on none goes onto the default list (reused by name, else created); a member of a live list with no item gets one. Also applied
+ * to imports, since an older backup has saves but no lists. Changes nothing once all are listed.
+ */
+export function withListedSaves(snapshot: Snapshot, now = Date.now()): Snapshot {
+  const lists = snapshot.lists.map((l) => ({ ...l }));
+  // v3 let an item join a list without being saved; save it now. A tombstoned item stays deleted (the user removed it on purpose, so its stale list entry loses).
+  const known = new Set(snapshot.items.map((i) => `${i.type}:${i.id}`));
+  const items = [...snapshot.items];
+  for (const m of lists.filter((l) => !l.deletedAt).flatMap((l) => l.members)) {
+    if (known.has(`${m.type}:${m.id}`)) continue;
+    known.add(`${m.type}:${m.id}`);
+    items.push(stamp({ type: m.type, id: m.id, title: m.title, updatedAt: now }));
+  }
+  const listed = new Set(lists.filter((l) => !l.deletedAt).flatMap((l) => l.members.map((m) => `${m.type}:${m.id}`)));
+  for (const item of items) {
+    if (item.deletedAt || listed.has(`${item.type}:${item.id}`)) continue;
+    const kind: SavedList["kind"] = item.type === "author" ? "author" : "book";
+    let list = lists.find((l) => !l.deletedAt && l.kind === kind && l.name === DEFAULT_LIST_NAMES[kind]);
+    if (!list) {
+      list = stamp({ id: newListId(), name: DEFAULT_LIST_NAMES[kind], description: "", kind, members: [] as ListMember[], createdAt: now, updatedAt: now });
+      lists.push(list);
+    }
+    list.members = [...list.members, { type: item.type, id: item.id, title: item.title, addedAt: now }];
+    list.updatedAt = now;
+  }
+  return { ...snapshot, items, lists };
+}
+
+/** Just one live list and the saves on it (books by isbn, works by work id); no libraries. An unknown or deleted list gives empty arrays. */
+export function snapshotForList(snapshot: Snapshot, listId: string): Snapshot {
+  const list = snapshot.lists.find((l) => l.id === listId && !l.deletedAt);
+  const has = (type: ListMember["type"], id: string) => !!list?.members.some((m) => m.type === type && m.id === id);
+  return {
+    ...snapshot,
+    items: snapshot.items.filter((i) => has(i.type, i.id)),
+    books: snapshot.books.filter((b) => has("book", b.isbn)),
+    works: snapshot.works.filter((w) => has("work", w.openLibraryWorkId)),
+    libraries: [],
+    lists: list ? [list] : [],
+  };
 }

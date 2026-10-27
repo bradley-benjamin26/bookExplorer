@@ -8,6 +8,11 @@ const KEY = "book-explorer:saved-lists";
 const MAX_NAME = 100;
 const MAX_DESCRIPTION = 1_000;
 
+/** The lists a save lands on when the user didn't pick one. */
+export const DEFAULT_LIST_NAMES: Record<SavedList["kind"], string> = { book: "Saved books", author: "Saved authors" };
+
+export const newListId = () => `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 /** A list holds ids and titles only, so it never needs a lookup to show. */
 export interface ListMember {
   type: "book" | "work" | "author";
@@ -76,7 +81,7 @@ export function createList(input: { name: string; description?: string; kind: Sa
   return enqueueWrite(KEY, async () => {
     const now = Date.now();
     const list: SavedList = stamp({
-      id: `list-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      id: newListId(),
       name,
       description,
       kind: input.kind,
@@ -85,6 +90,31 @@ export function createList(input: { name: string; description?: string; kind: Sa
     });
     await write([...(await read()), list]);
     return list;
+  });
+}
+
+const kindOf = (type: ListMember["type"]): SavedList["kind"] => (type === "author" ? "author" : "book");
+const holds = (l: SavedList, type: ListMember["type"], id: string) => !l.deletedAt && l.members.some((m) => m.type === type && m.id === id);
+
+export async function isOnAnyList(type: ListMember["type"], id: string): Promise<boolean> {
+  return (await getAllLists()).some((l) => holds(l, type, id));
+}
+
+/** Puts `member` on the default list unless some live list already holds it. One queued write, so concurrent calls share one default list. */
+export function ensureOnAList(member: Omit<ListMember, "addedAt">): Promise<void> {
+  return enqueueWrite(KEY, async () => {
+    const lists = await read();
+    if (lists.some((l) => holds(l, member.type, member.id))) return;
+    const kind = kindOf(member.type);
+    const now = Date.now();
+    const entry = { ...member, addedAt: now };
+    const index = lists.findIndex((l) => !l.deletedAt && l.kind === kind && l.name === DEFAULT_LIST_NAMES[kind]);
+    if (index === -1) {
+      lists.push(stamp({ id: newListId(), name: DEFAULT_LIST_NAMES[kind], description: "", kind, members: [entry], createdAt: now }));
+    } else {
+      lists[index] = { ...lists[index], members: [...lists[index].members, entry], updatedAt: now };
+    }
+    await write(lists);
   });
 }
 

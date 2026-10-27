@@ -25,11 +25,13 @@ export const routes = {
     pathname: "/graph/[type]/[id]",
     params: { type, id, ...filter },
   }),
-  /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. */
-  connection: (from: string, label: string): Href => ({ pathname: "/connection", params: { from, label } }),
+  /** `from` is a graph node id, e.g. "work:OL1W"; `label` names it on the screen. With neither, the screen has no starting point (Task 10 adds a picker). */
+  connection: (from?: string, label?: string): Href => ({ pathname: "/connection", params: from ? { from, label } : {} }),
   saved: (): Href => "/saved",
   recommendations: (): Href => "/recommendations",
+  backup: (): Href => "/backup",
   settings: (): Href => "/settings",
+  about: (): Href => "/about",
   lists: (): Href => "/lists",
   list: (id: string): Href => ({ pathname: "/lists/[id]", params: { id } }),
   search: (query?: string): Href => ({ pathname: "/search", params: query ? { q: query } : {} }),
@@ -37,3 +39,15 @@ export const routes = {
 
 export const memberHref = (m: Pick<ListMember, "type" | "id">): Href =>
   m.type === "author" ? routes.author(m.id) : m.type === "work" ? routes.work(m.id) : routes.book(m.id);
+
+/** The page a graph node id ("author:OL1A", "editions:OL2W", …) opens; null for unresolved (":qid:") nodes. */
+export const nodeHref = (nodeId: string): Href | null => {
+  const [type, ...rest] = nodeId.split(":");
+  const id = rest.join(":");
+  if (id.startsWith("qid:")) return null;
+  if (type === "author") return routes.author(id);
+  if (type === "subject" || type === "genre") return routes.subject(id);
+  if (type === "work") return routes.work(id);
+  if (type === "editions") return routes.work(id, { highlight: "editions" });
+  return null;
+};

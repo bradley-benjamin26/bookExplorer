@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidAppKey } from "./appAuth.js";
+import { isPublicPath, isValidAppKey } from "./appAuth.js";
 
 describe("isValidAppKey", () => {
   it("accepts a header that matches the expected secret exactly", () => {
@@ -30,5 +30,20 @@ describe("isValidAppKey", () => {
 
   it("is case-sensitive", () => {
     expect(isValidAppKey("Correct-Secret", "correct-secret")).toBe(false);
+  });
+});
+
+describe("isPublicPath", () => {
+  it("allows /health (with or without a query) and /og/ pages", () => {
+    expect(isPublicPath("/health")).toBe(true);
+    expect(isPublicPath("/health?x=1")).toBe(true);
+    expect(isPublicPath("/og/work/OL1W")).toBe(true);
+    expect(isPublicPath("/og/work/OL1W?a=1")).toBe(true);
+  });
+
+  it("rejects everything else, including lookalikes", () => {
+    for (const u of ["/api/works/OL1W", "/healthz", "/health/x", "/api/x?/og/", "/api/x?y=/health", "//og/x", "/og", "/ogx/y", "/x/og/y", "", "og/x"]) {
+      expect(isPublicPath(u)).toBe(false);
+    }
   });
 });

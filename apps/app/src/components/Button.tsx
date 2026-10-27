@@ -1,6 +1,7 @@
 import { Star } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { titleRef } from "../webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
 type Variant = "primary" | "pill";
@@ -21,6 +22,7 @@ export function Button({
   accessibilityLabel,
   accessibilityHint,
   disabled = false,
+  tooltip,
 }: {
   children: ReactNode;
   onPress: () => void;
@@ -33,6 +35,8 @@ export function Button({
   accessibilityLabel?: string;
   accessibilityHint?: string;
   disabled?: boolean;
+  /** Hover text on web; no effect on native. */
+  tooltip?: string;
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -40,6 +44,7 @@ export function Button({
   const starColor = active ? theme.colors.primaryText : theme.colors.ink;
   return (
     <Pressable
+      ref={titleRef(tooltip)}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"

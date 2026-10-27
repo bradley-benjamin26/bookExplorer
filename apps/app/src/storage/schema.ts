@@ -1,7 +1,8 @@
 // Bump when a stored record's shape changes, and add the upgrade to migrateStorage.
 // 2: saved works get their own editable record (savedWorks.ts).
 // 3: named lists (savedLists.ts)
-export const SCHEMA_VERSION = 3;
+// 4: every saved item is on a list (lists replace saves)
+export const SCHEMA_VERSION = 4;
 
 /** Fields every synced/exported record carries. `updatedAt` (ms) lets a future sync pick the newer copy. */
 export interface Versioned {

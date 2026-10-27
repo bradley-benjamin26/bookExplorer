@@ -1,13 +1,14 @@
 import { MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, MAX_TEXT_LENGTH, type Book } from "@book-explorer/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchBookWithAlternate } from "./api/bookLookup";
-import { exportJson, ImportError, importSnapshot, NEW_CSV_IMPORT, parseBookCsv, parseSnapshotJson, runCsvImport } from "./backup";
+import { exportJson, exportListCsv, exportListJson, ImportError, importSnapshot, NEW_CSV_IMPORT, parseBookCsv, parseSnapshotJson, runCsvImport } from "./backup";
 import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems, toggleSaved } from "./storage/savedItems";
 import { addToList, createList, getLists } from "./storage/savedLists";
 import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
+import { parseCsv } from "./csv";
 import { getSnapshot, migrateStorage } from "./storage/snapshot";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
@@ -29,6 +30,38 @@ async function seed() {
   const list = await createList({ name: "Favourites", kind: "book" });
   await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
 }
+
+describe("per-list export", () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    fetchBook.mockReset();
+  });
+
+  async function seedTwoLists() {
+    await seed();
+    await toggleSaved({ type: "book", id: "9780000000002", title: "Other" });
+    fetchBook.mockResolvedValueOnce(apiBook("9780000000002", "Other"));
+    await runCsvImport([{ title: "Other", isbn: "9780000000002" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 });
+    const other = await createList({ name: "Other list", kind: "book" });
+    await addToList(other.id, { type: "book", id: "9780000000002", title: "Other" });
+    await addToList(other.id, { type: "work", id: "OL1W", title: "Emma" });
+    return (await getLists()).find((l) => l.name === "Favourites")!.id;
+  }
+
+  it("exportListJson holds only that list and its members, and re-imports", async () => {
+    const id = await seedTwoLists();
+    const snap = parseSnapshotJson(await exportListJson(id));
+    expect(snap.lists).toHaveLength(1);
+    expect(snap.books.map((b) => b.isbn)).toEqual(["9780441013593"]);
+  });
+
+  it("exportListCsv lists the list's books and works only", async () => {
+    await seedTwoLists();
+    const other = (await getLists()).find((l) => l.name === "Other list")!;
+    const rows = parseCsv(await exportListCsv(other.id));
+    expect(rows.slice(1).map((r) => r[0]).sort()).toEqual(["Emma", "Other"]);
+  });
+});
 
 describe("JSON backup", () => {
   beforeEach(async () => {
@@ -85,11 +118,11 @@ describe("JSON backup", () => {
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
   });
 
-  it("exports v3 with lists", async () => {
+  it("exports v4 with lists", async () => {
     await seed();
     const v3 = JSON.parse(await exportJson());
-    expect(v3.schemaVersion).toBe(3);
-    expect(v3.lists).toMatchObject([{ name: "Favourites", kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] }]);
+    expect(v3.schemaVersion).toBe(4);
+    expect(v3.lists.find((l: { name: string }) => l.name === "Favourites")).toMatchObject({ kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] });
   });
 
   it("a schemaVersion 2 backup with no lists imports with lists: []", async () => {
@@ -99,9 +132,10 @@ describe("JSON backup", () => {
     expect(parsed.lists).toEqual([]);
     // Merging it keeps the local lists; replacing with it leaves none.
     await importSnapshot(parsed, "merge");
-    expect((await getLists()).map((l) => l.name)).toEqual(["Favourites"]);
+    expect((await getLists()).map((l) => l.name).sort()).toEqual(["Favourites", "Saved books"]);
+    // Its unlisted saves land on Saved books rather than vanishing from the list-based UI.
     await importSnapshot(parsed, "replace");
-    expect(await getLists()).toEqual([]);
+    expect((await getLists()).map((l) => l.name)).toEqual(["Saved books"]);
   });
 
   it("a schemaVersion 3 backup without lists is rejected", async () => {

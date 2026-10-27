@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid } from "./wikidata.js";
+import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
 
 describe("isValidQid", () => {
   it("accepts a well-formed QID", () => {
@@ -107,6 +107,23 @@ describe("searchAuthorQid", () => {
   });
 });
 
+describe("searchWorkQid", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("searches without a trailing series suffix in parentheses", async () => {
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      json: async () => ({ search: [{ id: "Q2261855", description: "1990 novel by Ursula K. Le Guin" }] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await searchWorkQid("Tehanu (The Earthsea Cycle, Book 4)", "Ursula K. Le Guin")).toBe("Q2261855");
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(url.searchParams.get("search")).toBe("Tehanu");
+  });
+});
+
 describe("compareOrdinals", () => {
   it("sorts numerics by value, fractional between integers, non-numeric and missing last", () => {
     const sorted = ["10", "A", null, "2.5", "2", "1"].sort(compareOrdinals);
@@ -174,6 +191,32 @@ describe("series lookups", () => {
     );
     const series = await fetchSeries("Q9");
     expect(series?.members[0]).toMatchObject({ title: "One", openLibraryWorkId: null });
+  });
+
+  it("leaves out a member that is part of (P361) another member, like a volume's inner books", async () => {
+    const partOf = (id: string) => ({ P361: [{ mainsnak: { datavalue: { value: { id } } } }] });
+    stubWikidata(
+      {
+        Q9: entity("The Lord of the Rings"),
+        Q1: entity("The Fellowship of the Ring", { P179: [seriesClaim("Q9", "1")] }),
+        Q11: entity("The First Journey", { ...partOf("Q1"), P179: [seriesClaim("Q9", "1")] }),
+      },
+      ["Q1", "Q11"]
+    );
+    expect((await fetchSeries("Q9"))?.members.map((m) => m.title)).toEqual(["The Fellowship of the Ring"]);
+  });
+
+  it("leaves out a prologue (P31 Q920285)", async () => {
+    const instanceOf = (id: string) => ({ P31: [{ mainsnak: { datavalue: { value: { id } } } }] });
+    stubWikidata(
+      {
+        Q9: entity("The Saga"),
+        Q1: entity("One", { P179: [seriesClaim("Q9", "1")] }),
+        Q2: entity("Prologue", { ...instanceOf("Q920285"), P179: [seriesClaim("Q9")] }),
+      },
+      ["Q1", "Q2"]
+    );
+    expect((await fetchSeries("Q9"))?.members.map((m) => m.title)).toEqual(["One"]);
   });
 
   it("returns null for a malformed qid without calling out", async () => {

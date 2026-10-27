@@ -1,11 +1,14 @@
 import type { Graph, GraphEdge, GraphNode, GraphPath, PathResult } from "@book-explorer/shared";
-import { buildAuthorGraph, buildSubjectBooksGraph, buildWorkGraph } from "./graphService.js";
+import { buildAuthorLinksGraph, buildSubjectBooksGraph, buildWorkLinksGraph } from "./graphService.js";
 import { UpstreamUnavailableError } from "../httpClient.js";
 
-// Measured cold: a subject's book list ~0.5 s, a work ~1 s, an author ~2.5 s.
-// At 4 at a time that's roughly 80-100 expansions in the 25 s budget, so the
-// expansion cap sits just under it, and the visited cap allows ~15 new nodes
-// per expansion. Depth 4 covers author -> other work -> subject <- target.
+// Measured cold on 2026-10-26, all Open Library calls sharing its 3 requests a
+// second: a work ~1 s, a subject's book list ~2 s, an author ~2.5 s, so 38-62
+// expansions in the 25 s budget (~1.5-2.5 a second); a search through one
+// author's books reached 80 in 16 s. A retry starts warm and reaches the cap
+// in under 10 s, so the cap stays above the cold rate rather than at it. The
+// visited cap allows ~15 new nodes per expansion. Depth 4 covers
+// author -> other work -> subject <- target.
 export const MAX_PATH_DEPTH = 4;
 export const MAX_VISITED_NODES = 1200;
 export const MAX_EXPANSIONS = 80;
@@ -42,7 +45,8 @@ const DEFAULT_LIMITS: PathLimits = {
 
 /**
  * Production neighbours: the cached builders behind /api/graph/:type/:id,
- * except that subjects and genres give only their books and work count.
+ * except that subjects and genres give only their books and work count, and
+ * works and authors skip the lookups their pages need but the links don't.
  */
 export const graphNeighbours: Neighbours = async (nodeId) => {
   const sep = nodeId.indexOf(":");
@@ -51,7 +55,7 @@ export const graphNeighbours: Neighbours = async (nodeId) => {
   // QID-only authors/works and the editions summary have no graph of their own.
   if (id.startsWith("qid:")) return null;
   // A genre opens the same subject browse as a subject of that slug.
-  const build = { author: buildAuthorGraph, work: buildWorkGraph, subject: buildSubjectBooksGraph, genre: buildSubjectBooksGraph }[type];
+  const build = { author: buildAuthorLinksGraph, work: buildWorkLinksGraph, subject: buildSubjectBooksGraph, genre: buildSubjectBooksGraph }[type];
   const graph: (Graph & { workCount?: number }) | null = (await build?.(id)) ?? null;
   if (!graph) return null;
   // The centre can come back under another id (a genre's "subject:", a
@@ -100,6 +104,7 @@ export function findPath(
   }));
   const found: Found[] = [];
   let expansions = 0;
+  const started = Date.now();
   let running = 0;
   let capHit = false;
   let depthPruned = false;
@@ -177,6 +182,8 @@ export function findPath(
     const finish = (reason: Extract<PathResult, { found: false }>["reason"]) => {
       if (finished) return;
       finished = true;
+      const outcome = found.length ? `${found.length} path(s)` : reason;
+      console.info(`[graphQuery] ${from} -> ${to}: ${outcome} after ${expansions} expansions in ${Date.now() - started} ms`);
       clearTimeout(timer);
       signal?.removeEventListener("abort", stop);
       resolve(found.length ? { found: true, paths: found.map((p) => toPath(p, nodes)) } : { found: false, reason });

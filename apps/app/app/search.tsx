@@ -167,6 +167,7 @@ export default function Search() {
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
       ListFooterComponent={<Footer />}
+      ListFooterComponentStyle={{ marginTop: "auto" }}
     />
   );
 }
@@ -174,7 +175,7 @@ export default function Search() {
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg },
+    content: { flexGrow: 1, padding: spacing.lg },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,

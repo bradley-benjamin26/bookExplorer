@@ -41,7 +41,7 @@ export function SeriesSection({ seriesQid, currentWorkId }: { seriesQid?: string
         return (
           <WorkListRow
             key={m.wikidataId}
-            work={{ openLibraryWorkId: id ?? "", title: m.title, authors: [], coverUrl: null }}
+            work={{ openLibraryWorkId: id ?? "", title: m.title, authors: [], coverUrl: m.coverUrl }}
             series={{ position: m.position, current }}
             onPress={id && !current ? () => router.push(routes.work(id)) : undefined}
           />

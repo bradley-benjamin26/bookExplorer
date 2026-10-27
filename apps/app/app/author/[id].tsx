@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AuthorRelation } from "@book-explorer/shared";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { useCallback, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
@@ -13,8 +12,7 @@ import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
-import { isItemSaved, toggleSaved } from "../../src/storage/savedItems";
+import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
@@ -34,21 +32,6 @@ export default function AuthorDetail() {
     queryFn: () => fetchAuthor(id),
     enabled: !!id,
   });
-
-  const [saved, setSaved] = useState(false);
-
-  // Re-read on focus: this screen stays mounted under others, so a removal from Saved must show on return.
-  useFocusEffect(
-    useCallback(() => {
-      if (id) isItemSaved("author", id).then(setSaved);
-    }, [id])
-  );
-
-  const handleToggleSaved = async () => {
-    if (!data) return;
-    const nowSaved = await toggleSaved({ type: "author", id: data.openLibraryId, title: data.name });
-    setSaved(nowSaved);
-  };
 
   if (isLoading) {
     return (
@@ -71,18 +54,12 @@ export default function AuthorDetail() {
           {data.birthDate ?? "?"} – {data.deathDate ?? "present"}
         </Text>
       )}
-      <Button
-        variant="pill"
-        active={saved}
-        starIcon
-        onPress={handleToggleSaved}
-        style={styles.saveButton}
-        accessibilityLabel={saved ? "Saved" : "Save"}
-      >
-        {saved ? "Saved" : "Save"}
-      </Button>
-      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} publicUrl={openLibraryUrl.author(data.openLibraryId)} />
-      <AddToListButton member={{ type: "author", id: data.openLibraryId, title: data.name }} />
+      <ShareButton title={data.name} href={routes.author(data.openLibraryId)} style={{ marginTop: 8 }} />
+      <AddToListButton
+        style={{ marginTop: 8 }}
+        member={{ type: "author", id: data.openLibraryId, title: data.name }}
+        onSave={() => saveAuthor(data.openLibraryId, data.name)}
+      />
       {data.bio && <Text style={styles.bio}>{data.bio}</Text>}
       {/* Wikipedia's text is CC BY-SA, which requires attribution on reuse. */}
       {data.bioSource === "wikipedia" && data.bioSourceUrl && (
@@ -112,6 +89,7 @@ export default function AuthorDetail() {
         variant="primary"
         onPress={() => router.push(routes.graph("author", data.openLibraryId))}
         style={styles.graphButton}
+        tooltip="See this author's books, subjects and links as a graph"
       >
         View as Graph
       </Button>
@@ -120,6 +98,7 @@ export default function AuthorDetail() {
         onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
         style={styles.graphButton}
         accessibilityLabel={`Find a connection from ${data.name}`}
+        tooltip="Find how this author links to a book"
       >
         Find Connection
       </Button>
@@ -167,11 +146,10 @@ export default function AuthorDetail() {
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg, alignItems: "flex-start" },
+    content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
     dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
-    saveButton: { marginTop: spacing.md },
     bio: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, lineHeight: 24 },
     bioSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     pseudonyms: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md, fontStyle: "italic" },

@@ -6,7 +6,7 @@ import { NewSearchButton } from "./NewSearchButton";
 export function HeaderActions() {
   return (
     <View style={{ flexDirection: "row", gap: 0 }}>
-      <MyLibraryButton iconOnly />
+      <MyLibraryButton />
       <NewSearchButton iconOnly />
     </View>
   );

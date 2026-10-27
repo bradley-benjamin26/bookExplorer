@@ -16,3 +16,9 @@ export function isValidAppKey(provided: unknown, expected: string): boolean {
   if (providedBuf.length !== expectedBuf.length) return false;
   return timingSafeEqual(providedBuf, expectedBuf);
 }
+
+/** Routes that skip the app-key check: the health probe, and /og/ pages that link-preview crawlers fetch (they send no key). */
+export function isPublicPath(url: string): boolean {
+  const path = url.split("?")[0];
+  return path === "/health" || path.startsWith("/og/");
+}

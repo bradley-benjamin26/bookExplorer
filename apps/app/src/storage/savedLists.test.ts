@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { addToList, createList, deleteList, getAllLists, getList, getLists, removeFromList } from "./savedLists";
+import { addToList, createList, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, removeFromList } from "./savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -65,5 +65,31 @@ describe("savedLists", () => {
     const list = await createList({ name: "Books", kind: "book" });
     await Promise.all([addToList(list.id, dune), addToList(list.id, emma)]);
     expect((await getList(list.id))?.members.map((m) => m.id)).toEqual(expect.arrayContaining([dune.id, emma.id]));
+  });
+
+  it("ensureOnAList twice at once creates one default list", async () => {
+    await Promise.all([ensureOnAList(dune), ensureOnAList(emma)]);
+    const lists = await getLists("book");
+    expect(lists).toHaveLength(1);
+    expect(lists[0].name).toBe("Saved books");
+    expect(lists[0].members.map((m) => m.id).sort()).toEqual([dune.id, emma.id].sort());
+  });
+
+  it("ensureOnAList leaves an item already on a list alone", async () => {
+    const faves = await createList({ name: "Faves", kind: "book" });
+    await addToList(faves.id, dune);
+    await ensureOnAList(dune);
+    expect(await getLists("book")).toHaveLength(1);
+    expect(await isOnAnyList("book", dune.id)).toBe(true);
+    expect(await isOnAnyList("book", emma.id)).toBe(false);
+  });
+
+  it("getLists and getList reject when storage fails, instead of returning nothing", async () => {
+    const spy = vi.spyOn(AsyncStorage, "getItem");
+    spy.mockRejectedValueOnce(new Error("disk"));
+    await expect(getLists()).rejects.toThrow("disk");
+    spy.mockRejectedValueOnce(new Error("disk"));
+    await expect(getList("x")).rejects.toThrow("disk");
+    spy.mockRestore();
   });
 });

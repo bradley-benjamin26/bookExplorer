@@ -1,7 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { normalizeTitle } from "@book-explorer/shared";
-import { cleanGraph } from "./graphService.js";
+import { buildWorkLinksGraph, cleanGraph } from "./graphService.js";
+
+vi.mock("./workService.js", () => ({
+  getWorkDetail: vi.fn(),
+  getWorkLinks: vi.fn().mockResolvedValue({
+    openLibraryWorkId: "OL1W",
+    title: "Dune",
+    authors: [{ openLibraryId: "OL2A", name: "Frank Herbert" }],
+    subjects: [
+      { label: "Desert", sources: ["openLibrary"] },
+      { label: "genre:Science Fiction", sources: ["openLibrary"] },
+    ],
+    genres: [],
+    editions: [],
+  }),
+}));
 
 describe("normalizeTitle", () => {
   it("strips a leading article", () => {
@@ -87,5 +102,12 @@ describe("cleanGraph", () => {
     const { nodes: cleaned } = cleanGraph(nodes, []);
     expect(cleaned).toHaveLength(1);
     expect(cleaned[0].label).toBe("Author X");
+  });
+});
+
+describe("buildWorkLinksGraph", () => {
+  it("builds a work's links graph with 'genre:' subjects as genre nodes and no editions node", async () => {
+    const graph = await buildWorkLinksGraph("OL1W");
+    expect(graph?.nodes.map((n) => n.id)).toEqual(["work:OL1W", "author:OL2A", "subject:desert", "genre:science_fiction"]);
   });
 });

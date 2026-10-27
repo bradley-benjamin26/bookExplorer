@@ -1,6 +1,7 @@
 import type { AuthorRef } from "@book-explorer/shared";
 import { orderEditions } from "../editionOrder.js";
 import { fetchWithTimeout, UpstreamUnavailableError } from "../httpClient.js";
+import { TtlCache } from "../cache.js";
 
 // Upstream APIs (Open Library asks for this) use the contact address to reach us instead of blocking us.
 const CONTACT_EMAIL = process.env.USER_EMAIL?.trim();
@@ -76,7 +77,7 @@ export interface OpenLibraryAuthor {
 // (OL3894951A) is exactly this — a redirect with no `name` field at all,
 // which would otherwise have shown the literal id as his "name". `depth`
 // just guards against an implausible redirect chain looping forever.
-export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenLibraryAuthor | null> {
+async function fetchAuthor(openLibraryId: string, depth = 0): Promise<OpenLibraryAuthor | null> {
   const url = `https://openlibrary.org/authors/${encodeURIComponent(openLibraryId)}.json`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return null;
@@ -85,7 +86,7 @@ export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenL
   const data = (await res.json()) as OpenLibraryAuthorData;
 
   if (data.type?.key === "/type/redirect" && data.location && depth < 3) {
-    return getAuthor(data.location.replace("/authors/", ""), depth + 1);
+    return fetchAuthor(data.location.replace("/authors/", ""), depth + 1);
   }
 
   const bio = typeof data.bio === "string" ? data.bio : data.bio?.value ?? null;
@@ -97,6 +98,14 @@ export async function getAuthor(openLibraryId: string, depth = 0): Promise<OpenL
     deathDate: data.death_date ?? null,
     wikidataId: data.remote_ids?.wikidata ?? null,
   };
+}
+
+// Every work names its authors only by id, so expanding an author's books one
+// by one (as path search does) would re-fetch the same author record each time.
+const authorRecordCache = new TtlCache<OpenLibraryAuthor | null>(1000 * 60 * 60 * 24, 2000, "olAuthor");
+
+export function getAuthor(openLibraryId: string): Promise<OpenLibraryAuthor | null> {
+  return authorRecordCache.wrap(openLibraryId, () => fetchAuthor(openLibraryId));
 }
 
 interface OpenLibraryWorkData {
@@ -147,6 +156,7 @@ export interface OpenLibraryWork {
 interface OpenLibraryEditionsData {
   entries?: {
     key?: string;
+    title?: string;
     isbn_13?: string[];
     isbn_10?: string[];
     languages?: { key?: string }[];
@@ -168,14 +178,16 @@ interface OpenLibraryEditionsData {
 // ISBN (spot-checked: 30 of the first 50 for a popular work, 12 of 15 for a
 // less common one), so a single reasonably-sized page is enough without
 // pagination.
-async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
+async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryEdition[]; englishTitles: string[] }> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}/editions.json?limit=50`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
   const data = (await res.json()) as OpenLibraryEditionsData;
   const editions: (OpenLibraryEdition & { nonEnglish: boolean })[] = [];
+  const englishTitles: string[] = [];
   for (const entry of data.entries ?? []) {
+    if (entry.title && entry.languages?.some((l) => l.key === "/languages/eng")) englishTitles.push(entry.title);
     const coverId = entry.covers?.find((c) => c > 0);
     const edition: OpenLibraryEdition = {
       openLibraryEditionId: (entry.key ?? "").replace("/books/", ""),
@@ -222,10 +234,25 @@ async function getWorkEditions(workId: string): Promise<OpenLibraryEdition[]> {
     return true;
   });
 
-  return deduped.map(({ nonEnglish, ...edition }) => edition);
+  return { editions: deduped.map(({ nonEnglish, ...edition }) => edition), englishTitles };
 }
 
-export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
+// A work's own title is often its original-language one ("Le capital au XXIe
+// siècle"). When no English edition carries it, the English editions' most
+// common title is shown instead; a work an English edition does carry keeps
+// its title (Philosopher's Stone, not the US Sorcerer's Stone).
+function englishTitle(workTitle: string, englishTitles: string[]): string {
+  if (englishTitles.length === 0 || englishTitles.some((t) => t.toLowerCase() === workTitle.toLowerCase())) return workTitle;
+  const counts = new Map<string, { title: string; n: number }>();
+  for (const title of englishTitles) {
+    const entry = counts.get(title.toLowerCase()) ?? { title, n: 0 };
+    entry.n++;
+    counts.set(title.toLowerCase(), entry);
+  }
+  return [...counts.values()].reduce((best, c) => (c.n > best.n ? c : best)).title;
+}
+
+export async function getWork(workId: string, { editions: withEditions = true }: { editions?: boolean } = {}): Promise<OpenLibraryWork | null> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}.json`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (res.status === 404) return null;
@@ -240,7 +267,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
 
   // Work records only reference authors by id, so their names are resolved
   // with a lookup per author (cached separately by the authors route/cache).
-  const [authors, editions] = await Promise.all([
+  const [authors, { editions, englishTitles }] = await Promise.all([
     Promise.all(
       authorIds.map(async (id) => {
         const author = await getAuthor(id).catch((err) => {
@@ -258,11 +285,13 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
     // Non-fatal and best-effort: this only unlocks a few extra links/an
     // editions list on the work page, so a failure here shouldn't take down
     // the rest of an otherwise-good response.
-    getWorkEditions(workId).catch((err) => {
-      if (err instanceof UpstreamUnavailableError) throw err;
-      console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
-      return [] as OpenLibraryEdition[];
-    }),
+    withEditions
+      ? getWorkEditions(workId).catch((err) => {
+          if (err instanceof UpstreamUnavailableError) throw err;
+          console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
+          return { editions: [] as OpenLibraryEdition[], englishTitles: [] };
+        })
+      : { editions: [] as OpenLibraryEdition[], englishTitles: [] },
   ]);
 
   const isbnCandidates = [...new Set(editions.map((e) => e.isbn).filter((isbn): isbn is string => !!isbn))];
@@ -272,7 +301,7 @@ export async function getWork(workId: string): Promise<OpenLibraryWork | null> {
   const coverId = data.covers?.find((c) => c > 0);
 
   return {
-    title: data.title ?? "Unknown title",
+    title: data.title ? englishTitle(data.title, englishTitles) : "Unknown title",
     authors,
     coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg` : null,
     description,
@@ -439,6 +468,16 @@ export async function getAuthorWorks(openLibraryId: string, limit = 15): Promise
       authors: (d.author_name ?? []).slice(0, (d.author_key ?? []).length).map((name, i) => ({ openLibraryId: d.author_key![i], name })),
       coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null,
     }));
+}
+
+/** Best-effort match of a title plus author name to an Open Library work (Wikidata's P648 can be a stale, merged id). */
+export async function findWork(title: string, authorName: string): Promise<{ workId: string; coverUrl: string | null } | null> {
+  const params = new URLSearchParams({ title, author: authorName, fields: "key,cover_i", limit: "1" });
+  const res = await fetchWithTimeout(`https://openlibrary.org/search.json?${params}`, { headers: { "User-Agent": USER_AGENT } });
+  if (!res.ok) throw new Error(`Open Library search request failed: ${res.status}`);
+  const doc = ((await res.json()) as { docs?: { key?: string; cover_i?: number }[] }).docs?.[0];
+  if (!doc?.key) return null;
+  return { workId: doc.key.replace("/works/", ""), coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null };
 }
 
 interface AuthorSearchResult {

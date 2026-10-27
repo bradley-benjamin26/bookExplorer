@@ -34,11 +34,11 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
     return (
       <Pressable
         style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
-        onPress={() => router.push(routes.saved())}
+        onPress={() => router.push(routes.settings())}
         accessibilityRole="button"
-        accessibilityLabel="Add your library's search URL in My Library to see it here."
+        accessibilityLabel="Add your library in My Library, then Settings, to see it here."
       >
-        <Text style={styles.findRowHint}>Add your library's search URL in My Library to see it here.</Text>
+        <Text style={styles.findRowHint}>Add your library in My Library → Settings to see it here.</Text>
       </Pressable>
     );
   }

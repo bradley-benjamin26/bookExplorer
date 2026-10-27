@@ -5,7 +5,7 @@ import { booksToCsv, readBookCsv, type CsvBookRow } from "./csv";
 import { mergeSnapshots } from "./storage/mergeSnapshot";
 import { getSavedBook, saveBook } from "./storage/savedBooks";
 import { SCHEMA_VERSION } from "./storage/schema";
-import { applySnapshot, getSnapshot, withWorkRecords, type Snapshot } from "./storage/snapshot";
+import { applySnapshot, getSnapshot, snapshotForList, withListedSaves, withWorkRecords, type Snapshot } from "./storage/snapshot";
 
 // Fails to compile unless the shared import schema and the stored Snapshot are the same
 // type, so a field added to a stored record can't be silently stripped on import.
@@ -28,8 +28,11 @@ const SNAPSHOT_PARTS: Record<string, string> = {
   lists: "a list",
 };
 
-export async function exportJson(): Promise<string> {
-  const snapshot = await getSnapshot();
+export const exportJson = async (): Promise<string> => exportSnapshot(await getSnapshot());
+
+export const exportListJson = async (listId: string): Promise<string> => exportSnapshot(snapshotForList(await getSnapshot(), listId));
+
+function exportSnapshot(snapshot: Snapshot): string {
   // Import rejects the whole file over one bad record, so a backup that couldn't be restored
   // fails now, while the data is still on this device, not when the user restores it.
   const check = SnapshotExportSchema.safeParse(snapshot);
@@ -41,8 +44,13 @@ export async function exportJson(): Promise<string> {
 }
 
 export async function exportCsv(): Promise<string> {
-  const { books, lists } = await getSnapshot();
-  return booksToCsv(books, lists);
+  const { books, lists, works } = await getSnapshot();
+  return booksToCsv(books, lists, works);
+}
+
+export async function exportListCsv(listId: string): Promise<string> {
+  const { books, lists, works } = snapshotForList(await getSnapshot(), listId);
+  return booksToCsv(books, lists, works);
 }
 
 /** Validates a JSON backup file (untrusted) against the shared schema. */
@@ -64,8 +72,8 @@ export function parseSnapshotJson(text: string): Snapshot {
 
 /** Merge: union with what's saved, newer edit wins per record. Replace: the backup becomes the whole dataset. */
 export async function importSnapshot(imported: Snapshot, mode: "merge" | "replace"): Promise<void> {
-  // After the merge, so a v1 backup's work items only get a blank record where neither side has one.
-  await applySnapshot(withWorkRecords(mode === "replace" ? imported : mergeSnapshots(await getSnapshot(), imported)));
+  // After the merge, so a v1 backup's saves get a list only where neither side has one, and so a v1 backup's work items only get a blank record where neither side has one.
+  await applySnapshot(withWorkRecords(withListedSaves(mode === "replace" ? imported : mergeSnapshots(await getSnapshot(), imported))));
 }
 
 export function parseBookCsv(text: string): CsvBookRow[] {

@@ -18,8 +18,7 @@ import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSectio
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
-import { openLibraryUrl } from "../../src/share";
-import { getSavedWork, saveWork, seedSavedWorkFromApi, unsaveWork, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
+import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { titleCase } from "../../src/titleCase";
 
@@ -36,7 +35,6 @@ export default function WorkDetail() {
 
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
-  const saved = savedRecord !== null;
 
   // Re-read on every focus: this screen stays mounted under others, so an edit
   // or removal on the Saved screen would otherwise not show here.
@@ -53,18 +51,6 @@ export default function WorkDetail() {
     if (data && savedRecord) seedSavedWorkFromApi(savedRecord.openLibraryWorkId, data).then((r) => r && setSavedRecord(r));
   }, [data, savedRecord]);
 
-  const handleToggleSaved = async () => {
-    if (!data) return;
-    if (saved) {
-      await unsaveWork(data.openLibraryWorkId);
-      setSavedRecord(null);
-    } else {
-      // Keeps the cover on disk so the saved work still shows it offline.
-      if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-      setSavedRecord(await saveWork(data));
-    }
-  };
-
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -80,35 +66,38 @@ export default function WorkDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
-      <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
-      {data.authors.map((author) => (
-        <Pressable
-          key={author.openLibraryId}
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => router.push(routes.author(author.openLibraryId))}
-        >
-          <Text style={styles.author}>{author.name}</Text>
-        </Pressable>
-      ))}
-      <RatingBadge rating={data.rating} />
-      <Button
-        variant="pill"
-        active={saved}
-        starIcon
-        onPress={handleToggleSaved}
-        style={styles.saveButton}
-        accessibilityLabel={saved ? "Saved" : "Save"}
-      >
-        {saved ? "Saved" : "Save"}
-      </Button>
-      <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} publicUrl={openLibraryUrl.work(data.openLibraryWorkId)} />
-      <AddToListButton member={{ type: "work", id: data.openLibraryWorkId, title: data.title }} />
+      <View style={styles.header}>
+        {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
+        <Text style={styles.title} accessibilityRole="header">{data.title}</Text>
+        {data.authors.map((author) => (
+          <Pressable
+            key={author.openLibraryId}
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => router.push(routes.author(author.openLibraryId))}
+          >
+            <Text style={styles.author}>{author.name}</Text>
+          </Pressable>
+        ))}
+        <RatingBadge rating={data.rating} />
+      </View>
+      <View style={styles.actions}>
+        <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
+        <AddToListButton
+          member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
+          onSave={async () => {
+            // Keeps the cover on disk so the saved work still shows it offline.
+            if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
+            return saveWork(data);
+          }}
+          onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
+        />
+      </View>
 
       <Button
         variant="primary"
         onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
         style={styles.graphButton}
+        tooltip="See this book's authors, subjects and links as a graph"
       >
         View as Graph
       </Button>
@@ -118,6 +107,7 @@ export default function WorkDetail() {
         style={styles.graphButton}
         accessibilityLabel={`Find a connection from ${data.title}`}
         accessibilityHint="Shows how this book links to another book you pick"
+        tooltip="Find how this book links to another"
       >
         Find Connection
       </Button>
@@ -206,10 +196,12 @@ export default function WorkDetail() {
 function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
-    content: { padding: spacing.lg, alignItems: "flex-start" },
+    content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
-    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
+    header: { alignItems: "center", width: "100%" },
+    actions: { flexDirection: "row", justifyContent: "center", gap: spacing.sm, marginTop: spacing.md, width: "100%" },
+    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "center", letterSpacing: -0.3, color: colors.ink },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,
@@ -217,7 +209,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    saveButton: { marginTop: spacing.md },
     genresSection: { marginTop: spacing.xxl, width: "100%" },
     genreTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     genreTag: {

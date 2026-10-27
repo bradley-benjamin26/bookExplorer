@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import { isValidAppKey } from "./appAuth.js";
+import { isPublicPath, isValidAppKey } from "./appAuth.js";
 import { parseTrustProxy } from "./trustProxy.js";
 import { booksRoutes } from "./routes/books.js";
 import { authorsRoutes } from "./routes/authors.js";
@@ -11,6 +11,7 @@ import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
 import { seriesRoutes } from "./routes/series.js";
 import { pathRoutes } from "./routes/path.js";
+import { ogRoutes } from "./routes/og.js";
 import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
 import { initPersistentCache } from "./cache.js";
 
@@ -42,7 +43,7 @@ const appSharedSecret = process.env.APP_SHARED_SECRET;
 
 if (appSharedSecret) {
   app.addHook("onRequest", async (request, reply) => {
-    if (request.url.split("?")[0] === "/health") return;
+    if (isPublicPath(request.url)) return;
     if (!isValidAppKey(request.headers["x-app-key"], appSharedSecret)) {
       return reply.code(401).send({ error: "Missing or invalid X-App-Key header" });
     }
@@ -69,6 +70,9 @@ await app.register(graphRoutes);
 await app.register(searchRoutes);
 await app.register(seriesRoutes);
 await app.register(pathRoutes);
+if (process.env.WEB_INDEX_HTML) {
+  await app.register(ogRoutes, { indexHtml: process.env.WEB_INDEX_HTML, origin: process.env.PUBLIC_WEB_URL });
+}
 
 if (process.env.CACHE_DB_PATH) initPersistentCache(process.env.CACHE_DB_PATH);
 

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Check, ChevronLeft, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
+import { Check, ChevronLeft, ChevronRight, Crosshair, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -17,10 +17,10 @@ import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
-import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, RELATION_LABELS } from "../../../src/graphLabels";
+import { titleRef } from "../../../src/webTitle";
+import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
-import { routes } from "../../../src/navigation";
-import { openLibraryUrl } from "../../../src/share";
+import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { CENTER_NODE_RADIUS, LABEL_LINE_HEIGHT, layoutGraph, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
 
@@ -315,7 +315,7 @@ export default function GraphExplorer() {
     );
   }
 
-  if (!data || !layout || !center) {
+  if (!data || !visible || !layout || !center) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No graph found for ${type}/${id}`} />;
   }
 
@@ -330,7 +330,7 @@ export default function GraphExplorer() {
     // screen instead of joining the recenter-the-graph behavior every other
     // non-center node gets.
     if (next.type === "genre") {
-      router.push(routes.subject(next.id));
+      router.push(nodeHref(node.id)!);
       return;
     }
 
@@ -339,7 +339,7 @@ export default function GraphExplorer() {
     // real browsable node, so tapping it jumps straight there instead of
     // recentering.
     if (next.type === "editions") {
-      router.push(routes.work(next.id, { highlight: "editions" }));
+      router.push(nodeHref(node.id)!);
       return;
     }
 
@@ -348,9 +348,7 @@ export default function GraphExplorer() {
       setCenter(next);
       return;
     }
-    if (next.type === "author") router.push(routes.author(next.id));
-    else if (next.type === "subject") router.push(routes.subject(next.id));
-    else router.push(routes.work(next.id));
+    router.push(nodeHref(node.id)!);
   };
 
   const handleBack = () => {
@@ -390,7 +388,6 @@ export default function GraphExplorer() {
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
-        Screen reader users get a list of every connection; switch with the List button.
       </Text>
       <View style={styles.legend}>
         {legend.types.map((nodeType) => (
@@ -407,7 +404,7 @@ export default function GraphExplorer() {
         )}
       </View>
       <View style={styles.toolbar}>
-        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph">
+        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
         <Button
@@ -417,13 +414,13 @@ export default function GraphExplorer() {
             setShowList((v) => !v);
           }}
           accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
+          tooltip={showList ? "Show as a graph" : "Show as a list"}
         >
           {showList ? "Graph" : "List"}
         </Button>
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
           href={routes.graph(center.type, center.id, filterToParams(filter))}
-          publicUrl={center.type === "work" ? openLibraryUrl.work(center.id) : center.type === "author" ? openLibraryUrl.author(center.id) : openLibraryUrl.subject(center.id)}
         />
       </View>
       <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
@@ -443,7 +440,7 @@ export default function GraphExplorer() {
             {[...new Set([...data.edges.map((e) => e.relation), ...filter.hiddenRelations])].map((r) => (
               <FilterRow
                 key={r}
-                label={RELATION_LABELS[r] ?? r}
+                label={relationLabel(r)}
                 checked={!filter.hiddenRelations.includes(r)}
                 onPress={() => updateFilter({ ...filter, hiddenRelations: toggle(filter.hiddenRelations, r) })}
               />
@@ -456,6 +453,7 @@ export default function GraphExplorer() {
       </Modal>
       {history.length > 0 && (
         <Pressable
+          ref={titleRef("Back to the previous graph")}
           onPress={handleBack}
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
@@ -470,35 +468,53 @@ export default function GraphExplorer() {
       )}
       {showList ? (
         <ScrollView style={styles.list}>
-          <Text accessibilityRole="header" style={styles.listHeading}>
-            {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}`}
-          </Text>
-          {orderedNodes.length <= 1 && (
+          {orderedNodes.length > 1 ? (
+            <Text accessibilityRole="header" style={styles.listHeading}>
+              {`${orderedNodes.length - 1} connected to ${orderedNodes[0].label}. Tap an item to open its page.`}
+            </Text>
+          ) : (
             <Text style={styles.listRelations}>Nothing left after filtering. Change the filter to see connections.</Text>
           )}
           {orderedNodes.length > 1 && orderedNodes.map((node) => {
             const isCenter = node.id === data.centerId;
-            const relations = isCenter ? "" : nodeRelations(visible!, node.id).join(". ");
+            const relations = isCenter ? "" : nodeRelations(visible, node.id).join(". ");
+            const href = node.navigable ? nodeHref(node.id) : null;
             return (
-              <Pressable
-                key={node.id}
-                onPress={() => handleNodePress(node)}
-                disabled={!node.navigable}
-                accessibilityRole="button"
-                accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
-                  .filter(Boolean)
-                  .join(". ")}
-                accessibilityHint={node.navigable ? (isCenter ? "Opens full details for this item" : "Re-centers the graph on this item") : undefined}
-                accessibilityState={{ disabled: !node.navigable, selected: isCenter }}
-                style={({ pressed }) => [styles.listRow, pressed && styles.pressed]}
-              >
-                <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
-                <View style={styles.listBody}>
-                  <Text style={styles.listNodeLabel}>{node.label}</Text>
-                  {!!relations && <Text style={styles.listRelations}>{relations}</Text>}
-                </View>
-                <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
-              </Pressable>
+              <View key={node.id} style={styles.listRow}>
+                <Pressable
+                  ref={titleRef(href ? `Open ${node.label}` : `${node.label} has no page yet`)}
+                  onPress={() => href && router.push(href)}
+                  disabled={!href}
+                  accessibilityRole="button"
+                  accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
+                    .filter(Boolean)
+                    .join(". ")}
+                  accessibilityHint={href ? "Opens this item's page" : undefined}
+                  accessibilityState={{ disabled: !href, selected: isCenter }}
+                  style={({ pressed }) => [styles.listRowMain, pressed && styles.pressed]}
+                >
+                  <View style={[styles.legendSwatch, { backgroundColor: NODE_COLORS[node.type] }, !node.navigable && styles.legendSwatchFaded]} />
+                  <View style={styles.listBody}>
+                    <Text style={styles.listNodeLabel}>{node.label}</Text>
+                    {!!relations && <Text style={styles.listRelations}>{relations}</Text>}
+                    {!!href && <Text style={styles.listRelations}>{`Open ${NODE_LABELS[node.type].toLowerCase()} page`}</Text>}
+                  </View>
+                  <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
+                  {!!href && <ChevronRight size={16} color={theme.colors.inkFaint} strokeWidth={2} />}
+                </Pressable>
+                {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && (
+                  <Pressable
+                    ref={titleRef(`Center graph on ${node.label}`)}
+                    onPress={() => handleNodePress(node)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Center graph on ${node.label}`}
+                    hitSlop={4}
+                    style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
+                  >
+                    <Crosshair size={20} color={theme.colors.cover} strokeWidth={2} />
+                  </Pressable>
+                )}
+              </View>
             );
           })}
         </ScrollView>
@@ -506,7 +522,7 @@ export default function GraphExplorer() {
       <GestureDetector gesture={composedGesture}>
         <View
           style={[styles.viewport, { width }]}
-          accessibilityHint="Swipe to move between nodes. Activate the highlighted center node for full details."
+          accessibilityHint="Swipe to move between nodes. Activate the highlighted center node for full details. For a list of every connection, use the List button."
           onLayout={(e) => {
             const h = Math.round(e.nativeEvent.layout.height);
             if (h > 0 && h !== measuredHeight) setMeasuredHeight(h);
@@ -587,7 +603,7 @@ export default function GraphExplorer() {
                       stands in for a drop shadow — react-native-svg's cross-
                       platform blur support is unreliable, so this fakes the
                       same "resting on the page" depth without it. */}
-                  <Circle cx={node.x} cy={node.y + 2} r={radius} fill={theme.colors.ink} opacity={opacity * 0.08} />
+                  <Circle cx={node.x} cy={node.y + 3} r={radius + 1} fill="#000" opacity={opacity * 0.25} />
                   {isCenter && (
                     <Circle
                       cx={node.x}
@@ -646,7 +662,7 @@ export default function GraphExplorer() {
           const isCenter = node.id === data.centerId;
           const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
           // A screen reader landing on one node in isolation can't see its edges, so spell them out.
-          const relations = nodeRelations(visible!, node.id).join(". ");
+          const relations = nodeRelations(visible, node.id).join(". ");
           const label = [
             `${node.label}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",
@@ -659,6 +675,7 @@ export default function GraphExplorer() {
           return (
             <Pressable
               key={node.id}
+              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `Center the graph on ${node.label}`)}
               onPress={() => handleNodePress(node)}
               disabled={!node.navigable}
               accessibilityRole="button"
@@ -678,6 +695,7 @@ export default function GraphExplorer() {
                 width: radius * 2,
                 height: radius * 2,
                 borderRadius: radius,
+                ...(node.navigable && Platform.OS === "web" ? ({ cursor: "pointer" } as object) : null),
               }}
               />
           );
@@ -685,6 +703,7 @@ export default function GraphExplorer() {
           </Animated.View>
           <View style={styles.zoomControls}>
             <Pressable
+              ref={titleRef("Zoom in")}
               onPress={() => zoomByStep(DOUBLE_TAP_ZOOM_STEP)}
               accessibilityRole="button"
               accessibilityLabel="Zoom in"
@@ -694,6 +713,7 @@ export default function GraphExplorer() {
               <ZoomIn size={20} color={theme.colors.cover} strokeWidth={2} />
             </Pressable>
             <Pressable
+              ref={titleRef("Zoom out")}
               onPress={() => zoomByStep(1 / DOUBLE_TAP_ZOOM_STEP)}
               accessibilityRole="button"
               accessibilityLabel="Zoom out"
@@ -703,6 +723,7 @@ export default function GraphExplorer() {
               <ZoomOut size={20} color={theme.colors.cover} strokeWidth={2} />
             </Pressable>
             <Pressable
+              ref={titleRef("Fit the whole graph")}
               onPress={resetView}
               accessibilityRole="button"
               accessibilityLabel="Reset zoom to fit the whole graph"
@@ -810,6 +831,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     checkboxOn: { backgroundColor: colors.cover },
     list: { flex: 1, paddingHorizontal: spacing.lg },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+    listRowMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md },
     listHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, paddingVertical: spacing.md },
     listBody: { flex: 1, paddingVertical: spacing.sm },
     listNodeLabel: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },

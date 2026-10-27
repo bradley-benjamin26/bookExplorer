@@ -3,9 +3,10 @@ import AsyncStorage from "../test/asyncStorageMock";
 import { upsertLibrary } from "./librarySettings";
 import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
 import { getSavedItems, isItemSaved, removeSaved, toggleSaved } from "./savedItems";
-import { addToList, createList } from "./savedLists";
+import { addToList, createList, getLists } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
-import { applySnapshot, getSnapshot, migrateStorage } from "./snapshot";
+import { booksToCsv } from "../csv";
+import { applySnapshot, getSnapshot, migrateStorage, snapshotForList, withListedSaves, type Snapshot } from "./snapshot";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -20,9 +21,9 @@ describe("snapshot", () => {
     await AsyncStorage.setItem("book-explorer:libraries", JSON.stringify([{ id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" }]));
     await migrateStorage();
     const first = await getSnapshot();
-    expect(first.books[0]).toMatchObject({ schemaVersion: 3, updatedAt: 1234, notes: "n" });
-    expect(first.items[0].schemaVersion).toBe(3);
-    expect(first.libraries[0].schemaVersion).toBe(3);
+    expect(first.books[0]).toMatchObject({ schemaVersion: 4, updatedAt: 1234, notes: "n" });
+    expect(first.items[0].schemaVersion).toBe(4);
+    expect(first.libraries[0].schemaVersion).toBe(4);
     await migrateStorage();
     expect(await getSnapshot()).toEqual(first);
   });
@@ -37,9 +38,9 @@ describe("snapshot", () => {
     await migrateStorage();
     const { works } = await getSnapshot();
     expect(works).toEqual([
-      { schemaVersion: 3, updatedAt: 100, openLibraryWorkId: "OL1W", title: "TOL1W", authorNames: [], subjects: [], genres: [], notes: "", savedAt: 100 },
+      { schemaVersion: 4, updatedAt: 100, openLibraryWorkId: "OL1W", title: "TOL1W", authorNames: [], subjects: [], genres: [], notes: "", savedAt: 100 },
     ]);
-    expect(await AsyncStorage.getItem("book-explorer:schema-version")).toBe("3");
+    expect(await AsyncStorage.getItem("book-explorer:schema-version")).toBe("4");
 
     // Re-running (even forced past the version check) neither duplicates nor overwrites an edited record.
     await updateSavedWork("OL1W", { notes: "kept" });
@@ -51,7 +52,7 @@ describe("snapshot", () => {
     expect((await getSavedWork("OL1W"))?.notes).toBe("kept");
   });
 
-  it("migration v2 -> v3 keeps every record and starts with no lists", async () => {
+  it("migration v2 -> v3 keeps every record", async () => {
     const work = { schemaVersion: 2, updatedAt: 100, openLibraryWorkId: "OL1W", title: "W", authorNames: [], subjects: [], genres: [], notes: "w", savedAt: 100 };
     await AsyncStorage.setItem("book-explorer:saved-items", JSON.stringify([{ schemaVersion: 2, updatedAt: 100, type: "work", id: "OL1W", title: "W" }]));
     await AsyncStorage.setItem("book-explorer:saved-work:OL1W", JSON.stringify(work));
@@ -59,10 +60,13 @@ describe("snapshot", () => {
     await AsyncStorage.setItem("book-explorer:schema-version", "2");
     const before = await getSnapshot();
     await migrateStorage();
-    expect(await getSnapshot()).toEqual(before);
-    expect(before).toMatchObject({ works: [work], lists: [] });
+    const { lists, ...after } = await getSnapshot();
+    const { lists: _, ...kept } = before;
+    expect(after).toEqual(kept);
+    expect(lists).toMatchObject([{ name: "Saved books", members: [{ id: "OL1W" }] }]);
+    expect(before).toMatchObject({ works: [work] });
     expect(before.books[0]).toMatchObject({ notes: "n", schemaVersion: 2 });
-    expect(await AsyncStorage.getItem("book-explorer:schema-version")).toBe("3");
+    expect(await AsyncStorage.getItem("book-explorer:schema-version")).toBe("4");
   });
 
   it("round-trips through applySnapshot, replacing existing data", async () => {
@@ -75,7 +79,7 @@ describe("snapshot", () => {
     const list = await createList({ name: "L", kind: "book" });
     await addToList(list.id, { type: "work", id: "OL1W", title: "W" });
     const snap = await getSnapshot();
-    expect(snap.lists).toMatchObject([{ id: list.id, members: [{ id: "OL1W" }] }]);
+    expect(snap.lists).toContainEqual(expect.objectContaining({ id: list.id, members: [expect.objectContaining({ id: "OL1W" })] }));
     expect(snap.works).toMatchObject([{ openLibraryWorkId: "OL1W", notes: "w" }]);
     await AsyncStorage.clear();
     await AsyncStorage.setItem("book-explorer:saved-work:stale", JSON.stringify({ openLibraryWorkId: "stale" }));
@@ -118,15 +122,109 @@ describe("snapshot", () => {
   });
 });
 
+describe("v4 lists", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("v4 puts saved items that are on no list onto Saved books / Saved authors", async () => {
+    await toggleSaved({ type: "book", id: "9780441013593", title: "Dune" });
+    await toggleSaved({ type: "work", id: "OL1W", title: "Emma" });
+    await toggleSaved({ type: "author", id: "OL1A", title: "Jane Austen" });
+    const faves = await createList({ name: "Faves", kind: "book" });
+    await addToList(faves.id, { type: "work", id: "OL1W", title: "Emma" });
+    await AsyncStorage.setItem("book-explorer:schema-version", "3");
+    await migrateStorage();
+    const lists = await getLists();
+    const books = lists.find((l) => l.name === "Saved books");
+    expect(books?.members).toMatchObject([{ type: "book", id: "9780441013593" }]);
+    expect(lists.find((l) => l.name === "Faves")?.members).toMatchObject([{ id: "OL1W" }]);
+    expect(lists.find((l) => l.name === "Saved authors")?.members).toMatchObject([{ type: "author", id: "OL1A" }]);
+    expect((await getSnapshot()).schemaVersion).toBe(4);
+    expect(await AsyncStorage.getItem("book-explorer:schema-version")).toBe("4");
+  });
+
+  it("withListedSaves reuses an existing Saved books list and skips tombstones", () => {
+    const item = (type: "book" | "work" | "author", id: string, extra = {}) => ({ schemaVersion: 3, updatedAt: 1, type, id, title: id, ...extra });
+    const saved = { schemaVersion: 3, updatedAt: 1, id: "l1", name: "Saved books", description: "", kind: "book" as const, createdAt: 1, members: [] };
+    const snap: Snapshot = {
+      schemaVersion: 3,
+      items: [item("book", "1"), item("book", "2", { deletedAt: 5 })],
+      books: [],
+      works: [],
+      libraries: [],
+      lists: [saved, { ...saved, id: "gone", deletedAt: 5 }],
+    };
+    const out = withListedSaves(snap, 10);
+    expect(out.lists).toHaveLength(2);
+    expect(out.lists[0].members).toMatchObject([{ type: "book", id: "1", addedAt: 10 }]);
+    expect(withListedSaves(out, 20)).toEqual(out);
+  });
+});
+
+describe("unsaved list members", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("migration saves a v3 list member that has no item, with a work record, and it exports", async () => {
+    const list = { schemaVersion: 3, updatedAt: 1, id: "l1", name: "Faves", description: "", kind: "book", createdAt: 1, members: [{ type: "work", id: "OL5W", title: "Persuasion", addedAt: 1 }, { type: "author", id: "OL5A", title: "Austen", addedAt: 1 }] };
+    await AsyncStorage.setItem("book-explorer:saved-lists", JSON.stringify([list]));
+    await AsyncStorage.setItem("book-explorer:schema-version", "3");
+    await migrateStorage();
+    expect((await getSavedItems()).map((i) => `${i.type}:${i.id}`).sort()).toEqual(["author:OL5A", "work:OL5W"]);
+    expect(await getSavedWork("OL5W")).not.toBeNull();
+    const { books, lists, works } = snapshotForList(await getSnapshot(), "l1");
+    expect(booksToCsv(books, lists, works)).toContain("Persuasion");
+  });
+
+  it("withListedSaves saves members of live lists only, skips tombstoned items, and is idempotent", () => {
+    const st = { schemaVersion: 3, updatedAt: 1 };
+    const m = (type: "book" | "work" | "author", id: string) => ({ type, id, title: id, addedAt: 1 });
+    const list = { ...st, id: "l1", name: "L", description: "", kind: "book" as const, createdAt: 1, members: [m("book", "1"), m("book", "2")] };
+    const snap: Snapshot = {
+      ...st,
+      items: [{ ...st, type: "book", id: "2", title: "2", deletedAt: 5 }],
+      books: [],
+      works: [],
+      libraries: [],
+      lists: [list, { ...list, id: "gone", deletedAt: 5, members: [m("book", "3")] }],
+    };
+    const out = withListedSaves(snap, 10);
+    expect(out.items.filter((i) => !i.deletedAt).map((i) => i.id)).toEqual(["1"]);
+    expect(out.items.find((i) => i.id === "2")?.deletedAt).toBe(5);
+    expect(withListedSaves(out, 20)).toEqual(out);
+  });
+});
+
 describe("applySnapshot library writes", () => {
   beforeEach(() => AsyncStorage.clear());
 
   it("queues library replacement behind an in-flight upsert", async () => {
     const lib = (id: string) => ({ id, name: id, isbnUrl: "https://x/", titleUrl: "" });
     const edit = upsertLibrary(lib("edit"));
-    await applySnapshot({ schemaVersion: 3, items: [], books: [], works: [], lists: [], libraries: [{ ...lib("imported"), schemaVersion: 2, updatedAt: 1 }] });
+    await applySnapshot({ schemaVersion: 4, items: [], books: [], works: [], lists: [], libraries: [{ ...lib("imported"), schemaVersion: 2, updatedAt: 1 }] });
     await edit;
     // The edit ran first, then the import replaced it; never the reverse interleaving.
     expect((await getSnapshot()).libraries.map((l) => l.id)).toEqual(["imported"]);
+  });
+
+  it("snapshotForList keeps only the live list's members, and nothing for a deleted or unknown list", () => {
+    const stamped = { schemaVersion: 4, updatedAt: 1 };
+    const item = (type: "book" | "work" | "author", id: string) => ({ ...stamped, type, id, title: id });
+    const rec = { ...stamped, authorNames: [], subjects: [], genres: [], notes: "", savedAt: 1 };
+    const member = (type: "book" | "work" | "author", id: string) => ({ type, id, title: id, addedAt: 1 });
+    const list = { ...stamped, id: "l1", name: "L", description: "", kind: "book" as const, createdAt: 1, members: [member("book", "1"), member("work", "OL1W"), member("author", "OL1A")] };
+    const snap = {
+      schemaVersion: 4,
+      items: [item("book", "1"), item("book", "2"), item("work", "OL1W"), item("work", "OL2W"), item("author", "OL1A"), item("author", "OL2A")],
+      books: [{ ...rec, isbn: "1" }, { ...rec, isbn: "2" }],
+      works: [{ ...rec, openLibraryWorkId: "OL1W" }, { ...rec, openLibraryWorkId: "OL2W" }],
+      libraries: [{ ...stamped, id: "a", name: "A", isbnUrl: "https://x/", titleUrl: "" }],
+      lists: [list, { ...list, id: "gone", deletedAt: 5 }],
+    } as unknown as Snapshot;
+    const out = snapshotForList(snap, "l1");
+    expect(out.items.map((i) => i.id)).toEqual(["1", "OL1W", "OL1A"]);
+    expect(out.books.map((b) => b.isbn)).toEqual(["1"]);
+    expect(out.works.map((w) => w.openLibraryWorkId)).toEqual(["OL1W"]);
+    expect(out.lists).toEqual([list]);
+    expect(out.libraries).toEqual([]);
+    for (const id of ["gone", "nope"]) expect(snapshotForList(snap, id)).toMatchObject({ items: [], books: [], works: [], lists: [] });
   });
 });
