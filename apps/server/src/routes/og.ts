@@ -18,10 +18,16 @@ export async function ogRoutes(app: FastifyInstance, opts: { indexHtml: string; 
       req.log.error(err, "WEB_INDEX_HTML unreadable");
       return reply.code(500).send({ error: "Web index unavailable" });
     }
-    const meta = await pageMeta(path).catch(() => null);
+    let meta = null;
+    try {
+      meta = await pageMeta(path);
+    } catch (err) {
+      req.log.warn(err, "page lookup failed; serving default tags");
+    }
+    // A generic card (unknown path or failed lookup) must not be pinned in caches.
     return reply
-      .header("Cache-Control", "public, max-age=3600")
+      .header("Cache-Control", meta ? "public, max-age=3600" : "no-store")
       .type("text/html; charset=utf-8")
-      .send(injectSocialTags(html, renderSocialTags(meta, origin + path, origin)));
+      .send(injectSocialTags(html, renderSocialTags(meta, meta ? origin + path : `${origin}/`, origin)));
   });
 }
