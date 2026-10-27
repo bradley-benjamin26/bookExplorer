@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
@@ -54,6 +55,22 @@ export default function AuthorDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
+      {data.photoUrl && (
+        <>
+          <Image
+            source={{ uri: data.photoUrl }}
+            style={styles.photo}
+            contentFit="cover"
+            accessibilityLabel={`Photo of ${data.name}`}
+          />
+          {/* Commons images carry their own licences; the Wikipedia page credits them. */}
+          {data.bioSourceUrl && (
+            <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
+              <Text style={styles.photoCredit}>Photo via Wikipedia</Text>
+            </Pressable>
+          )}
+        </>
+      )}
       <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
       {(data.birthDate || data.deathDate) && (
         <Text style={styles.dates}>
@@ -154,6 +171,8 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    photo: { width: 120, height: 150, borderRadius: 6 },
+    photoCredit: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.xs, marginBottom: spacing.md },
     name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
     dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
     bio: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, lineHeight: 24 },

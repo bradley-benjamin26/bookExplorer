@@ -140,6 +140,8 @@ export const AuthorSchema = z.object({
   // shows a "via Wikipedia" credit linking to bioSourceUrl to satisfy that.
   bioSource: z.enum(["wikipedia", "openLibrary"]).nullable(),
   bioSourceUrl: z.string().nullable(),
+  // Wikipedia's lead image; optional because older cached entries lack it.
+  photoUrl: z.string().nullable().optional(),
   birthDate: z.string().nullable(),
   deathDate: z.string().nullable(),
   relations: z.array(AuthorRelationSchema),
