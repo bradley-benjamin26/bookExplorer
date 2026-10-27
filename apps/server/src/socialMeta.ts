@@ -3,7 +3,7 @@ import { getAuthorDetail } from "./services/authorService.js";
 import { getBookDetail } from "./services/bookService.js";
 import { getSubjectDetail } from "./services/subjectService.js";
 import { getWorkDetail } from "./services/workService.js";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlug } from "./validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "./validation.js";
 
 /** Where shared links point; the same value the app uses for its own share links. */
 export const DEFAULT_WEB_ORIGIN = "https://shelfthread.com";
@@ -50,11 +50,11 @@ const LOOKUPS: Record<string, { valid: (id: string) => boolean; load: Lookup }> 
     valid: isOpenLibraryAuthorId,
     load: async (id) => {
       const a = await getAuthorDetail(id);
-      return a && { title: a.name, description: describe(a.bio, a.name), image: null };
+      return a && { title: a.name, description: describe(a.bio, a.name), image: a.photoUrl ?? null };
     },
   },
   subject: {
-    valid: isSubjectSlug,
+    valid: (slug) => isSubjectSlugInput(slug),
     load: async (slug) => {
       const s = await getSubjectDetail(slug);
       return s && { title: s.name, description: describe(s.description, s.name), image: s.books[0]?.coverUrl ?? null };
@@ -101,7 +101,8 @@ export function renderSocialTags(meta: PageMeta | null, url: string, origin = DE
     `<meta property="og:description" content="${e(description)}" />`,
     `<meta property="og:url" content="${e(url)}" />`,
     `<meta property="og:image" content="${e(image)}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    `<meta property="og:image:alt" content="${e(title)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${e(title)}" />`,
     `<meta name="twitter:description" content="${e(description)}" />`,
     `<meta name="twitter:image" content="${e(image)}" />`,

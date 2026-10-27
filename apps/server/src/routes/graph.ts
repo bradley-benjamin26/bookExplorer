@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { buildAuthorGraph, buildSubjectGraph, buildWorkGraph } from "../services/graphService.js";
-import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlug } from "../validation.js";
+import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "../validation.js";
 
 const BUILDERS = {
   author: buildAuthorGraph,
@@ -12,7 +12,7 @@ type GraphType = keyof typeof BUILDERS;
 
 const ID_VALIDATORS: Partial<Record<GraphType, (id: string) => boolean>> = {
   author: isOpenLibraryAuthorId,
-  subject: isSubjectSlug,
+  subject: (slug) => isSubjectSlugInput(slug), // legacy slugs from old links still work
   work: isOpenLibraryWorkId,
 };
 

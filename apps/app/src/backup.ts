@@ -43,14 +43,14 @@ function exportSnapshot(snapshot: Snapshot): string {
   return JSON.stringify(snapshot, null, 2);
 }
 
-export async function exportCsv(): Promise<string> {
+export async function exportCsv(workIsbn?: (workId: string) => string | null): Promise<string> {
   const { books, lists, works } = await getSnapshot();
-  return booksToCsv(books, lists, works);
+  return booksToCsv(books, lists, works, workIsbn);
 }
 
-export async function exportListCsv(listId: string): Promise<string> {
+export async function exportListCsv(listId: string, workIsbn?: (workId: string) => string | null): Promise<string> {
   const { books, lists, works } = snapshotForList(await getSnapshot(), listId);
-  return booksToCsv(books, lists, works);
+  return booksToCsv(books, lists, works, workIsbn);
 }
 
 /** Validates a JSON backup file (untrusted) against the shared schema. */

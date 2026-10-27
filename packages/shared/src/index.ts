@@ -68,6 +68,10 @@ export function subjectKey(label: string): string {
   return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
 }
 
+// The Library of Congress catalog record's call number, Dewey class and
+// control number; present only when LOC has catalogued the book (an LCCN).
+export const LocCatalogSchema = z.object({ lcc: z.string().nullable(), ddc: z.string().nullable(), lccn: z.string() });
+
 export const BookSchema = z.object({
   isbn: z.string(),
   title: z.string(),
@@ -84,7 +88,7 @@ export const BookSchema = z.object({
   // Wikipedia and Google Books content require attribution on reuse — the
   // client shows a source credit (linking to descriptionSourceUrl, when
   // one exists) whenever description didn't come from Open Library itself.
-  descriptionSource: z.enum(["wikipedia", "googleBooks", "openLibrary"]).nullable(),
+  descriptionSource: z.enum(["wikipedia", "googleBooks", "openLibrary", "loc"]).nullable(),
   descriptionSourceUrl: z.string().nullable(),
   coverUrl: z.string().nullable(),
   // Google Books' terms require attribution whenever its cover image is
@@ -108,6 +112,7 @@ export const BookSchema = z.object({
   format: z.string().nullable(),
   rating: RatingSchema.nullable(),
   reviews: z.array(ReviewSchema),
+  loc: LocCatalogSchema.nullable().optional(),
 });
 export type Book = z.infer<typeof BookSchema>;
 
@@ -123,7 +128,7 @@ export const WorkRefSchema = z.object({
 export type WorkRef = z.infer<typeof WorkRefSchema>;
 
 export const AuthorRelationSchema = z.object({
-  relation: z.enum(["influencedBy", "influenced", "notableWork", "movement"]),
+  relation: z.enum(["influencedBy", "influenced", "notableWork", "movement", "award"]),
   wikidataId: z.string(),
   label: z.string(),
   openLibraryId: z.string().nullable(),
@@ -140,6 +145,8 @@ export const AuthorSchema = z.object({
   // shows a "via Wikipedia" credit linking to bioSourceUrl to satisfy that.
   bioSource: z.enum(["wikipedia", "openLibrary"]).nullable(),
   bioSourceUrl: z.string().nullable(),
+  // Wikipedia's lead image; optional because older cached entries lack it.
+  photoUrl: z.string().nullable().optional(),
   birthDate: z.string().nullable(),
   deathDate: z.string().nullable(),
   relations: z.array(AuthorRelationSchema),
@@ -168,6 +175,8 @@ export type Edition = z.infer<typeof EditionSchema>;
 
 export const WorkSchema = WorkRefSchema.extend({
   description: z.string().nullable(),
+  descriptionSource: z.enum(["openLibrary", "loc"]).nullable().optional(),
+  loc: LocCatalogSchema.nullable().optional(),
   subjects: z.array(TaggedTermSchema),
   awards: z.array(z.string()).default([]),
   genres: z.array(TaggedTermSchema),
@@ -206,9 +215,26 @@ export const SubjectSchema = z.object({
 });
 export type Subject = z.infer<typeof SubjectSchema>;
 
-/** Open Library's subject URLs are the subject name, lowercased with spaces turned into underscores. */
+/**
+ * Open Library's subject URLs: the name lowercased, with spaces turned into
+ * underscores. LCSH's "--" subdivisions and commas are dropped, since Open
+ * Library files "Science fiction -- Authorship" as science_fiction_authorship;
+ * hyphens, apostrophes, parentheses and periods stay (they make different
+ * subjects there). Idempotent, so it also turns a legacy slug canonical.
+ */
 export function slugifySubject(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, "_");
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/,/g, "") // first, so "-,-" can't leave a new "--" behind
+    .replace(/--/g, " ")
+    .replace(/[\s_]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+/** One award from its dated or per-category spellings: "Hugo Award (1966)" and "Hugo Award for Best Novella" are both "Hugo Award". */
+export function awardFamily(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s+for\s.*$/i, "").trim();
 }
 
 export const GraphNodeSchema = z.object({
@@ -218,7 +244,7 @@ export const GraphNodeSchema = z.object({
   // pointing a viewer at the Editions section on that work's own page,
   // rather than being a browsable concept in its own right the way every
   // other node type is.
-  type: z.enum(["author", "work", "subject", "genre", "editions"]),
+  type: z.enum(["author", "work", "subject", "genre", "editions", "award"]),
   label: z.string(),
   // Most nodes link straight to their detail screen. The exception is an
   // author known only by Wikidata QID (no Open Library id) — the author

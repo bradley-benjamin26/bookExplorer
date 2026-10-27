@@ -5,6 +5,7 @@ import * as openLibrary from "../sources/openLibrary.js";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
+import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { getWorkDetail } from "./workService.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
@@ -79,8 +80,21 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
 
     const coverUrl = ol.coverUrl ?? hc?.coverUrl ?? gb?.coverUrl ?? null;
     const coverSource = ol.coverUrl ? "openLibrary" : hc?.coverUrl ? "hardcover" : gb?.coverUrl ? "googleBooks" : null;
-    const description = wikipedia?.text ?? gb?.description ?? ol.description;
-    const descriptionSource = wikipedia ? "wikipedia" : gb?.description ? "googleBooks" : ol.description ? "openLibrary" : null;
+    // Wikipedia's extract is always English; the other two are checked.
+    const gbDescription = englishOrNull(gb?.description ?? null);
+    const olDescription = englishOrNull(ol.description);
+    // Only with an LCCN, since the summary is credited to (and linked from) its catalog record.
+    const locSummary = locMetadata.lccn ? englishOrNull(locMetadata.summary) : null;
+    const description = wikipedia?.text ?? gbDescription ?? olDescription ?? locSummary;
+    const descriptionSource = wikipedia
+      ? "wikipedia"
+      : gbDescription
+        ? "googleBooks"
+        : olDescription
+          ? "openLibrary"
+          : locSummary
+            ? "loc"
+            : null;
     // Google Books' rating is only used on its own, as a last resort, when
     // neither Hardcover nor Open Library has one at all — it's never
     // blended in, since folding it in would mean an extra request against
@@ -108,6 +122,7 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       format: ol.format,
       rating,
       reviews: hc?.reviews ?? [],
+      ...(locMetadata.lccn && { loc: { lcc: locMetadata.lcc, ddc: locMetadata.ddc, lccn: locMetadata.lccn } }),
     };
     return result;
   });

@@ -10,6 +10,7 @@ import {
   type Library,
 } from "../storage/librarySettings";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 
 /**
  * With a single configured library, its ISBN/title links are shown as two
@@ -33,6 +34,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
   if (libraries.length === 0) {
     return (
       <Pressable
+        ref={titleRef("Add your library in Settings")}
         style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
         onPress={() => router.push(routes.settings())}
         accessibilityRole="button"
@@ -45,6 +47,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
 
   const linkRow = (key: string, label: string, url: string) => (
     <Pressable
+      ref={titleRef(label)}
       key={key}
       style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
       onPress={() => Linking.openURL(url)}
@@ -82,6 +85,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
         return (
           <View key={library.id}>
             <Pressable
+              ref={titleRef(`Find at ${library.name}`)}
               style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
               onPress={() => toggleExpanded(library.id)}
               accessibilityRole="button"

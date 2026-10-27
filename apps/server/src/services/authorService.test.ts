@@ -31,6 +31,26 @@ describe("getAuthorDetail", () => {
   });
 });
 
+describe("getAuthorDetail photo", () => {
+  beforeEach(() => {
+    vi.mocked(openLibrary.getAuthor).mockReset().mockResolvedValue({ name: "Timothy Zahn", bio: null, birthDate: null, deathDate: null, wikidataId: "Q1" });
+    vi.mocked(openLibrary.getAuthorWorks).mockReset().mockResolvedValue([]);
+    vi.mocked(wikidata.fetchAuthorRelations).mockReset().mockResolvedValue([]);
+    vi.mocked(wikidata.fetchPseudonyms).mockReset().mockResolvedValue([]);
+    vi.mocked(fetchMoreByAuthor).mockReset().mockResolvedValue([]);
+  });
+
+  it("uses the Wikipedia thumbnail as photoUrl", async () => {
+    vi.mocked(fetchWikipediaExtract).mockReset().mockResolvedValue({ text: "Bio.", url: "https://en.wikipedia.org/wiki/Z", imageUrl: "https://upload.wikimedia.org/x.jpg" });
+    expect((await getAuthorDetail("OL10A"))?.photoUrl).toBe("https://upload.wikimedia.org/x.jpg");
+  });
+
+  it("has a null photoUrl without a Wikipedia match", async () => {
+    vi.mocked(fetchWikipediaExtract).mockReset().mockResolvedValue(null);
+    expect((await getAuthorDetail("OL11A"))?.photoUrl).toBeNull();
+  });
+});
+
 describe("getAuthorLinks", () => {
   beforeEach(() => {
     vi.mocked(openLibrary.getAuthor).mockReset().mockResolvedValue({

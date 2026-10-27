@@ -1,8 +1,9 @@
 import { type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
 import { useIsRestoring, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { ChevronDown, ChevronRight } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { fetchGraph, fetchSubject, searchBooks } from "../api/client";
 import { routes } from "../navigation";
 import {
@@ -11,15 +12,14 @@ import {
   FETCH_CONCURRENCY,
   loadSubjectBooks,
   mapWithConcurrency,
+  groupRecommendations,
   rankRecommendations,
   seedsFromCache,
-  reasonHeading,
-  reasonKey,
   recommendationsStatus,
-  type Recommendation,
 } from "../recommendations";
 import { getSnapshot, snapshotForList, type Snapshot } from "../storage/snapshot";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { titleRef } from "../webTitle";
 import { WorkListRow } from "./WorkListRow";
 
 // Subject listings and author graphs change rarely; reuse a day-old copy rather than refetch on every visit.
@@ -31,6 +31,8 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
+  // Groups the user opened or closed, by reasonKey; the rest follow the default (only the first open).
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   useEffect(() => {
     getSnapshot().then((s) => setSnapshot(listId ? snapshotForList(s, listId) : s));
@@ -103,30 +105,40 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
   if (status === "loading") return <ActivityIndicator color={theme.colors.cover} accessibilityLabel="Loading recommendations" />;
   if (status === "empty") return <Text style={styles.emptyText}>Not enough books or authors to make recommendations</Text>;
 
-  // One group per primary reason, in the order of its best recommendation.
-  const groups = new Map<string, { heading: string; recs: Recommendation[] }>();
-  for (const r of recommendations) {
-    const key = reasonKey(r.reason);
-    groups.set(key, { heading: reasonHeading(r.reason), recs: [...(groups.get(key)?.recs ?? []), r] });
-  }
+  const groups = groupRecommendations(recommendations);
 
   return (
     <View>
-      {[...groups].map(([key, { heading, recs }]) => (
-        <View key={key}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            {heading}
-          </Text>
-          {recs.map((r) => (
-            <WorkListRow
-              key={r.work.openLibraryWorkId}
-              work={r.work}
-              note={`shares: ${r.shares.join(", ")}`}
-              onPress={() => router.push(routes.work(r.work.openLibraryWorkId))}
-            />
-          ))}
-        </View>
-      ))}
+      {[...groups].map(([key, { heading, recs }], index) => {
+        const expanded = toggled[key] ?? index === 0;
+        const Chevron = expanded ? ChevronDown : ChevronRight;
+        return (
+          <View key={key}>
+            <Pressable
+              ref={titleRef(`${expanded ? "Hide" : "Show"} ${heading}`)}
+              style={({ pressed }) => [styles.groupHeader, pressed && styles.pressed]}
+              onPress={() => setToggled((t) => ({ ...t, [key]: !expanded }))}
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+            >
+              <Text accessibilityRole="header" style={styles.sectionTitle}>
+                {heading} ({recs.length})
+              </Text>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Chevron size={18} color={theme.colors.inkFaint} strokeWidth={2} />
+              </View>
+            </Pressable>
+            {expanded && recs.map((r) => (
+              <WorkListRow
+                key={r.work.openLibraryWorkId}
+                work={r.work}
+                note={`shares: ${r.shares.join(", ")}`}
+                onPress={() => router.push(routes.work(r.work.openLibraryWorkId))}
+              />
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -134,6 +146,8 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
-    sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.xxl, marginBottom: spacing.md },
+    groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginTop: spacing.xxl, marginBottom: spacing.md },
+    pressed: { opacity: 0.6 },
+    sectionTitle: { flexShrink: 1, fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },
   });
 }

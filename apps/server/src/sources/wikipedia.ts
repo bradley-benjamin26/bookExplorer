@@ -5,6 +5,7 @@ import { isValidQid } from "./wikidata.js";
 export interface WikipediaExtract {
   text: string;
   url: string;
+  imageUrl: string | null;
 }
 
 interface SitelinksResponse {
@@ -21,6 +22,7 @@ async function getEnglishWikipediaTitle(qid: string): Promise<string | null> {
 
 interface PageSummary {
   extract?: string;
+  thumbnail?: { source?: string };
   content_urls?: { desktop?: { page?: string } };
 }
 
@@ -51,5 +53,7 @@ export async function fetchWikipediaExtract(qid: string): Promise<WikipediaExtra
   const text = data.extract?.trim();
   if (!text) return null;
 
-  return { text, url: data.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}` };
+  const thumb = data.thumbnail?.source;
+  const imageUrl = thumb?.startsWith("https://") ? thumb : null;
+  return { text, imageUrl, url: data.content_urls?.desktop?.page ?? `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}` };
 }

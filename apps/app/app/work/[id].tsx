@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { slugifySubject } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
@@ -15,12 +14,16 @@ import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
-import { AddToListButton } from "../../src/components/AddToListButton";
+import { WorkSaveButton } from "../../src/components/WorkSaveButton";
 import { ShareButton } from "../../src/components/ShareButton";
+import { TermsSection } from "../../src/components/TermsSection";
+import type { SaveSheetHandle } from "../../src/components/AddToListButton";
 import { routes } from "../../src/navigation";
-import { getSavedWork, saveWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
+import { savedEditionOf } from "../../src/editionChoice";
+import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedBooks";
+import { addRecent } from "../../src/storage/history";
+import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
-import { titleCase } from "../../src/titleCase";
 
 export default function WorkDetail() {
   const { id, highlight } = useLocalSearchParams<{ id: string; highlight?: string }>();
@@ -33,8 +36,15 @@ export default function WorkDetail() {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    if (data) addRecent({ kind: "work", id: data.openLibraryWorkId, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
+  }, [data]);
+
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
+  const saveSheet = useRef<SaveSheetHandle>(null);
+  // Set when the Subjects & Genres lock asked for the save, so a saved edition opens ready to edit.
+  const editAfterSave = useRef(false);
 
   // Re-read on every focus: this screen stays mounted under others, so an edit
   // or removal on the Saved screen would otherwise not show here.
@@ -43,6 +53,14 @@ export default function WorkDetail() {
   useFocusEffect(
     useCallback(() => {
       if (savedId) getSavedWork(savedId).then(setSavedRecord);
+    }, [savedId])
+  );
+
+  // The edition of this work saved as a book, if any; re-read on focus like the work's own record.
+  const [savedEdition, setSavedEdition] = useState<SavedBookRecord | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (savedId) getAllSavedBooks().then((books) => setSavedEdition(savedEditionOf(books, savedId)));
     }, [savedId])
   );
 
@@ -82,16 +100,22 @@ export default function WorkDetail() {
       </View>
       <View style={styles.actions}>
         <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
-        <AddToListButton
-          member={{ type: "work", id: data.openLibraryWorkId, title: data.title }}
-          onSave={async () => {
-            // Keeps the cover on disk so the saved work still shows it offline.
-            if (data.coverUrl) Image.prefetch(data.coverUrl, "disk");
-            return saveWork(data);
+        <WorkSaveButton
+          ref={saveSheet}
+          work={data}
+          onSaved={(isbn) => {
+            const edit = editAfterSave.current;
+            editAfterSave.current = false;
+            if (isbn) router.push(routes.book(isbn, { edit }));
+            else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
           }}
-          onChange={() => getSavedWork(data.openLibraryWorkId).then(setSavedRecord)}
         />
       </View>
+      {savedEdition && (
+        <Pressable onPress={() => router.push(routes.book(savedEdition.isbn))}>
+          <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
+        </Pressable>
+      )}
 
       <Button
         variant="primary"
@@ -122,65 +146,27 @@ export default function WorkDetail() {
         />
       ) : null}
 
-      {!savedRecord && data.genres.length > 0 && (
-        <View style={styles.genresSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">Genre</Text>
-          <View style={styles.genreTags}>
-            {data.genres.map((genre) => (
-              <Pressable
-                key={genre.label}
-                style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
-                accessibilityRole="button"
-                accessibilityLabel={titleCase(genre.label)}
-              >
-                <Text style={styles.genreTagText}>
-                  {titleCase(genre.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {data.awards.length > 0 && (
-        <View style={styles.genresSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
-          <View style={styles.genreTags}>
-            {data.awards.map((award) => (
-              <View key={award} style={styles.genreTag}>
-                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {!savedRecord && data.subjects.length > 0 && (
-        <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">Subjects</Text>
-          <View style={styles.subjectTags}>
-            {data.subjects.slice(0, 12).map((subject) => (
-              <Pressable
-                key={subject.label}
-                style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
-                accessibilityRole="button"
-                accessibilityLabel={titleCase(subject.label)}
-              >
-                <Text style={styles.subjectTagText}>
-                  {titleCase(subject.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
+      <TermsSection
+        subjects={savedRecord?.subjects ?? data.subjects.map((t) => t.label)}
+        genres={savedRecord?.genres ?? data.genres.map((t) => t.label)}
+        awards={data.awards}
+        record={savedRecord}
+        onUpdate={(c) => updateSavedWork(data.openLibraryWorkId, c).then((r) => r && setSavedRecord(r))}
+        onRequestSave={() => {
+          editAfterSave.current = true;
+          saveSheet.current?.open();
+        }}
+      />
 
       {data.description && (
         <View style={styles.aboutSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">About</Text>
           <ExpandableText text={data.description} textStyle={styles.description} viewMoreStyle={styles.viewMore} />
+          {data.descriptionSource === "loc" && data.loc && (
+            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+              <Text style={styles.descriptionSource}>via Library of Congress</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -193,7 +179,7 @@ export default function WorkDetail() {
   );
 }
 
-function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: Theme) {
+function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
@@ -209,44 +195,13 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    genresSection: { marginTop: spacing.xxl, width: "100%" },
-    genreTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    genreTag: {
-      backgroundColor: colors.chipBackgroundGenre,
-      borderRadius: radii.pill,
-      paddingHorizontal: 13,
-      paddingVertical: 7,
-      borderWidth: 1,
-      borderColor: colors.chipTextGenre,
-    },
-    genreTagText: {
-      fontFamily: fonts.bodySemiBold,
-      fontSize: typeScale.xs,
-      color: colors.chipTextGenre,
-    },
     aboutSection: { marginTop: spacing.xxl, width: "100%" },
+    savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm, alignSelf: "center", textDecorationLine: "underline" },
+    descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
-    subjectsSection: { marginTop: spacing.xxl, width: "100%" },
-    subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    // Matches how the graph explorer colors subject nodes, so the same
-    // concept reads as the same color whether you're browsing a book/work
-    // page or the graph.
-    subjectTag: {
-      backgroundColor: colors.chipBackgroundSubject,
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 7,
-      borderWidth: 1,
-      borderColor: colors.chipTextSubject,
-    },
-    subjectTagText: {
-      fontFamily: fonts.bodySemiBold,
-      fontSize: typeScale.xs,
-      color: colors.chipTextSubject,
-    },
   });
 }

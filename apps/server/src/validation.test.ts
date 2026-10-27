@@ -67,10 +67,21 @@ describe("isPathEndpointId", () => {
     expect(isPathEndpointId("subject:science_fiction")).toBe(true);
   });
 
-  it("rejects other types, mismatched ids and unslugified subjects", () => {
-    expect(isPathEndpointId("genre:fiction")).toBe(false);
+  it("accepts legacy and unslugified subject and genre ids that slug to a valid subject", () => {
+    expect(isPathEndpointId("subject:science_fiction_--_authorship")).toBe(true);
+    expect(isPathEndpointId("subject:Science Fiction")).toBe(true);
+    expect(isPathEndpointId("genre:fiction")).toBe(true);
+  });
+
+  it("rejects a raw subject id over 200 characters even when it slugifies short", () => {
+    expect(isPathEndpointId(`subject:a${",".repeat(300)}`)).toBe(false);
+    expect(isPathEndpointId(`genre:a${",".repeat(300)}`)).toBe(false);
+  });
+
+  it("rejects other types, mismatched ids and subjects that slug to nothing", () => {
+    expect(isPathEndpointId("editions:OL1W")).toBe(false);
     expect(isPathEndpointId("author:OL1W")).toBe(false);
-    expect(isPathEndpointId("subject:Science Fiction")).toBe(false);
+    expect(isPathEndpointId("subject:,")).toBe(false);
     expect(isPathEndpointId("OL1W")).toBe(false);
   });
 });

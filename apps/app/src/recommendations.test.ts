@@ -2,7 +2,7 @@ import { slugifySubject, type Graph, type Subject, type WorkRef } from "@book-ex
 import { dehydrate, hydrate, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Book, Work } from "@book-explorer/shared";
-import { buildTasteProfile, detailLanded, explain, loadSubjectBooks, mapWithConcurrency, rankRecommendations, recommendationsStatus, reasonHeading, reasonKey, seedsFromCache, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
+import { buildTasteProfile, detailLanded, explain, loadSubjectBooks, groupRecommendations, mapWithConcurrency, MAX_PER_GROUP, rankRecommendations, recommendationsStatus, reasonHeading, reasonKey, seedsFromCache, TOP_AUTHORS, TOP_SUBJECTS, type AuthorSeed } from "./recommendations";
 import type { SavedBookRecord } from "./storage/savedBooks";
 import type { Snapshot } from "./storage/snapshot";
 
@@ -75,13 +75,12 @@ describe("buildTasteProfile", () => {
   });
 
   it("keeps the authors behind the most saved items", () => {
-    const seeds = ["OL1A", "OL2A", "OL2A", "OL3A", "OL3A", "OL4A", "OL4A"].map((id, i) => ({ id, name: id, seedTitle: `Book ${9 - i}` }));
+    const doubled = Array.from({ length: TOP_AUTHORS }, (_, i) => `OL${i + 2}A`).flatMap((id) => [id, id]);
+    const seeds = ["OL1A", ...doubled].map((id, i) => ({ id, name: id, seedTitle: `Book ${String(99 - i).padStart(2, "0")}` }));
     const profile = profileOf(snapshot([]), seeds);
-    expect(profile.authors).toEqual([
-      { id: "OL2A", name: "OL2A", seedTitle: "Book 7" },
-      { id: "OL3A", name: "OL3A", seedTitle: "Book 5" },
-      { id: "OL4A", name: "OL4A", seedTitle: "Book 3" },
-    ]);
+    expect(profile.authors).toHaveLength(TOP_AUTHORS);
+    expect(profile.authors.map((a) => a.id)).toEqual(Array.from({ length: TOP_AUTHORS }, (_, i) => `OL${i + 2}A`));
+    expect(profile.authors[0]).toEqual({ id: "OL2A", name: "OL2A", seedTitle: "Book 97" });
   });
 });
 
@@ -296,5 +295,18 @@ describe("loadSubjectBooks", () => {
     const deps = (found: ReturnType<typeof work>[] | null) => ({ searchSorted: async () => found, classic: async () => ({ books: classic }) });
     expect(await loadSubjectBooks("X", "x", deps([]))).toEqual({ books: classic });
     expect(await loadSubjectBooks("X", "x", deps(null))).toEqual({ books: classic });
+  });
+});
+
+describe("groupRecommendations", () => {
+  const rec = (i: number, label: string) =>
+    ({ work: { openLibraryWorkId: `OL${i}W`, title: `T${i}`, authors: [], coverUrl: null }, score: 1, reason: { kind: "subject" as const, label, seedTitles: ["a"] }, shares: [label] });
+
+  it("groups by reason in first-seen order and caps each group at MAX_PER_GROUP", () => {
+    const recs = [...Array.from({ length: MAX_PER_GROUP + 2 }, (_, i) => rec(i, "X")), rec(99, "Y")];
+    const groups = [...groupRecommendations(recs)];
+    expect(groups.map(([key]) => key)).toEqual(["subject:X", "subject:Y"]);
+    expect(groups[0][1].recs).toHaveLength(MAX_PER_GROUP);
+    expect(groups[0][1].heading).toBe("Because you like X");
   });
 });

@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { getSubjectDetail } from "../services/subjectService.js";
-import { isSubjectSlug } from "../validation.js";
+import { isSubjectSlugInput } from "../validation.js";
 
 export async function subjectsRoutes(app: FastifyInstance) {
   app.get<{ Params: { slug: string } }>("/api/subjects/:slug", async (req, reply) => {
     const { slug } = req.params;
-    if (!isSubjectSlug(slug)) {
+    // A legacy slug (e.g. from an old shared link) is fine; the service answers with the canonical one.
+    if (!isSubjectSlugInput(slug)) {
       reply.code(400);
       return { error: `"${slug}" is not a valid subject slug` };
     }

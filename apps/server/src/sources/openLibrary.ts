@@ -492,14 +492,17 @@ interface AuthorSearchResult {
  * guaranteed correct, but a reasonable best effort for a supplementary data
  * source rather than the primary lookup.
  */
-export async function searchAuthorByName(name: string): Promise<{ openLibraryId: string; name: string } | null> {
-  const url = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(name)}&limit=1`;
+export async function searchAuthors(name: string, limit: number): Promise<{ openLibraryId: string; name: string }[]> {
+  const url = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(name)}&limit=${limit}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
   const data = (await res.json()) as AuthorSearchResult;
-  const doc = data.docs?.[0];
-  return doc ? { openLibraryId: doc.key, name: doc.name } : null;
+  return (data.docs ?? []).map((doc) => ({ openLibraryId: doc.key, name: doc.name }));
+}
+
+export async function searchAuthorByName(name: string): Promise<{ openLibraryId: string; name: string } | null> {
+  return (await searchAuthors(name, 1))[0] ?? null;
 }
 
 // The `volumes/brief` response below doesn't include a work reference at

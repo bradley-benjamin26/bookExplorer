@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -16,6 +18,7 @@ import { useThemedStyles, type Theme } from "../../src/theme";
 export default function ListDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
   const [list, setList] = useState<SavedList | null | undefined>(undefined);
   const [error, setError] = useState("");
@@ -44,7 +47,7 @@ export default function ListDetail() {
     setError("");
     try {
       const file = `${shelfSlug(list?.name ?? "") || "list"}-${today()}.${ext}`;
-      if (ext === "csv") await shareFile(file, await exportListCsv(id), "text/csv");
+      if (ext === "csv") await shareFile(file, await exportListCsv(id, (w) => queryClient.getQueryData<Work>(["work", w])?.isbn ?? null), "text/csv");
       else await shareFile(file, await exportListJson(id), "application/json");
     } catch (e) {
       setError(e instanceof ImportError ? e.message : "Something went wrong. Please try again.");

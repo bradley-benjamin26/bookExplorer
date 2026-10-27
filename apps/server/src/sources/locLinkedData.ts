@@ -1,4 +1,6 @@
+import { slugifySubject } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
+import { TtlCache } from "../cache.js";
 import { USER_AGENT } from "./openLibrary.js";
 
 // id.loc.gov's linked-data vocabulary service for LCSH — distinct from
@@ -65,8 +67,8 @@ function labelVariants(name: string): string[] {
 
 /**
  * Resolves a subject heading's own label (e.g. "Fairy tales") to its LCSH
- * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact,
- * case-insensitive match against the label or its singular/plural variant —
+ * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact
+ * slug match (see slugifySubject) against the label or its singular/plural variant —
  * a left-anchored near-miss like "Fairy tales--Adaptations" is a different,
  * more specific heading and must not be treated as a match. Never throws:
  * any failure (network error, non-ok response, no hits, no match) degrades
@@ -78,12 +80,41 @@ export async function findSubjectHeadingUri(name: string): Promise<string | null
     const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
     if (!res.ok) return null;
     const data = (await res.json()) as Suggest2Response;
-    const targets = labelVariants(name);
-    const hit = (data.hits ?? []).find((h) => targets.includes(h.aLabel?.toLowerCase()));
+    // Compared as slugs: Open Library's collapsed "science fiction authorship" is LCSH's "Science fiction--Authorship".
+    const targets = labelVariants(name).map(slugifySubject);
+    const hit = (data.hits ?? []).find((h) => typeof h.aLabel === "string" && targets.includes(slugifySubject(h.aLabel)));
     return hit?.uri ?? null;
   } catch {
     return null;
   }
+}
+
+// Memory-only, no namespace: keys are user-typed text (same reason as searchCache).
+const suggestCache = new TtlCache<string[]>(1000 * 60 * 60 * 24, 1000);
+const FAILED_SUGGEST_TTL_MS = 60_000;
+
+/**
+ * Autocomplete headings from id.loc.gov (LCSH "subjects" or LCGFT "genreForms"),
+ * shown the way MODS headings are ("A -- B"). Never throws: a failure gives []
+ * and is only remembered for a minute.
+ */
+export function suggestHeadings(vocab: "subjects" | "genreForms", q: string): Promise<string[]> {
+  return suggestCache.wrap(`${vocab}|${q.toLowerCase()}`, async (entry) => {
+    try {
+      const url = `https://id.loc.gov/authorities/${vocab}/suggest2?q=${encodeURIComponent(q)}&count=8`;
+      const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
+      if (res.ok) {
+        const data = (await res.json()) as Suggest2Response;
+        return (data.hits ?? [])
+          .flatMap((h) => (typeof h.aLabel === "string" ? [h.aLabel.replaceAll("--", " -- ")] : []))
+          .slice(0, 8);
+      }
+    } catch {
+      // fall through to the short-lived empty result
+    }
+    entry.ttlMs = FAILED_SUGGEST_TTL_MS;
+    return [];
+  });
 }
 
 const WIKIDATA_ENTITY = /^https?:\/\/www\.wikidata\.org\/entity\/(Q[1-9]\d*)$/;

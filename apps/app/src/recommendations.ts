@@ -6,10 +6,11 @@ import { subjectSortParams } from "./subjectSort";
 
 // Bounds on the candidate fetch: one /api/subjects call per top subject and one
 // /api/graph/author call per top author, FETCH_CONCURRENCY at a time.
-export const TOP_SUBJECTS = 5;
-export const TOP_AUTHORS = 3;
+export const TOP_SUBJECTS = 10;
+export const TOP_AUTHORS = 6;
 export const FETCH_CONCURRENCY = 3;
-export const MAX_RECOMMENDATIONS = 10;
+export const MAX_RECOMMENDATIONS = 60;
+export const MAX_PER_GROUP = 8;
 
 // Each author link counts like a shared subject held by every saved book (ln 2).
 const AUTHOR_WEIGHT = Math.LN2;
@@ -58,6 +59,18 @@ export function reasonHeading({ kind, label, seedTitles }: Reason): string {
   if (kind === "author") return `More by ${label}`;
   if (kind === "influence") return `Connected to ${label}`; // influence edges run either way
   return `Because you like ${label}${seedTitles.length > 1 ? ` (${seedTitles.length} saved)` : ""}`;
+}
+
+/** One group per primary reason, in the order of its best recommendation, each showing at most MAX_PER_GROUP rows. */
+export function groupRecommendations(recs: Recommendation[]): Map<string, { heading: string; recs: Recommendation[] }> {
+  const groups = new Map<string, { heading: string; recs: Recommendation[] }>();
+  for (const r of recs) {
+    const key = reasonKey(r.reason);
+    const group = groups.get(key) ?? { heading: reasonHeading(r.reason), recs: [] };
+    if (group.recs.length < MAX_PER_GROUP) group.recs.push(r);
+    groups.set(key, group);
+  }
+  return groups;
 }
 
 /**

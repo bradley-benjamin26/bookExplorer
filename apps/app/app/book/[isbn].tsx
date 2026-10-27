@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { normalizeIsbn, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
+import { normalizeIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError } from "../../src/api/client";
@@ -17,20 +17,21 @@ import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
-import { AddToListButton } from "../../src/components/AddToListButton";
+import { AddToListButton, type SaveSheetHandle } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
+import { TermsSection } from "../../src/components/TermsSection";
 import { routes } from "../../src/navigation";
-import { addRecentBook } from "../../src/storage/history";
+import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
-import { titleCase } from "../../src/titleCase";
+import { titleRef } from "../../src/webTitle";
 
 const BOOKSHOP_URL = "https://bookshop.org/beta-search?keywords=";
 const WORLDCAT_URL = "https://search.worldcat.org/search?q=bn%3A";
 const OPEN_LIBRARY_URL = "https://openlibrary.org/isbn/";
 
 export default function BookDetail() {
-  const { isbn: rawIsbn } = useLocalSearchParams<{ isbn: string }>();
+  const { isbn: rawIsbn, edit } = useLocalSearchParams<{ isbn: string; edit?: string }>();
   // A typed or pasted ISBN may be hyphenated, but the server returns (and a
   // saved record is keyed by) the bare-digit form — normalizing the route
   // param keeps the saved-record lookup below, and the query cache key, on
@@ -50,9 +51,10 @@ export default function BookDetail() {
   // two are set together everywhere below, so there's no need for a second,
   // separately-tracked boolean that could drift out of sync with this one.
   const [savedRecord, setSavedRecord] = useState<SavedBookRecord | null>(null);
+  const saveSheet = useRef<SaveSheetHandle>(null);
 
   useEffect(() => {
-    if (data) addRecentBook({ isbn: data.isbn, title: data.title, authorNames: data.authors.map((a) => a.name) });
+    if (data) addRecent({ kind: "book", id: data.isbn, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
   }, [data]);
 
   // Re-read on every focus, not just on first load — this screen stays
@@ -71,12 +73,8 @@ export default function BookDetail() {
   // edited, on top of the snapshot taken at save time) is what's shown and
   // edited from here on, rather than whatever the external sources return
   // on this fetch — that's the whole point of saving a book's data locally.
-  const displaySubjects: TaggedTerm[] = savedRecord
-    ? savedRecord.subjects.map((label) => ({ label, sources: [] }))
-    : (data?.subjects ?? []);
-  const displayGenres: TaggedTerm[] = savedRecord
-    ? savedRecord.genres.map((label) => ({ label, sources: [] }))
-    : (data?.genres ?? []);
+  const displaySubjects = savedRecord?.subjects ?? data?.subjects.map((t) => t.label) ?? [];
+  const displayGenres = savedRecord?.genres ?? data?.genres.map((t) => t.label) ?? [];
 
   if (isLoading) {
     return (
@@ -121,6 +119,7 @@ export default function BookDetail() {
       <RatingBadge rating={data.rating} />
       <ShareButton title={data.title} href={routes.book(data.isbn)} style={{ marginTop: 8 }} />
       <AddToListButton
+        ref={saveSheet}
         style={{ marginTop: 8 }}
         member={{ type: "book", id: data.isbn, title: data.title }}
         onSave={async () => {
@@ -134,75 +133,24 @@ export default function BookDetail() {
         <SavedRecordEditor record={savedRecord} update={(c) => updateSavedBook(savedRecord.isbn, c)} onChange={setSavedRecord} />
       )}
 
-      {(data.format || displayGenres.length > 0) && (
-        <View style={styles.metaRow}>
-          {data.format && (
-            <View style={styles.metaColumn}>
-              <Text style={styles.sectionTitle} accessibilityRole="header">Format</Text>
-              <View style={styles.genreTags}>
-                <View style={styles.formatTag}>
-                  <Text style={styles.formatTagText}>{data.format}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {displayGenres.length > 0 && (
-            <View style={styles.metaColumn}>
-              <Text style={styles.sectionTitle} accessibilityRole="header">Genre</Text>
-              <View style={styles.genreTags}>
-                {displayGenres.map((genre) => (
-                  <Pressable
-                    key={genre.label}
-                    style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
-                    onPress={() => router.push(routes.subject(slugifySubject(genre.label)))}
-                    accessibilityRole="button"
-                    accessibilityLabel={titleCase(genre.label)}
-                  >
-                    <Text style={styles.genreTagText}>
-                      {titleCase(genre.label)}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-      )}
-
-      {data.awards.length > 0 && (
+      {data.format && (
         <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
-          <View style={styles.genreTags}>
-            {data.awards.map((award) => (
-              <View key={award} style={styles.genreTag}>
-                <Text style={styles.genreTagText}>{titleCase(award)}</Text>
-              </View>
-            ))}
+          <Text style={styles.sectionTitle} accessibilityRole="header">Format</Text>
+          <View style={styles.formatTag}>
+            <Text style={styles.formatTagText}>{data.format}</Text>
           </View>
         </View>
       )}
 
-      {displaySubjects.length > 0 && (
-        <View style={styles.subjectsSection}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">Subjects</Text>
-          <View style={styles.subjectTags}>
-            {displaySubjects.slice(0, 12).map((subject) => (
-              <Pressable
-                key={subject.label}
-                style={({ pressed }) => [styles.subjectTag, pressed && styles.pressed]}
-                onPress={() => router.push(routes.subject(slugifySubject(subject.label)))}
-                accessibilityRole="button"
-                accessibilityLabel={titleCase(subject.label)}
-              >
-                <Text style={styles.subjectTagText}>
-                  {titleCase(subject.label)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      )}
+      <TermsSection
+        subjects={displaySubjects}
+        genres={displayGenres}
+        awards={data.awards}
+        record={savedRecord}
+        onUpdate={(c) => updateSavedBook(data.isbn, c).then((r) => r && setSavedRecord(r))}
+        onRequestSave={() => saveSheet.current?.open()}
+        startUnlocked={edit === "1"}
+      />
 
       {savedRecord?.notes ? (
         <View style={styles.subjectsSection}>
@@ -236,7 +184,13 @@ export default function BookDetail() {
 
       <View style={styles.findSection}>
         <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        {data.loc && (data.loc.lcc || data.loc.ddc) && (
+          <Text style={styles.callNumber}>
+            {[data.loc.lcc && `LC call number ${data.loc.lcc}`, data.loc.ddc && `Dewey ${data.loc.ddc}`].filter(Boolean).join(" · ")}
+          </Text>
+        )}
         <Pressable
+          ref={titleRef("View this book on Open Library")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
           accessibilityRole="button"
@@ -248,6 +202,7 @@ export default function BookDetail() {
           </View>
         </Pressable>
         <Pressable
+          ref={titleRef("Search Bookshop.org for this book")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${BOOKSHOP_URL}${data.isbn}`)}
           accessibilityRole="button"
@@ -259,6 +214,7 @@ export default function BookDetail() {
           </View>
         </Pressable>
         <Pressable
+          ref={titleRef("Search WorldCat for this book")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
           onPress={() => Linking.openURL(`${WORLDCAT_URL}${data.isbn}`)}
           accessibilityRole="button"
@@ -269,6 +225,19 @@ export default function BookDetail() {
             <ChevronRight size={18} color={theme.colors.inkFaint} />
           </View>
         </Pressable>
+        {data.loc && (
+          <Pressable
+            style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+            onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}
+            accessibilityRole="button"
+            accessibilityLabel="View in LOC catalog"
+          >
+            <Text style={styles.findRowText}>View in LOC catalog</Text>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <ChevronRight size={18} color={theme.colors.inkFaint} />
+            </View>
+          </Pressable>
+        )}
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
 
@@ -280,6 +249,10 @@ export default function BookDetail() {
           {data.descriptionSource === "wikipedia" && data.descriptionSourceUrl ? (
             <Pressable onPress={() => Linking.openURL(data.descriptionSourceUrl!)}>
               <Text style={styles.descriptionSource}>via Wikipedia</Text>
+            </Pressable>
+          ) : data.descriptionSource === "loc" && data.loc ? (
+            <Pressable onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}>
+              <Text style={styles.descriptionSource}>via Library of Congress</Text>
             </Pressable>
           ) : data.descriptionSource === "googleBooks" ? (
             <GoogleBooksAttribution
@@ -309,38 +282,12 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    // Format and Genre are two distinct labeled sections (different
-    // headings, different tag styling) rather than tags sharing one row —
-    // but stacking each in its own full-width block wasted vertical space
-    // when Format is just a single short tag, so they sit side by side in
-    // one row instead, each keeping its own heading. `flexWrap` lets Genre's
-    // tags fall to a second line under its own heading if the row gets too
-    // narrow, without disturbing Format's column.
-    metaRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      marginTop: spacing.xxl,
-      width: "100%",
-      justifyContent: "flex-start",
-      gap: spacing.xl,
-    },
-    // flexShrink lets a long genre list wrap within the row instead of running off the right edge.
-    metaColumn: { alignItems: "flex-start", flexShrink: 1 },
-    genreTags: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start", gap: spacing.sm },
-    genreTag: {
-      backgroundColor: colors.chipBackgroundGenre,
-      borderRadius: radii.pill,
-      paddingHorizontal: 13,
-      paddingVertical: 7,
-      borderWidth: 1,
-      borderColor: colors.chipTextGenre,
-    },
-    genreTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextGenre },
     // A format tag isn't a link to anywhere (there's no "format" browse page
     // the way there is for a genre/subject) — an outlined, neutral style
     // instead of the genre tags' filled pink signals that difference
     // without a caption.
     formatTag: {
+      alignSelf: "flex-start",
       backgroundColor: colors.chipBackground,
       borderRadius: radii.pill,
       paddingHorizontal: 13,
@@ -353,6 +300,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
     viewMore: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
+    callNumber: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginBottom: spacing.sm },
     findSection: { marginTop: spacing.xxl, width: "100%" },
     findRow: {
       flexDirection: "row",
@@ -367,18 +315,5 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     pressed: { opacity: 0.6 },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
-    subjectTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-    // Matches how the graph explorer colors subject nodes, so the same
-    // concept reads as the same color whether you're browsing a book/work
-    // page or the graph.
-    subjectTag: {
-      backgroundColor: colors.chipBackgroundSubject,
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 7,
-      borderWidth: 1,
-      borderColor: colors.chipTextSubject,
-    },
-    subjectTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });
 }

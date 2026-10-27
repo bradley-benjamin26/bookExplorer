@@ -330,7 +330,7 @@ function toConceptRelations(
   });
 }
 
-/** Influenced-by (P737, and its inverse), notable works (P800), and literary movement (P135). */
+/** Influenced-by (P737, and its inverse), notable works (P800), and literary movement (P135), and awards (P166). */
 export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[]> {
   if (!isValidQid(qid)) return [];
 
@@ -343,14 +343,16 @@ export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[
   const influencedByQids = claimItemIds(center, "P737");
   const notableWorkQids = claimItemIds(center, "P800");
   const movementQids = claimItemIds(center, "P135");
+  const awardQids = claimItemIds(center, "P166");
 
-  const resolved = await resolveItems([...influencedByQids, ...influencedQids, ...notableWorkQids, ...movementQids]);
+  const resolved = await resolveItems([...influencedByQids, ...influencedQids, ...notableWorkQids, ...movementQids, ...awardQids]);
 
   return [
     ...toAuthorRelations(influencedByQids, "influencedBy", resolved),
     ...toAuthorRelations(influencedQids, "influenced", resolved),
     ...toAuthorRelations(notableWorkQids, "notableWork", resolved),
     ...toAuthorRelations(movementQids, "movement", resolved),
+    ...toAuthorRelations(awardQids, "award", resolved),
   ];
 }
 

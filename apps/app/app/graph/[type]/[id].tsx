@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Graph, GraphNode } from "@book-explorer/shared";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ChevronLeft, ChevronRight, Crosshair, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Circle, Line, Rect, Text as SvgText } from "react-native-svg";
 import { fetchGraph, fetchPath, type GraphCenterType } from "../../../src/api/client";
+import { exploringTitle } from "../../../src/graphTitle";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
@@ -36,6 +37,7 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
     // highlight — uses on the work page, so the two visibly read as the
     // same thing rather than an arbitrary extra graph color.
     editions: colors.warning,
+    award: colors.graphAward,
   };
 }
 
@@ -307,6 +309,8 @@ export default function GraphExplorer() {
           : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
   }));
 
+  const titleScreen = <Stack.Screen options={{ title: exploringTitle(data?.nodes.find((n) => n.id === data.centerId)?.label) }} />;
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -372,6 +376,7 @@ export default function GraphExplorer() {
     const centerLabel = layout.nodes[0]?.label ?? "this";
     return (
       <View style={styles.center}>
+        {titleScreen}
         <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
         <Text style={styles.emptyGraphText}>No linked connections found for {centerLabel} yet.</Text>
       </View>
@@ -385,6 +390,7 @@ export default function GraphExplorer() {
 
   return (
     <View style={styles.container}>
+      {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
@@ -423,9 +429,12 @@ export default function GraphExplorer() {
           href={routes.graph(center.type, center.id, filterToParams(filter))}
         />
       </View>
-      <Modal visible={filterOpen} transparent animationType="slide" onRequestClose={() => setFilterOpen(false)}>
+      <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <View style={styles.sheetBackdrop}>
-          <ScrollView style={styles.sheet} accessibilityViewIsModal>
+          {/* A sibling behind the popup, so the popup's controls are not nested inside a button. */}
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setFilterOpen(false)} accessibilityLabel="Close filter" />
+          <View style={styles.sheet}>
+            <ScrollView style={{ flexShrink: 1 }} accessibilityViewIsModal>
             <Text accessibilityRole="header" style={styles.sheetTitle}>Filter graph</Text>
             <Text style={styles.sheetHeading}>Node types</Text>
             {[...new Set([...(data.nodes.map((n) => n.type) as string[]), ...filter.hiddenTypes])].map((t) => (
@@ -448,7 +457,8 @@ export default function GraphExplorer() {
             <Button variant="pill" onPress={() => setFilterOpen(false)} style={{ marginVertical: 16 }}>
               Done
             </Button>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
       {history.length > 0 && (
@@ -482,7 +492,7 @@ export default function GraphExplorer() {
             return (
               <View key={node.id} style={styles.listRow}>
                 <Pressable
-                  ref={titleRef(href ? `Open ${node.label}` : `${node.label} has no page yet`)}
+                  ref={titleRef(href ? (isCenter ? `Open ${node.label}` : `View ${node.label}`) : `${node.label} has no page yet`)}
                   onPress={() => href && router.push(href)}
                   disabled={!href}
                   accessibilityRole="button"
@@ -675,7 +685,7 @@ export default function GraphExplorer() {
           return (
             <Pressable
               key={node.id}
-              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `Center the graph on ${node.label}`)}
+              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `View ${node.label}`)}
               onPress={() => handleNodePress(node)}
               disabled={!node.navigable}
               accessibilityRole="button"
@@ -744,6 +754,7 @@ function FilterRow({ label, checked, onPress }: { label: string; checked: boolea
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable
+      ref={titleRef(checked ? `Hide ${label}` : `Show ${label}`)}
       onPress={onPress}
       accessibilityRole="checkbox"
       accessibilityLabel={label}
@@ -808,13 +819,14 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     },
     pressed: { opacity: 0.6 },
     toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
-    sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+    sheetBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {
+      width: "100%",
+      maxWidth: 360,
       maxHeight: "70%",
       backgroundColor: colors.paper,
       padding: spacing.lg,
-      borderTopLeftRadius: radii.sm,
-      borderTopRightRadius: radii.sm,
+      borderRadius: radii.sm,
     },
     sheetTitle: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
     sheetHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.md },

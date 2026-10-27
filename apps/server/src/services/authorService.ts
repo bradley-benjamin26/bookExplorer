@@ -76,6 +76,7 @@ export function getAuthorDetail(openLibraryId: string): Promise<Author | null> {
       bio: wikipedia?.text ?? ol.bio,
       bioSource: wikipedia ? "wikipedia" : ol.bio ? "openLibrary" : null,
       bioSourceUrl: wikipedia?.url ?? null,
+      photoUrl: wikipedia?.imageUrl ?? null,
       birthDate: ol.birthDate,
       deathDate: ol.deathDate,
       relations,

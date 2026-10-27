@@ -1,20 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import type { GraphNode, WorkRef } from "@book-explorer/shared";
+import type { GraphNode } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { AccessibilityInfo, ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { fetchPath, searchBooks } from "../src/api/client";
+import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { fetchPath, searchAuthors, searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
-import { connectionStep } from "../src/connectionSteps";
-import { routes } from "../src/navigation";
+import { connectionStep, type Endpoint } from "../src/connectionSteps";
+import { nodeHref, routes } from "../src/navigation";
+import { titleRef } from "../src/webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 // Same debounce and minimum as the search screen, for the same reasons.
 const DEBOUNCE_MS = 400;
 const MIN_QUERY_LENGTH = 3;
+const MAX_AUTHOR_ROWS = 3;
 // Matches the server's 25 s path search budget.
 const SEARCHING_MESSAGE = "Searching… this can take up to 25 seconds.";
 
@@ -26,10 +29,10 @@ export default function Connection() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   // Set only when opened from My Library, where no starting book comes in the route.
-  const [start, setStart] = useState<WorkRef | null>(null);
-  const [target, setTarget] = useState<WorkRef | null>(null);
-  const from = params.from ?? (start ? `work:${start.openLibraryWorkId}` : undefined);
-  const label = params.label ?? start?.title ?? "this item";
+  const [start, setStart] = useState<Endpoint | null>(null);
+  const [target, setTarget] = useState<Endpoint | null>(null);
+  const from = params.from ?? start?.id;
+  const label = params.label ?? start?.label ?? "this item";
   const step = connectionStep(params.from, start, target);
 
   useEffect(() => {
@@ -44,7 +47,13 @@ export default function Connection() {
     enabled: step !== "result" && trimmedQuery.length >= MIN_QUERY_LENGTH,
   });
 
-  const to = target ? `work:${target.openLibraryWorkId}` : "";
+  const authors = useQuery({
+    queryKey: ["searchAuthors", trimmedQuery],
+    queryFn: () => searchAuthors(trimmedQuery),
+    enabled: step !== "result" && trimmedQuery.length >= MIN_QUERY_LENGTH,
+  });
+
+  const to = target?.id ?? "";
   const path = useQuery({
     queryKey: ["path", from, to],
     queryFn: ({ signal }) => fetchPath(from!, to, signal),
@@ -73,28 +82,37 @@ export default function Connection() {
   const [fromType, fromId] = [from?.slice(0, sep), from?.slice(sep + 1)];
 
   if (step !== "result" || !target) {
+    const pick = (endpoint: Endpoint) => {
+      if (step === "pickStart") {
+        setStart(endpoint);
+        setQuery("");
+        setDebouncedQuery("");
+      } else setTarget(endpoint);
+    };
+    const authorRows = (authors.data ?? []).filter((a) => `author:${a.openLibraryId}` !== from).slice(0, MAX_AUTHOR_ROWS);
+    const bookRows = (search.data ?? []).filter((w) => `work:${w.openLibraryWorkId}` !== from);
     return (
       <FlatList
         style={styles.container}
         contentContainerStyle={styles.content}
-        data={(search.data ?? []).filter((w) => `work:${w.openLibraryWorkId}` !== from)}
+        data={bookRows}
         keyExtractor={(item) => item.openLibraryWorkId}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View>
             <Text style={styles.heading} accessibilityRole="header">
-              {step === "pickStart" ? "Choose the first book" : `Connect ${label} to…`}
+              {step === "pickStart" ? "Choose the first book or author" : `Connect ${label} to…`}
             </Text>
             <Text style={styles.howTitle} accessibilityRole="header">
               How it works
             </Text>
             <Text style={styles.explainer}>
-              Pick two books. Shelf Thread searches outward from the first: through its authors, subjects, series, and the writers who influenced them, up to 4 steps away, until it reaches the second. You'll see up to three connections, best first, and can open each one on the graph. A search can take up to 25 seconds.
+              Pick two books or authors. Shelf Thread searches outward from the first: through its authors, subjects, series, and the writers who influenced them, up to 4 steps away, until it reaches the second. You'll see up to three connections, best first, and can open each one on the graph. A search can take up to 25 seconds.
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="Search for a book"
-              accessibilityLabel="Search for a book to connect to"
+              placeholder="Search for a book or author"
+              accessibilityLabel="Search for a book or author to connect to"
               placeholderTextColor={theme.colors.inkFaint}
               value={query}
               onChangeText={setQuery}
@@ -103,15 +121,34 @@ export default function Connection() {
             />
             {search.isLoading && <ActivityIndicator style={styles.loading} color={theme.colors.cover} />}
             {search.isError && <Text style={styles.errorText}>{search.error.message}</Text>}
+            {authorRows.length > 0 && (
+              <View>
+                <Text style={styles.sectionTitle} accessibilityRole="header">
+                  Authors
+                </Text>
+                {authorRows.map((a) => (
+                  <Pressable
+                    key={a.openLibraryId}
+                    ref={titleRef(`Choose ${a.name}`)}
+                    style={({ pressed }) => [styles.authorRow, pressed && styles.pressed]}
+                    onPress={() => pick({ id: `author:${a.openLibraryId}`, label: a.name })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${a.name}, Author`}
+                  >
+                    <Text style={styles.nodeType}>{NODE_LABELS.author}</Text>
+                    <Text style={styles.nodeLabel}>{a.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {bookRows.length > 0 && (
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Books
+              </Text>
+            )}
           </View>
         }
-        renderItem={({ item }) => <WorkListRow work={item} onPress={() => {
-          if (step === "pickStart") {
-            setStart(item);
-            setQuery("");
-            setDebouncedQuery("");
-          } else setTarget(item);
-        }} />}
+        renderItem={({ item }) => <WorkListRow work={item} onPress={() => pick({ id: `work:${item.openLibraryWorkId}`, label: item.title })} />}
         ListFooterComponent={<Footer />}
       ListFooterComponentStyle={{ marginTop: "auto" }}
       />
@@ -121,7 +158,7 @@ export default function Connection() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading} accessibilityRole="header">
-        {label} to {target.title}
+        {label} to {target.label}
       </Text>
       {path.isFetching && (
         <View style={styles.loading} accessibilityLabel={SEARCHING_MESSAGE} accessibilityLiveRegion="polite" accessible>
@@ -147,20 +184,44 @@ export default function Connection() {
                 <Text style={styles.pathTitle} accessibilityRole="header">
                   {name}: {found.summary}
                 </Text>
-                {pathSteps(found).map((step) => (
-                  <View key={step.node.id} accessible accessibilityLabel={step.accessibilityLabel}>
-                    {step.relation && (
-                      <View style={styles.link}>
-                        <View style={styles.linkLine} />
-                        <Text style={styles.linkText}>{step.relation}</Text>
+                {pathSteps(found).map((step) => {
+                  const href = step.node.navigable ? nodeHref(step.node.id) : null;
+                  const body = (
+                    <>
+                      <View style={styles.nodeText}>
+                        <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
+                        <Text style={styles.nodeLabel}>{step.node.label}</Text>
                       </View>
-                    )}
-                    <View style={styles.node}>
-                      <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
-                      <Text style={styles.nodeLabel}>{step.node.label}</Text>
+                      {href && <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />}
+                    </>
+                  );
+                  return (
+                    <View key={step.node.id}>
+                      {step.relation && (
+                        // The relation is part of the step's label, so it isn't a second screen reader stop.
+                        <View style={styles.link} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                          <View style={styles.linkLine} />
+                          <Text style={styles.linkText}>{step.relation}</Text>
+                        </View>
+                      )}
+                      {href ? (
+                        <Pressable
+                          ref={titleRef(`Open ${step.node.label}`)}
+                          style={({ pressed }) => [styles.node, pressed && styles.pressed]}
+                          onPress={() => router.push(href)}
+                          accessibilityRole="link"
+                          accessibilityLabel={step.accessibilityLabel}
+                        >
+                          {body}
+                        </Pressable>
+                      ) : (
+                        <View style={styles.node} accessible accessibilityLabel={step.accessibilityLabel}>
+                          {body}
+                        </View>
+                      )}
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
                 <Button
                   variant={i === 0 ? "primary" : "pill"}
                   onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to, pathIndex: String(i) }))}
@@ -203,6 +264,9 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     content: { flexGrow: 1, padding: spacing.lg },
     explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
     howTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.xs },
+    sectionTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, marginBottom: spacing.xs },
+    authorRow: { borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md, marginBottom: spacing.sm },
+    pressed: { opacity: 0.7 },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     input: {
       borderWidth: 1,
@@ -219,7 +283,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
     chain: { marginTop: spacing.xl },
     pathTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.sm },
-    node: { borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md },
+    node: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md },
+    nodeText: { flex: 1 },
     nodeType: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
     nodeLabel: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink },
     link: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginLeft: spacing.lg, minHeight: 40 },

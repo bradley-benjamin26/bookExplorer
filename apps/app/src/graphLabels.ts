@@ -6,6 +6,7 @@ export const NODE_LABELS: Record<GraphNode["type"], string> = {
   subject: "Subject",
   genre: "Genre",
   editions: "Editions",
+  award: "Award",
 };
 
 // Each edge already reads correctly as "source <label> target" — direction
@@ -24,6 +25,7 @@ export const RELATION_LABELS: Record<string, string> = {
   hasBook: "includes",
   broader: "broader topic",
   editions: "has",
+  won: "won",
 };
 
 export const relationLabel = (relation: string) => RELATION_LABELS[relation] ?? relation;

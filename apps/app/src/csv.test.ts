@@ -82,6 +82,20 @@ describe("booksToCsv", () => {
     expect([cell("Title"), cell("Author"), cell("ISBN"), cell("ISBN13"), cell("Bookshelves"), cell("Private Notes")]).toEqual(["Emma", "Jane Austen", "", "", "classics", "n"]);
   });
 
+  it("a saved work's ISBN cell comes from workIsbn, an ISBN-10 in ISBN", () => {
+    const work: SavedWorkRecord = {
+      schemaVersion: 1, updatedAt: 1, openLibraryWorkId: "OL1W", title: "Emma", authorNames: [],
+      subjects: [], genres: [], notes: "", savedAt: 1,
+    };
+    const cells = (isbn: string | null) => {
+      const [header, row] = parseCsv(booksToCsv([], [], [work], () => isbn));
+      return [row[header.indexOf("ISBN")], row[header.indexOf("ISBN13")]];
+    };
+    expect(cells("9780441013593")).toEqual(["", '="9780441013593"']);
+    expect(cells("0441013597")).toEqual(['="0441013597"', ""]);
+    expect(cells(null)).toEqual(["", ""]);
+  });
+
   it("Bookshelves holds the book's live book-list names as Goodreads shelf slugs, never subjects", () => {
     const hugo = { ...record, subjects: ["Award:Hugo_Award=1966"] };
     const lists = [list("Book Club 2026"), list("Gone", { deletedAt: 3 }), list("Authors", { kind: "author" }), list("Other", { members: [] })];

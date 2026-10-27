@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Image } from "expo-image";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
@@ -12,6 +14,7 @@ import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { addRecent } from "../../src/storage/history";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
@@ -20,6 +23,7 @@ const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
   { relation: "influenced", title: "Influenced" },
   { relation: "notableWork", title: "Notable Works" },
   { relation: "movement", title: "Literary Movement" },
+  { relation: "award", title: "Awards" },
 ];
 
 export default function AuthorDetail() {
@@ -32,6 +36,10 @@ export default function AuthorDetail() {
     queryFn: () => fetchAuthor(id),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (data) addRecent({ kind: "author", id: data.openLibraryId, title: data.name, subtitle: null });
+  }, [data]);
 
   if (isLoading) {
     return (
@@ -48,6 +56,22 @@ export default function AuthorDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
+      {data.photoUrl && (
+        <>
+          <Image
+            source={{ uri: data.photoUrl }}
+            style={styles.photo}
+            contentFit="cover"
+            accessibilityLabel={`Photo of ${data.name}`}
+          />
+          {/* Commons images carry their own licences; the Wikipedia page credits them. */}
+          {data.bioSourceUrl && (
+            <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => Linking.openURL(data.bioSourceUrl!)}>
+              <Text style={styles.photoCredit}>Photo via Wikipedia</Text>
+            </Pressable>
+          )}
+        </>
+      )}
       <Text style={styles.name} accessibilityRole="header">{data.name}</Text>
       {(data.birthDate || data.deathDate) && (
         <Text style={styles.dates}>
@@ -148,6 +172,8 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+    photo: { width: 120, height: 150, borderRadius: 6 },
+    photoCredit: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.xs, marginBottom: spacing.md },
     name: { fontFamily: fonts.display, fontSize: typeScale.lg, letterSpacing: -0.3, color: colors.ink },
     dates: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
     bio: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, lineHeight: 24 },

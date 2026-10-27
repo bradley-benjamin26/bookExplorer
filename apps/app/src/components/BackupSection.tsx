@@ -1,3 +1,4 @@
+import type { Work } from "@book-explorer/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
@@ -32,6 +33,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
   // Merge/Replace are async; a second press mid-apply would race the first one's writes.
   const applying = useRef(false);
   const queryClient = useQueryClient();
+  const workIsbn = (id: string) => queryClient.getQueryData<Work>(["work", id])?.isbn ?? null;
   // Leaving the screen pauses a running CSV import, so it can't run on unseen or overlap one started on return.
   useEffect(() => () => {
     stopRequested.current = true;
@@ -121,7 +123,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
         </Button>
         <Button
           variant="pill"
-          onPress={() => attempt(async () => shareFile(`book-explorer-books-${today()}.csv`, await exportCsv(), "text/csv"))}
+          onPress={() => attempt(async () => shareFile(`book-explorer-books-${today()}.csv`, await exportCsv(workIsbn), "text/csv"))}
           accessibilityLabel="Export books as CSV"
         >
           Export CSV

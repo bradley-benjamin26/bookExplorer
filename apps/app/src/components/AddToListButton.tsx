@@ -1,6 +1,6 @@
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { applyListChanges, listChanges } from "../storage/listMembership";
 import {
@@ -88,6 +88,9 @@ export function CreateListForm({
   );
 }
 
+/** Lets a parent open the list sheet itself. */
+export type SaveSheetHandle = { open: () => void };
+
 const LOAD_ERROR = "Couldn't load your lists. Try again.";
 
 /**
@@ -100,11 +103,16 @@ export function AddToListButton({
   onSave,
   onChange,
   style,
+  hidden,
+  ref,
 }: {
   member: Omit<ListMember, "addedAt">;
   onSave: () => Promise<unknown>;
   onChange?: () => void;
   style?: StyleProp<ViewStyle>;
+  /** Shows no pill, for a parent that opens the sheet through `ref`. */
+  hidden?: boolean;
+  ref?: Ref<SaveSheetHandle>;
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -167,6 +175,7 @@ export function AddToListButton({
       refreshStar();
     }
   };
+  useImperativeHandle(ref, () => ({ open: show }));
   const handleCreated = async (list: SavedList) => {
     setChecked((prev) => new Set(prev).add(list.id));
     setCreating(false);
@@ -175,9 +184,9 @@ export function AddToListButton({
 
   return (
     <>
-      <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
+      {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={show} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
-      </Button>
+      </Button>}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.backdrop}>
           <View style={styles.sheet}>

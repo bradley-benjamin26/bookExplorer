@@ -55,8 +55,13 @@ export const shelfSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]
 // into 9.78E+12; readBookCsv unwraps it. Added after noFormula, which would neutralize the "=".
 const isbnCell = (isbn: string) => `="${isbn}"`;
 
-/** Live saved books and works as a Goodreads-style CSV: the names of the book lists an item is in are its shelves. A work has no ISBN, so its ISBN cells are empty. */
-export function booksToCsv(books: SavedBookRecord[], lists: SavedList[], works: SavedWorkRecord[] = []): string {
+/** Live saved books and works as a Goodreads-style CSV: the names of the book lists an item is in are its shelves. A work has no ISBN of its own, so its ISBN cells come from `workIsbn` (empty when it gives none). */
+export function booksToCsv(
+  books: SavedBookRecord[],
+  lists: SavedList[],
+  works: SavedWorkRecord[] = [],
+  workIsbn: (workId: string) => string | null = () => null
+): string {
   const bookLists = lists.filter((l) => l.kind === "book" && !l.deletedAt);
   const shelves = (type: "book" | "work", id: string) =>
     bookLists
@@ -64,18 +69,17 @@ export function booksToCsv(books: SavedBookRecord[], lists: SavedList[], works: 
       .map((l) => shelfSlug(l.name))
       .filter(Boolean)
       .join(", ");
-  const row = (title: string, authors: string[], shelf: string, notes: string, savedAt: number) =>
-    [title, authors[0] ?? "", authors.slice(1).join(", "), "", "", shelf, "to-read", notes, goodreadsDate(savedAt)].map(noFormula);
+  const row = (title: string, authors: string[], shelf: string, notes: string, savedAt: number, isbn: string | null) => {
+    const r = [title, authors[0] ?? "", authors.slice(1).join(", "), "", "", shelf, "to-read", notes, goodreadsDate(savedAt)].map(noFormula);
+    if (isbn) r[isbn.length === 10 ? 3 : 4] = isbnCell(isbn);
+    return r;
+  };
   const bookRows = books
     .filter((b) => !b.deletedAt)
-    .map((b) => {
-      const r = row(b.title, b.authorNames, shelves("book", b.isbn), b.notes, b.savedAt);
-      r[b.isbn.length === 10 ? 3 : 4] = isbnCell(b.isbn);
-      return r;
-    });
+    .map((b) => row(b.title, b.authorNames, shelves("book", b.isbn), b.notes, b.savedAt, b.isbn));
   const workRows = works
     .filter((w) => !w.deletedAt)
-    .map((w) => row(w.title, w.authorNames, shelves("work", w.openLibraryWorkId), w.notes, w.savedAt));
+    .map((w) => row(w.title, w.authorNames, shelves("work", w.openLibraryWorkId), w.notes, w.savedAt, workIsbn(w.openLibraryWorkId)));
   return toCsv([EXPORT_HEADER, ...bookRows, ...workRows]);
 }
 

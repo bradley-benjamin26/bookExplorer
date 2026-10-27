@@ -2,13 +2,14 @@ import { splitSubjectTerms, type Work } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
+import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByAuthor, findWorkQid, optionalSource } from "./bookEnrichment.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
 /** The parts of a work that path search links through. */
-export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "editions">;
+export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "awards" | "editions">;
 
 const workLinksCache = new TtlCache<WorkLinks | null>(1000 * 60 * 60, 1000, "workLinks");
 
@@ -25,11 +26,13 @@ export function getWorkLinks(workId: string): Promise<WorkLinks | null> {
   return workLinksCache.wrap(workId, async () => {
     const ol = await openLibrary.getWork(workId, { editions: false });
     if (!ol) return null;
+    const terms = splitSubjectTerms(ol.subjects);
     return {
       openLibraryWorkId: workId,
       title: ol.title,
       authors: ol.authors,
-      subjects: mergeTaggedTerms({ source: "openLibrary", labels: ol.subjects }),
+      subjects: mergeTaggedTerms({ source: "openLibrary", labels: terms.subjects }),
+      awards: terms.awards,
       genres: [],
       editions: [],
     };
@@ -74,9 +77,15 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     ]);
 
     const olTerms = splitSubjectTerms(ol.subjects);
+    const olDescription = englishOrNull(ol.description);
+    // Only with an LCCN, since the summary is credited to (and linked from) its catalog record.
+    const locSummary = locMetadata.lccn ? englishOrNull(locMetadata.summary) : null;
     const result: Work = {
       openLibraryWorkId: workId,
       ...ol,
+      description: olDescription ?? locSummary,
+      descriptionSource: olDescription ? "openLibrary" : locSummary ? "loc" : null,
+      ...(locMetadata.lccn && { loc: { lcc: locMetadata.lcc, ddc: locMetadata.ddc, lccn: locMetadata.lccn } }),
       // Same Open-Library-then-Hardcover cover fallback as a scanned book —
       // no Google Books here (see above), so a work whose edition Open
       // Library has no cover recorded for just has none instead of falling

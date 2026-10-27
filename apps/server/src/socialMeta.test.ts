@@ -41,6 +41,11 @@ describe("pageMeta", () => {
     });
   });
 
+  it("author page uses the photo when there is one", async () => {
+    vi.mocked(getAuthorDetail).mockResolvedValue({ name: "Ann", bio: "b", photoUrl: "https://p/ann.jpg" } as never);
+    expect((await pageMeta("/author/OL1A"))?.image).toBe("https://p/ann.jpg");
+  });
+
   it("subject page uses the first book's cover; book page uses its isbn lookup", async () => {
     vi.mocked(getSubjectDetail).mockResolvedValue({
       name: "Dragons",
@@ -58,7 +63,7 @@ describe("pageMeta", () => {
   });
 
   it("invalid id or unknown path → null, no service call", async () => {
-    for (const p of ["/work/nope", "/book/123", "/author/OL1W", "/subject/Not A Slug", "/graph/x/OL1W", "/other", "/", "/work/OL1W/extra"]) {
+    for (const p of ["/work/nope", "/book/123", "/author/OL1W", "/subject/, --", "/graph/x/OL1W", "/other", "/", "/work/OL1W/extra"]) {
       expect(await pageMeta(p)).toBeNull();
     }
     expect(getWorkDetail).not.toHaveBeenCalled();
@@ -97,7 +102,12 @@ describe("renderSocialTags", () => {
     expect(html).toContain("<title>Shelf Thread</title>");
     expect(html).toContain("https://shelfthread.com/og-image.png");
     expect(html).toContain('property="og:site_name"');
-    expect(html).toContain('name="twitter:card" content="summary"');
+    expect(html).toContain('name="twitter:card" content="summary_large_image"');
+  });
+
+  it("og:image:alt is the escaped title", () => {
+    const html = renderSocialTags({ title: 'Dune "x"', description: "d", image: "https://c/1.jpg" }, "https://shelfthread.com/");
+    expect(html).toContain('<meta property="og:image:alt" content="Dune &quot;x&quot; · Shelf Thread" />');
   });
 });
 

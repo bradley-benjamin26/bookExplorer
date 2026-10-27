@@ -1,8 +1,7 @@
-import type { WorkRef } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
 import { connectionStep } from "./connectionSteps";
 
-const work = { openLibraryWorkId: "OL1W", title: "A" } as WorkRef;
+const work = { id: "work:OL1W", label: "A" };
 
 describe("connectionStep", () => {
   it("from a work page, starts at the target then shows the result", () => {

@@ -9,7 +9,10 @@ import type { ListMember } from "./storage/savedLists";
 // contain commas and parentheses (e.g. "british_and_irish_fiction_(fictional...)"),
 // and manually-typed ISBNs can contain anything at all.
 export const routes = {
-  book: (isbn: string): Href => ({ pathname: "/book/[isbn]", params: { isbn } }),
+  book: (isbn: string, options?: { edit?: boolean }): Href => ({
+    pathname: "/book/[isbn]",
+    params: options?.edit ? { isbn, edit: "1" } : { isbn },
+  }),
   author: (id: string): Href => ({ pathname: "/author/[id]", params: { id } }),
   subject: (slug: string): Href => ({ pathname: "/subject/[slug]", params: { slug } }),
   work: (id: string, options?: { highlight?: string }): Href => ({

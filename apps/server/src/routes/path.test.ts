@@ -22,9 +22,9 @@ describe("GET /api/path validation", () => {
     "from=work:OL1A&to=author:OL2A",
     "from=author:OL1W&to=work:OL2W",
     "from=OL1W&to=work:OL2W",
-    "from=genre:fiction&to=work:OL2W",
     "from=editions:OL1W&to=work:OL2W",
-    "from=subject:Science%20Fiction&to=work:OL2W",
+    "from=subject:%2C&to=work:OL2W",
+    "from=subject:science_fiction_--_authorship&to=subject:science_fiction_authorship",
     "from=subject:&to=work:OL2W",
     "from=work:OL1W&from=work:OL3W&to=work:OL2W",
   ])("returns 400 for %s", async (qs) => {
@@ -45,6 +45,15 @@ describe("GET /api/path validation", () => {
 });
 
 describe("GET /api/path search", () => {
+  it("searches between canonical slugs when given legacy subject and genre ids", async () => {
+    vi.mocked(findPath).mockResolvedValueOnce({ found: false, reason: "noPath" });
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/path?from=subject:science_fiction_--_authorship&to=genre:Fiction" });
+    await app.close();
+    expect(res.statusCode).toBe(200);
+    expect(vi.mocked(findPath).mock.lastCall?.slice(0, 2)).toEqual(["subject:science_fiction_authorship", "genre:fiction"]);
+  });
+
   it("returns the ranked paths in the shared response shape", async () => {
     const found: PathResult = {
       found: true,

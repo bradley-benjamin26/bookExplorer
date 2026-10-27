@@ -20,6 +20,8 @@ export const MAX_PATHS = 3;
 // genre passed through, so a hop through "Fiction" (~10^6 works) costs as
 // much as several hops through people and books, and the most specific
 // chain ranks first. A subject not yet fetched is guessed at ~1000 works.
+// Awards are never fetched (no graph of their own), so they always take that
+// guess: a big award like the Hugo links hundreds of winners.
 const HOP_COST = 1;
 const UNPROBED_SUBJECT_PENALTY = 3;
 
@@ -111,7 +113,7 @@ export function findPath(
   let upstreamDown = false;
 
   const penalty = (id: string) => {
-    if (!/^(subject|genre):/.test(id)) return 0;
+    if (!/^(subject|genre|award):/.test(id)) return 0;
     const count = breadth.get(id);
     return count === undefined ? UNPROBED_SUBJECT_PENALTY : Math.log10(1 + count);
   };
@@ -227,6 +229,7 @@ export function findPath(
         for (const edge of hood.edges) {
           if (edge.source !== id && edge.target !== id) continue;
           const next = edge.source === id ? edge.target : edge.source;
+          if (isGenericSubject(next) && next !== from && next !== to) continue;
           // Started nodes never change, so a recorded chain stays valid.
           if (side.started.has(next) || (side.seen.get(next)?.cost ?? Infinity) <= cost) continue;
           side.seen.set(next, { cost, hops: entry.hops + 1, prev: id, edge });
@@ -247,12 +250,24 @@ function toPath(p: Found, nodes: Map<string, GraphNode>): GraphPath {
   return { nodes: pathNodes, edges: p.edges, summary: summarise(pathNodes) };
 }
 
+// shortcut: a fixed list of broad terms, a work-count cut-off is the upgrade if more show up.
+export const GENERIC_SUBJECT_SLUGS: ReadonlySet<string> = new Set([
+  "fiction", "juvenile_fiction", "fiction_general", "young_adult_fiction", "juvenile_literature", "literature", "novels", "general",
+]);
+
+/** A `subject:` or `genre:` id too broad to say anything as a link between two nodes. */
+export function isGenericSubject(nodeId: string): boolean {
+  const m = /^(?:subject|genre):(.*)$/.exec(nodeId);
+  return !!m && GENERIC_SUBJECT_SLUGS.has(m[1]);
+}
+
 /** What links the two ends, in a line: the one node between them, or the chain. */
 export function summarise(pathNodes: GraphNode[]): string {
   const mid = pathNodes.slice(1, -1);
   const [first, last] = [pathNodes[0], pathNodes[pathNodes.length - 1]];
   if (mid.length === 0) return `${first.label} and ${last.label} are directly linked`;
   if (mid.length === 1 && (mid[0].type === "subject" || mid[0].type === "genre")) return `Both: ${mid[0].label}`;
+  if (mid.length === 1 && mid[0].type === "award") return `Both won: ${mid[0].label}`;
   if (mid.length === 1 && mid[0].type === "author" && first.type === "work" && last.type === "work") return `Same author: ${mid[0].label}`;
   return `Via ${mid.map((n) => n.label).join(" → ")}`;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -11,9 +11,11 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { addRecent } from "../../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
 import { titleCase } from "../../src/titleCase";
+import { titleRef } from "../../src/webTitle";
 
 export default function SubjectDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -25,6 +27,10 @@ export default function SubjectDetail() {
     queryFn: () => fetchSubject(slug),
     enabled: !!slug,
   });
+
+  useEffect(() => {
+    if (data) addRecent({ kind: "subject", id: data.slug, title: titleCase(data.name), subtitle: null });
+  }, [data]);
 
   const [sort, setSort] = useState(DEFAULT_SUBJECT_SORT);
   const sortParams = data ? subjectSortParams(data.name, sort) : null;
@@ -88,6 +94,7 @@ export default function SubjectDetail() {
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
+                        ref={titleRef(`View ${titleCase(concept.label)}`)}
                         key={concept.label}
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
                         onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
