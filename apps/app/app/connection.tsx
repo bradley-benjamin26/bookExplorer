@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { GraphNode } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchPath, searchAuthors, searchBooks } from "../src/api/client";
@@ -9,7 +10,7 @@ import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
 import { connectionStep, type Endpoint } from "../src/connectionSteps";
-import { routes } from "../src/navigation";
+import { nodeHref, routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
@@ -183,20 +184,44 @@ export default function Connection() {
                 <Text style={styles.pathTitle} accessibilityRole="header">
                   {name}: {found.summary}
                 </Text>
-                {pathSteps(found).map((step) => (
-                  <View key={step.node.id} accessible accessibilityLabel={step.accessibilityLabel}>
-                    {step.relation && (
-                      <View style={styles.link}>
-                        <View style={styles.linkLine} />
-                        <Text style={styles.linkText}>{step.relation}</Text>
+                {pathSteps(found).map((step) => {
+                  const href = step.node.navigable ? nodeHref(step.node.id) : null;
+                  const body = (
+                    <>
+                      <View style={styles.nodeText}>
+                        <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
+                        <Text style={styles.nodeLabel}>{step.node.label}</Text>
                       </View>
-                    )}
-                    <View style={styles.node}>
-                      <Text style={styles.nodeType}>{NODE_LABELS[step.node.type]}</Text>
-                      <Text style={styles.nodeLabel}>{step.node.label}</Text>
+                      {href && <ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} />}
+                    </>
+                  );
+                  return (
+                    <View key={step.node.id}>
+                      {step.relation && (
+                        // The relation is part of the step's label, so it isn't a second screen reader stop.
+                        <View style={styles.link} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                          <View style={styles.linkLine} />
+                          <Text style={styles.linkText}>{step.relation}</Text>
+                        </View>
+                      )}
+                      {href ? (
+                        <Pressable
+                          ref={titleRef(`Open ${step.node.label}`)}
+                          style={({ pressed }) => [styles.node, pressed && styles.pressed]}
+                          onPress={() => router.push(href)}
+                          accessibilityRole="link"
+                          accessibilityLabel={step.accessibilityLabel}
+                        >
+                          {body}
+                        </Pressable>
+                      ) : (
+                        <View style={styles.node} accessible accessibilityLabel={step.accessibilityLabel}>
+                          {body}
+                        </View>
+                      )}
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
                 <Button
                   variant={i === 0 ? "primary" : "pill"}
                   onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to, pathIndex: String(i) }))}
@@ -258,7 +283,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
     chain: { marginTop: spacing.xl },
     pathTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.sm },
-    node: { borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md },
+    node: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md },
+    nodeText: { flex: 1 },
     nodeType: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
     nodeLabel: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink },
     link: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginLeft: spacing.lg, minHeight: 40 },
