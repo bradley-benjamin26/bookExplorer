@@ -50,7 +50,7 @@ const LOOKUPS: Record<string, { valid: (id: string) => boolean; load: Lookup }> 
     valid: isOpenLibraryAuthorId,
     load: async (id) => {
       const a = await getAuthorDetail(id);
-      return a && { title: a.name, description: describe(a.bio, a.name), image: null };
+      return a && { title: a.name, description: describe(a.bio, a.name), image: a.photoUrl ?? null };
     },
   },
   subject: {
@@ -101,7 +101,8 @@ export function renderSocialTags(meta: PageMeta | null, url: string, origin = DE
     `<meta property="og:description" content="${e(description)}" />`,
     `<meta property="og:url" content="${e(url)}" />`,
     `<meta property="og:image" content="${e(image)}" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    `<meta property="og:image:alt" content="${e(title)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${e(title)}" />`,
     `<meta name="twitter:description" content="${e(description)}" />`,
     `<meta name="twitter:image" content="${e(image)}" />`,
