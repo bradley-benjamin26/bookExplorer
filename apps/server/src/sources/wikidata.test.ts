@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid } from "./wikidata.js";
+import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
 
 describe("isValidQid", () => {
   it("accepts a well-formed QID", () => {
@@ -104,6 +104,23 @@ describe("searchAuthorQid", () => {
   it("returns null rather than guessing the first hit when none looks like an author", async () => {
     stubSearch([{ id: "Q1", description: "American film" }]);
     expect(await searchAuthorQid("Someone")).toBeNull();
+  });
+});
+
+describe("searchWorkQid", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("searches without a trailing series suffix in parentheses", async () => {
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      json: async () => ({ search: [{ id: "Q2261855", description: "1990 novel by Ursula K. Le Guin" }] }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await searchWorkQid("Tehanu (The Earthsea Cycle, Book 4)", "Ursula K. Le Guin")).toBe("Q2261855");
+    const url = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(url.searchParams.get("search")).toBe("Tehanu");
   });
 });
 

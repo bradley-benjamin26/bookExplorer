@@ -88,7 +88,9 @@ const WORK_REJECT_KEYWORDS = ["film", "television", "tv series", "album", "video
 
 /** Best-effort match of a book's title + author to the Wikidata item for the literary work itself (not a specific edition, film adaptation, etc). */
 export async function searchWorkQid(title: string, authorName: string): Promise<string | null> {
-  const body = await wbSearchEntities(title, 8);
+  // Wikidata finds nothing for "Title (Series, Book N)"; the bare title is what it indexes.
+  const bareTitle = title.replace(/\s*\([^)]*\)\s*$/, "") || title;
+  const body = await wbSearchEntities(bareTitle, 8);
   const authorLastName = authorName.trim().split(/\s+/).pop()?.toLowerCase();
   if (!authorLastName) return null;
 
