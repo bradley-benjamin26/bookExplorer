@@ -1,0 +1,46 @@
+1) Shelf Thread find your next read needs to move to a persistent header.
+If someone sends a link to a node, you have no idea what you're looking at
+and how to get to the main page. "Shelf Thread" should be a link to the home page.
+Need to start developing theme/identity around the Shelf Thread title/header.
+2) The filter options opens a giant pane. Can it create
+a small pop up window with the options?
+3) Instead of "Explore Graph" add dynamic text "Exploring ______"
+4) Not sure if it is a weird mac thing, but when I click share it opens a ton of options like notes and freeform,
+I just want it to copy the url.
+5) Can the social cards display more information? For example, https://shelfthread.com/graph/work/OL27513W
+could display as something like
+
+|---------------------------------+
+| cover image                     |
+|Shelf Thread                     |
+|Explore (title)
+|https://shelfthread.com/graph/work/OL27513W|
+_____________________________________________
+6) Add hover text over buttons. The shelf icon should display "my library"
+The magnifying glass should read "new search" hover over a node
+should say "View editions," "View evil" "View High fiction" etc.
+Pretty much any icon that is clickable should display what it does with hover text.
+7) Recently Looked at only seems to popular individual books/editions. THis is because it originally just worked with ISBNs that are scanned. Please include works/authors/subjects.
+Maybe there can be an option to browse between those different categories to just see recent subjects/books/authors/etc
+8) If wikipedia has an author image, please use that when possible for author pages
+9) Expand connections. for example connect Timothy Zahn to Ursula K. Le Guin
+10) Please try to not use "fiction" or "Juvenile fiction" as a connection point.
+11) Connection links each should link to the respective pages. ie, author should link to author page, book should link to book page, subject to subject, etc
+If it is not included, matches should be made on things like both won an award or something. This actually exist on the graph view, but not the default list.
+12) Ensure about descriptions, such as on a book or work page, are in English.
+13) Recommendations display should be an accordian. Add more possible categories.
+14) Ok, so works when exported would not have an ISBN... Maybe when a user clicks on save to list,
+they are given a pop-up and prompted to pick an edition. That way no works are in a list so the isbn 13 can be exported...
+15)Ok the subject display has gotten complicated.
+15a) There are now multiple subject and genre term displays on a single edition/book page. One is a larger
+list of subjects that can be deleted, where as there is another set of subject terms that cannot be deleted which are totally separate.
+15b) Subjects should be combined. If there is a concern raise it as a decision for me to make.
+15c) Subjects should be locked by default. When a user clicks on a new lock icon, it then allows them to edit the genre and subject terms. Once they are done they click the lock to close it and lock/save the changes
+15d) All subject terms normally are clicked/tapped to view the subject term page.
+16) When a user types in a subject term, search LCSH to see if there are any suggestions
+17) When a user types in a genre term, search the LC genre and freeform
+18) Can id.loc.gov provide metadata on books. I would like to get LOC data if possible.
+19) Some subject pages are bad. https://shelfthread.com/subject/science_fiction_--_authorship Lists no works https://id.loc.gov/authorities/subjects/sh2008111319.html, shows
+that there are 107 works. One includes Bio of an Ogre, which shows the subject term in Shelf Thread and another is https://shelfthread.com/work/OL43656212W conversations with octavia butler. They both have that term
+but the Shelf Thread app can't make that connection. It should!
+20) Is the Google books api still being used? Is it used as a fallback and does the fallback work?
