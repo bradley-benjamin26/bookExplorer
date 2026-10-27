@@ -1,6 +1,6 @@
 import { UpstreamUnavailableError } from "../httpClient.js";
 import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
-import { normalizeTitle, slugifySubject } from "@book-explorer/shared";
+import { awardFamily, normalizeTitle, slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
@@ -77,6 +77,11 @@ export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: Gra
   return { nodes: [...byId.values()], edges: dedupedEdges };
 }
 
+function awardNode(label: string): GraphNode {
+  const family = awardFamily(label);
+  return { id: `award:${slugifySubject(family)}`, type: "award", label: family, navigable: false };
+}
+
 function authorNodeId(openLibraryId: string | null, wikidataId: string): string {
   return openLibraryId ? `author:${openLibraryId}` : `author:qid:${wikidataId}`;
 }
@@ -131,6 +136,10 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
       const nodeId = `subject:${slugifySubject(r.label)}`;
       nodes.push({ id: nodeId, type: "subject", label: r.label, navigable: true });
       edges.push({ source: centerId, target: nodeId, relation: "movement" });
+    } else if (r.relation === "award") {
+      const node = awardNode(r.label);
+      nodes.push(node);
+      edges.push({ source: centerId, target: node.id, relation: "won" });
     }
   }
 
@@ -244,6 +253,12 @@ function workGraph(work: WorkLinks): Graph {
     const nodeId = `author:${author.openLibraryId}`;
     nodes.push({ id: nodeId, type: "author", label: author.name, navigable: true });
     edges.push({ source: nodeId, target: centerId, relation: "author" });
+  }
+
+  for (const award of work.awards) {
+    const node = awardNode(award);
+    nodes.push(node);
+    edges.push({ source: centerId, target: node.id, relation: "won" });
   }
 
   // Open Library sometimes catalogs a genre as a plain subject with a

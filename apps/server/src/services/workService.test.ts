@@ -20,7 +20,7 @@ describe("getWorkLinks", () => {
       authors: [{ openLibraryId: "OL2A", name: "Frank Herbert" }],
       coverUrl: null,
       description: null,
-      subjects: ["Desert", "genre:Science Fiction"],
+      subjects: ["Desert", "genre:Science Fiction", "award:hugo_award=1966"],
       isbn: null,
       isbnCandidates: [],
       editions: [],
@@ -39,7 +39,8 @@ describe("getWorkLinks", () => {
     const links = await getWorkLinks("OL1W");
     expect(openLibrary.getWork).toHaveBeenCalledWith("OL1W", { editions: false });
     expect(startCommonEnrichment).not.toHaveBeenCalled();
-    expect(links?.subjects.map((s) => s.label)).toEqual(["Desert", "genre:Science Fiction"]);
+    expect(links?.subjects.map((s) => s.label)).toEqual(["Desert"]);
+    expect(links?.awards).toEqual(["hugo award (1966)"]);
     expect(links?.editions).toEqual([]);
   });
 

@@ -128,7 +128,7 @@ export const WorkRefSchema = z.object({
 export type WorkRef = z.infer<typeof WorkRefSchema>;
 
 export const AuthorRelationSchema = z.object({
-  relation: z.enum(["influencedBy", "influenced", "notableWork", "movement"]),
+  relation: z.enum(["influencedBy", "influenced", "notableWork", "movement", "award"]),
   wikidataId: z.string(),
   label: z.string(),
   openLibraryId: z.string().nullable(),
@@ -232,6 +232,11 @@ export function slugifySubject(name: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
+/** One award from its dated or per-category spellings: "Hugo Award (1966)" and "Hugo Award for Best Novella" are both "Hugo Award". */
+export function awardFamily(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s+for\s.*$/i, "").trim();
+}
+
 export const GraphNodeSchema = z.object({
   id: z.string(),
   // "editions" is a single summary node per work (not one node per
@@ -239,7 +244,7 @@ export const GraphNodeSchema = z.object({
   // pointing a viewer at the Editions section on that work's own page,
   // rather than being a browsable concept in its own right the way every
   // other node type is.
-  type: z.enum(["author", "work", "subject", "genre", "editions"]),
+  type: z.enum(["author", "work", "subject", "genre", "editions", "award"]),
   label: z.string(),
   // Most nodes link straight to their detail screen. The exception is an
   // author known only by Wikidata QID (no Open Library id) — the author

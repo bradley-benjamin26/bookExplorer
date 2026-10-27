@@ -40,6 +40,7 @@ export interface ThemeColors {
   graphWork: string;
   graphSubject: string;
   graphGenre: string;
+  graphAward: string;
   // Design-plan tokens (docs/DESIGN_PLAN.md). `cover` carries primary action;
   // `marginalia` is reserved for "this is yours" (saved) and graph highlights.
   paper: string;
@@ -82,6 +83,7 @@ export const lightColors: ThemeColors = {
   graphWork: "#1a7a4c",
   graphSubject: "#a8593c",
   graphGenre: "#9c3d82",
+  graphAward: "#8a6d1f",
   paper: "#FAF7F0",
   ink: "#1F2430",
   // The plan's #8B8A94 / #C0572E are 3.2:1 / 4.2:1 on paper; nudged darker to pass AA as text.
@@ -127,6 +129,7 @@ export const darkColors: ThemeColors = {
   graphWork: "#57d99a",
   graphSubject: "#e8946e",
   graphGenre: "#e7a6da",
+  graphAward: "#e0c27a",
   paper: "#191B20",
   ink: "#EDEAE2",
   inkFaint: "#9C9AA6",

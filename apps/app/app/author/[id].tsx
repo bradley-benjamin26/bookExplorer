@@ -23,6 +23,7 @@ const SECTIONS: { relation: AuthorRelation["relation"]; title: string }[] = [
   { relation: "influenced", title: "Influenced" },
   { relation: "notableWork", title: "Notable Works" },
   { relation: "movement", title: "Literary Movement" },
+  { relation: "award", title: "Awards" },
 ];
 
 export default function AuthorDetail() {

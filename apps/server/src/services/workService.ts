@@ -9,7 +9,7 @@ import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByA
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
 /** The parts of a work that path search links through. */
-export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "editions">;
+export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "awards" | "editions">;
 
 const workLinksCache = new TtlCache<WorkLinks | null>(1000 * 60 * 60, 1000, "workLinks");
 
@@ -26,11 +26,13 @@ export function getWorkLinks(workId: string): Promise<WorkLinks | null> {
   return workLinksCache.wrap(workId, async () => {
     const ol = await openLibrary.getWork(workId, { editions: false });
     if (!ol) return null;
+    const terms = splitSubjectTerms(ol.subjects);
     return {
       openLibraryWorkId: workId,
       title: ol.title,
       authors: ol.authors,
-      subjects: mergeTaggedTerms({ source: "openLibrary", labels: ol.subjects }),
+      subjects: mergeTaggedTerms({ source: "openLibrary", labels: terms.subjects }),
+      awards: terms.awards,
       genres: [],
       editions: [],
     };

@@ -265,6 +265,7 @@ export function summarise(pathNodes: GraphNode[]): string {
   const [first, last] = [pathNodes[0], pathNodes[pathNodes.length - 1]];
   if (mid.length === 0) return `${first.label} and ${last.label} are directly linked`;
   if (mid.length === 1 && (mid[0].type === "subject" || mid[0].type === "genre")) return `Both: ${mid[0].label}`;
+  if (mid.length === 1 && mid[0].type === "award") return `Both won: ${mid[0].label}`;
   if (mid.length === 1 && mid[0].type === "author" && first.type === "work" && last.type === "work") return `Same author: ${mid[0].label}`;
   return `Via ${mid.map((n) => n.label).join(" → ")}`;
 }

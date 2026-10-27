@@ -37,6 +37,7 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
     // highlight — uses on the work page, so the two visibly read as the
     // same thing rather than an arbitrary extra graph color.
     editions: colors.warning,
+    award: colors.graphAward,
   };
 }
 

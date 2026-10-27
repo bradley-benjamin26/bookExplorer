@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BookSchema, slugifySubject, splitSubjectTerms, subjectKey } from "@book-explorer/shared";
+import { awardFamily, BookSchema, slugifySubject, splitSubjectTerms, subjectKey } from "@book-explorer/shared";
 import { isSubjectSlug } from "./validation.js";
 
 describe("subject term cleaning", () => {
@@ -48,5 +48,13 @@ describe("slugifySubject", () => {
   it("treats only the canonical form as a subject slug", () => {
     expect(isSubjectSlug("science_fiction_authorship")).toBe(true);
     expect(isSubjectSlug("science_fiction_--_authorship")).toBe(false);
+  });
+});
+
+describe("awardFamily", () => {
+  it("makes Open Library and Wikidata spellings of one award the same, and keeps others apart", () => {
+    expect(awardFamily("Hugo Award for Best Novella")).toBe("Hugo Award");
+    expect(awardFamily("Hugo Award (1966)")).toBe("Hugo Award");
+    expect(awardFamily("Nebula Award")).toBe("Nebula Award");
   });
 });

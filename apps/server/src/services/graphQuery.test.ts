@@ -276,6 +276,7 @@ describe("summarise", () => {
     const [w1, w2] = [node("work:1", "Wolf Hall"), node("work:2", "Bring Up the Bodies")];
     expect(summarise([w1, node("author:A", "Hilary Mantel"), w2])).toBe("Same author: Hilary Mantel");
     expect(summarise([w1, node("subject:t", "Tudor England"), w2])).toBe("Both: Tudor England");
+    expect(summarise([node("author:1", "Zahn"), node("award:hugo_award", "Hugo Award"), node("author:2", "Le Guin")])).toBe("Both won: Hugo Award");
     expect(summarise([w1, node("author:A", "Hilary Mantel"), node("subject:t", "Tudor England"), w2])).toBe(
       "Via Hilary Mantel → Tudor England"
     );

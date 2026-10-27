@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { normalizeTitle } from "@book-explorer/shared";
-import { buildWorkLinksGraph, cleanGraph } from "./graphService.js";
+import { buildAuthorLinksGraph, buildWorkLinksGraph, cleanGraph } from "./graphService.js";
 import { getWorkLinks } from "./workService.js";
+import { getAuthorLinks } from "./authorService.js";
+
+vi.mock("./authorService.js", () => ({ getAuthorDetail: vi.fn(), getAuthorLinks: vi.fn() }));
+vi.mock("../sources/openLibrary.js", () => ({ getAuthorWorks: vi.fn().mockResolvedValue([]), searchAuthorByName: vi.fn() }));
 
 vi.mock("./workService.js", () => ({
   getWorkDetail: vi.fn(),
@@ -15,6 +19,7 @@ vi.mock("./workService.js", () => ({
       { label: "genre:Science Fiction", sources: ["openLibrary"] },
     ],
     genres: [],
+    awards: [],
     editions: [],
   }),
 }));
@@ -114,7 +119,7 @@ describe("buildWorkLinksGraph", () => {
 
   it("links an LOC '--' heading and Open Library's collapsed spelling of it to one subject node", async () => {
     const work = (id: string, subject: string, source: "loc" | "openLibrary") => ({
-      openLibraryWorkId: id, title: id, authors: [], subjects: [{ label: subject, sources: [source] }], genres: [], editions: [],
+      openLibraryWorkId: id, title: id, authors: [], subjects: [{ label: subject, sources: [source] }], genres: [], awards: [], editions: [],
     });
     vi.mocked(getWorkLinks)
       .mockResolvedValueOnce(work("OL10W", "Science fiction -- Authorship", "loc") as never)
@@ -122,5 +127,22 @@ describe("buildWorkLinksGraph", () => {
     const [a, b] = [await buildWorkLinksGraph("OL10W"), await buildWorkLinksGraph("OL11W")];
     expect(a?.edges).toContainEqual({ source: "work:OL10W", target: "subject:science_fiction_authorship", relation: "subject" });
     expect(b?.edges).toContainEqual({ source: "work:OL11W", target: "subject:science_fiction_authorship", relation: "subject" });
+  });
+
+  it("links an author's Wikidata award and a work's Open Library award to one award node", async () => {
+    vi.mocked(getAuthorLinks).mockResolvedValueOnce({
+      openLibraryId: "OL3A", name: "Zahn", pseudonyms: [],
+      relations: [{ relation: "award", wikidataId: "Q1", label: "Hugo Award for Best Novella", openLibraryId: null }],
+    } as never);
+    vi.mocked(getWorkLinks).mockResolvedValueOnce({
+      openLibraryWorkId: "OL12W", title: "T", authors: [], subjects: [], genres: [], editions: [], awards: ["Hugo Award (1966)"],
+    } as never);
+    const a = await buildAuthorLinksGraph("OL3A");
+    const w = await buildWorkLinksGraph("OL12W");
+    const node = { id: "award:hugo_award", type: "award", label: "Hugo Award", navigable: false };
+    expect(a?.nodes).toContainEqual(node);
+    expect(a?.edges).toContainEqual({ source: "author:OL3A", target: "award:hugo_award", relation: "won" });
+    expect(w?.nodes).toContainEqual(node);
+    expect(w?.edges).toContainEqual({ source: "work:OL12W", target: "award:hugo_award", relation: "won" });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legendEntries, nodeRelations, pathAsGraph, pathSteps } from "./graphLabels";
+import { legendEntries, nodeRelations, pathAsGraph, pathSteps, relationLabel } from "./graphLabels";
 
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
@@ -102,5 +102,11 @@ describe("nodeRelations", () => {
 
   it("dedupes repeated edges", () => {
     expect(nodeRelations(graph([wrote, wrote]), "work:OL1W")).toEqual(["Frank Herbert wrote Dune"]);
+  });
+});
+
+describe("relationLabel", () => {
+  it("reads an award edge as won", () => {
+    expect(relationLabel("won")).toBe("won");
   });
 });
