@@ -2,7 +2,8 @@ import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
-import { applyListChanges, listChanges } from "../storage/listMembership";
+import { confirmLeave } from "../confirm";
+import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import {
   createList,
   getLists,
@@ -166,6 +167,7 @@ export function AddToListButton({
       return next;
     });
   const done = async () => {
+    if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
     setError("");
     setBusy(true);
     try {

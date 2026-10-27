@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
 import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
@@ -10,9 +10,10 @@ import { Footer } from "../../src/components/Footer";
 import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
 import { shareFile } from "../../src/backupFiles";
 import { shelfSlug } from "../../src/csv";
+import { confirmDestructive, confirmLeave } from "../../src/confirm";
 import { memberHref, routes } from "../../src/navigation";
-import { applyListChanges, deleteListAndUnsave } from "../../src/storage/listMembership";
-import { getList, type ListMember, type SavedList } from "../../src/storage/savedLists";
+import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
+import { getList, getLists, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useThemedStyles, type Theme } from "../../src/theme";
 
 export default function ListDetail() {
@@ -35,6 +36,9 @@ export default function ListDetail() {
   const handleRemove = async (member: ListMember) => {
     setError("");
     try {
+      const lists = await getLists(member.type === "author" ? "author" : "book");
+      const others = new Set(lists.filter((l) => l.id !== id && l.members.some((m) => m.type === member.type && m.id === member.id)).map((l) => l.id));
+      if (leavesLibrary(lists, member, others) && !(await confirmLeave(member.title))) return;
       await applyListChanges(member, { add: [], remove: [id] }, async () => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -66,17 +70,10 @@ export default function ListDetail() {
     if (router.canGoBack()) router.back();
     else router.replace(routes.lists());
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!list) return;
     const message = `Delete “${list.name}”? Books and authors on no other list leave your library, with their notes. This can't be undone.`;
-    if (Platform.OS === "web") {
-      if (window.confirm(message)) doDelete();
-    } else {
-      Alert.alert("Delete list?", message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: doDelete },
-      ]);
-    }
+    if (await confirmDestructive("Delete list?", message, "Delete")) doDelete();
   };
 
   if (list === undefined && !loadError) return null;
