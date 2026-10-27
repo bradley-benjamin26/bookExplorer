@@ -28,7 +28,7 @@ function TagEditor({ label, tags, onChange }: { label: string; tags: string[]; o
         <View style={styles.tagRow}>
           {tags.map((tag) => (
             <Pressable
-              ref={titleRef(`Remove `)}
+              ref={titleRef(`Remove ${tag}`)}
               key={tag}
               style={styles.tag}
               onPress={() => onChange(tags.filter((t) => t !== tag))}

@@ -85,7 +85,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
         return (
           <View key={library.id}>
             <Pressable
-              ref={titleRef(`Find at `)}
+              ref={titleRef(`Find at ${library.name}`)}
               style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
               onPress={() => toggleExpanded(library.id)}
               accessibilityRole="button"

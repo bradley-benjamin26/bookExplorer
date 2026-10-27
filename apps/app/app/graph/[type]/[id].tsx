@@ -752,7 +752,7 @@ function FilterRow({ label, checked, onPress }: { label: string; checked: boolea
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable
-      ref={titleRef(checked ? `Hide ` : `Show `)}
+      ref={titleRef(checked ? `Hide ${label}` : `Show ${label}`)}
       onPress={onPress}
       accessibilityRole="checkbox"
       accessibilityLabel={label}
