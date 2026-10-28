@@ -204,7 +204,7 @@ function DefaultListPicker({
   const current = defaultListFor(ofKind, kind, prefs.defaultListIds[kind]);
   return (
     <>
-      <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>{kind === "book" ? "Book lists" : "Author lists"}</Text>
+      <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>{kind === "book" ? "Default list for books" : "Default list for authors"}</Text>
       <View style={styles.themeOptions}>
         {ofKind.map((list) => (
           <Button
@@ -253,7 +253,7 @@ function PreferencesSections() {
       {lists.length > 0 && (
         <>
           <Text style={styles.sectionTitle} accessibilityRole="header">Default Lists</Text>
-          <Text style={styles.helpText}>Where saves go when you don't pick a list, including batch scans.</Text>
+          <Text style={styles.helpText}>Tap a list to make it the default. Saves go there when you don't pick a list, including batch scans.</Text>
           <DefaultListPicker kind="book" lists={lists} prefs={prefs} onChange={update} />
           <DefaultListPicker kind="author" lists={lists} prefs={prefs} onChange={update} />
         </>
