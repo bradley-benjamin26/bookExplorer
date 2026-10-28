@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Href } from "expo-router";
 import { routes } from "../navigation";
+import { getPreferences } from "./preferences";
 import { enqueueWrite } from "./writeQueue";
 
 // The key predates works/authors/subjects; kept so old entries migrate in place.
@@ -40,10 +41,15 @@ export async function getRecent(): Promise<RecentItem[]> {
 
 export function addRecent(item: RecentItem): Promise<void> {
   return enqueueWrite(HISTORY_KEY, async () => {
+    if (!(await getPreferences()).recordHistory) return;
     const existing = await getRecent();
     const next = [item, ...existing.filter((r) => r.kind !== item.kind || r.id !== item.id)].slice(0, MAX_HISTORY);
     await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(next));
   });
+}
+
+export function clearRecent(): Promise<void> {
+  return enqueueWrite(HISTORY_KEY, () => AsyncStorage.removeItem(HISTORY_KEY));
 }
 
 /** "books" means books and works. */

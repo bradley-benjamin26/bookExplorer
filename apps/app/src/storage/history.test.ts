@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { addRecent, getRecent, recentOfKind, type RecentItem } from "./history";
+import { addRecent, clearRecent, getRecent, recentOfKind, type RecentItem } from "./history";
+import { setPreferences } from "./preferences";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -14,6 +15,19 @@ describe("history", () => {
     await addRecent(book("2"));
     await addRecent(book("1"));
     expect((await getRecent()).map((b) => b.id)).toEqual(["1", "2"]);
+  });
+
+  it("records nothing while history is turned off", async () => {
+    await addRecent(book("1"));
+    await setPreferences({ recordHistory: false });
+    await addRecent(book("2"));
+    expect((await getRecent()).map((b) => b.id)).toEqual(["1"]);
+  });
+
+  it("clearRecent empties the history", async () => {
+    await addRecent(book("1"));
+    await clearRecent();
+    expect(await getRecent()).toEqual([]);
   });
 
   it("keeps only the 30 most recent", async () => {

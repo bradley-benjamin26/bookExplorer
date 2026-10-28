@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { addToList, createList, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, removeFromList } from "./savedLists";
+import { setPreferences } from "./preferences";
+import { addToList, createList, defaultListFor, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, removeFromList } from "./savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -73,6 +74,23 @@ describe("savedLists", () => {
     expect(lists).toHaveLength(1);
     expect(lists[0].name).toBe("Saved books");
     expect(lists[0].members.map((m) => m.id).sort()).toEqual([dune.id, emma.id].sort());
+  });
+
+  it("ensureOnAList uses the chosen default list, and falls back once it's deleted", async () => {
+    const faves = await createList({ name: "Faves", kind: "book" });
+    await setPreferences({ defaultListIds: { book: faves.id, author: null } });
+    await ensureOnAList(dune);
+    expect((await getList(faves.id))?.members.map((m) => m.id)).toEqual([dune.id]);
+    await deleteList(faves.id);
+    await ensureOnAList(emma);
+    const live = await getLists("book");
+    expect(live.map((l) => l.name)).toEqual(["Saved books"]);
+    expect(live[0].members.map((m) => m.id)).toEqual([emma.id]);
+  });
+
+  it("defaultListFor ignores a chosen list of the other kind", async () => {
+    const authors = await createList({ name: "Authors", kind: "author" });
+    expect(defaultListFor(await getLists(), "book", authors.id)).toBeUndefined();
   });
 
   it("ensureOnAList leaves an item already on a list alone", async () => {

@@ -4,8 +4,10 @@ import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { confirmLeave } from "../confirm";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
+import { getPreferences } from "../storage/preferences";
 import {
   createList,
+  defaultListFor,
   getLists,
   type ListMember,
   type SavedList,
@@ -145,10 +147,14 @@ export function AddToListButton({
   const load = (reset: boolean) => {
     setLoadError("");
     setLoading(true);
-    return getLists(kind)
-      .then((ls) => {
+    return Promise.all([getLists(kind), getPreferences()])
+      .then(([ls, prefs]) => {
         setLists(ls);
-        if (reset) setChecked(new Set(ls.filter(holds).map((l) => l.id)));
+        if (!reset) return;
+        const held = ls.filter(holds);
+        // On no list yet: start with the default list ticked, so saving there is just Done.
+        const fallback = defaultListFor(ls, kind, prefs.defaultListIds[kind]);
+        setChecked(new Set((held.length || !fallback ? held : [fallback]).map((l) => l.id)));
       })
       .catch(() => setLoadError(LOAD_ERROR))
       .finally(() => setLoading(false));

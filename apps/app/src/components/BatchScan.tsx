@@ -28,7 +28,7 @@ async function saveScanned(queryClient: QueryClient, book: Book, tag: string) {
   if (label && !record.subjects.includes(label)) await updateSavedBook(book.isbn, { subjects: [...record.subjects, label] });
 }
 
-export function BatchScan({ onExit }: { onExit: () => void }) {
+export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () => void }) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const queryClient = useQueryClient();
@@ -65,7 +65,7 @@ export function BatchScan({ onExit }: { onExit: () => void }) {
   const add = (isbn: string) => {
     if (known.current.has(isbn)) return say("Already in this batch");
     known.current.add(isbn);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (haptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     say(`Added ${isbn}`);
     setRows((rs) => [...rs, { isbn, lookup: "loading", save: "idle" }]);
     resolve(isbn);

@@ -1,9 +1,14 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
+import { confirmDestructive } from "../src/confirm";
+import { routes } from "../src/navigation";
+import { clearRecent } from "../src/storage/history";
+import { getPreferences, setPreferences, type Preferences } from "../src/storage/preferences";
+import { defaultListFor, getLists, type SavedList } from "../src/storage/savedLists";
 import {
   generateLibraryId,
   getLibraries,
@@ -166,6 +171,115 @@ function AppearanceSection() {
   );
 }
 
+function SwitchRow({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.switchRow}>
+      <Text style={styles.switchLabel}>{label}</Text>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ true: theme.colors.cover }}
+        accessibilityLabel={label}
+      />
+    </View>
+  );
+}
+
+function DefaultListPicker({
+  kind,
+  lists,
+  prefs,
+  onChange,
+}: {
+  kind: SavedList["kind"];
+  lists: SavedList[];
+  prefs: Preferences;
+  onChange: (change: Partial<Preferences>) => void;
+}) {
+  const styles = useThemedStyles(createStyles);
+  const ofKind = lists.filter((l) => l.kind === kind);
+  if (ofKind.length === 0) return null;
+  const current = defaultListFor(ofKind, kind, prefs.defaultListIds[kind]);
+  return (
+    <>
+      <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>{kind === "book" ? "Book lists" : "Author lists"}</Text>
+      <View style={styles.themeOptions}>
+        {ofKind.map((list) => (
+          <Button
+            key={list.id}
+            variant="pill"
+            active={current?.id === list.id}
+            onPress={() => onChange({ defaultListIds: { ...prefs.defaultListIds, [kind]: list.id } })}
+            style={styles.themeOption}
+          >
+            {list.name}
+          </Button>
+        ))}
+      </View>
+    </>
+  );
+}
+
+function PreferencesSections() {
+  const router = useRouter();
+  const styles = useThemedStyles(createStyles);
+  const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [lists, setLists] = useState<SavedList[]>([]);
+  const [cleared, setCleared] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      getPreferences().then(setPrefs);
+      getLists().then(setLists, () => {});
+      setCleared(false);
+    }, [])
+  );
+
+  if (!prefs) return null;
+  const update = (change: Partial<Preferences>) => {
+    setPrefs({ ...prefs, ...change });
+    setPreferences(change).then(setPrefs);
+  };
+  const clearHistory = async () => {
+    if (!(await confirmDestructive("Clear history?", "Remove everything from your recently viewed list? This can't be undone.", "Clear"))) return;
+    await clearRecent();
+    setCleared(true);
+  };
+
+  return (
+    <>
+      {lists.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle} accessibilityRole="header">Default Lists</Text>
+          <Text style={styles.helpText}>Where saves go when you don't pick a list, including batch scans.</Text>
+          <DefaultListPicker kind="book" lists={lists} prefs={prefs} onChange={update} />
+          <DefaultListPicker kind="author" lists={lists} prefs={prefs} onChange={update} />
+        </>
+      )}
+
+      <Text style={styles.sectionTitle} accessibilityRole="header">Scanning</Text>
+      <SwitchRow label="Start in multi-book scanning" value={prefs.startInBatchScan} onChange={(v) => update({ startInBatchScan: v })} />
+      {Platform.OS !== "web" && (
+        <SwitchRow label="Vibrate on scan" value={prefs.scanHaptics} onChange={(v) => update({ scanHaptics: v })} />
+      )}
+
+      <Text style={styles.sectionTitle} accessibilityRole="header">History</Text>
+      <SwitchRow label="Remember recently viewed" value={prefs.recordHistory} onChange={(v) => update({ recordHistory: v })} />
+      <Button variant="pill" onPress={clearHistory} style={styles.historyButton}>
+        {cleared ? "History cleared" : "Clear history"}
+      </Button>
+
+      <Text style={styles.sectionTitle} accessibilityRole="header">Import & Export</Text>
+      <Text style={styles.helpText}>Back up your lists, notes and libraries, or move them to another device.</Text>
+      <Button variant="pill" onPress={() => router.push(routes.backup())} style={styles.historyButton}>
+        Open Import & Export
+      </Button>
+    </>
+  );
+}
+
 export default function Settings() {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -214,6 +328,8 @@ export default function Settings() {
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
 
+      <PreferencesSections />
+
       <Footer />
     </ScrollView>
   );
@@ -242,7 +358,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     errorText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm },
     pressed: { opacity: 0.6 },
     helpText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20, marginBottom: spacing.md },
-    themeOptions: { flexDirection: "row", gap: spacing.sm },
+    themeOptions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, paddingVertical: spacing.sm },
+    switchLabel: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
+    historyButton: { marginTop: spacing.sm, alignSelf: "flex-start" },
     themeOption: { alignSelf: "auto" },
     fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },
     fieldLabelSpaced: { marginTop: spacing.lg },
