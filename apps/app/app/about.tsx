@@ -31,54 +31,89 @@ export default function About() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.article}>
-        <Title>About This Project</Title>
-
-        <Heading>The app itself</Heading>
+        <Title>About Shelf Thread</Title>
+        <Heading>What is it?</Heading>
         <P>
-          Shelf Thread is an attempt to help readers find new books to read. The vision I had when starting this project
-          was thinking of myself standing in front of my book shelves, trying to find what to read next. I could pick up a
-          book I really like and see what might be similar that I might enjoy. Or, I could quickly scan a handful of my
-          favorite books to see if I could find something new. The application is informed by the professional values of
-          librarianship, such as user privacy, intellectual freedom, and equitable access to information. To that end, the
-          app doesn't collect or use your data to try to infer what you want. That process is entirely in the reader's
-          hands; they can choose different paths to go down to find something new. The app can try to surface connections
-          between materials that might not be obvious. Again, it does this by using the subject terms available from the
-          Online Library Catalog to find matches.
+          Shelf Thread is designed for those times you're stuck looking at a shelf of books and don't know what to read next.
+          Using the app you can scan the barcodes of books to create lists, explore related books, find connections, and get recommendations.
+          To make recommendations, Shelf Thread uses data from sources like the Library of Congress, Wikidata, and Open Library to make connections
+          rather than using cookies or and trackers.
         </P>
+        <Heading>The Homepage</Heading>
         <P>
-          Shelf Thread isn't intended to replace your current reader tracker; it's meant to help you create lists of your
-          books and books you're interested in, and then add those lists to your preferred tracker. This way, Shelf Thread
-          complements your existing tools rather than replacing them.
+          The homepage provides an option to scan book barcodes using your phone as well as an option to search for books using title, author, or ISBN.
+          It also is a place to find your browsing history so you can easily revist something you've been looking at previously.
         </P>
 
-        <Heading>The librarian side of things</Heading>
-        <P>
-          This is an under-development project by a librarian to explore how users interact with interfaces and the use of
-          alternative interfaces, such as a visual graph interface rather than a standard catalog interface. How can an
-          interface based on visual relationships be accessible? What are readers' expectations for an interface nowadays?
-          What do they expect it to be like when they search for a book in a library for the first time?
-        </P>
+        <Heading>The Graph View</Heading>
+        <p>
+          The graph view is the core of Shelf Thread. These pages show all the different connections and allow you to explore them. If you
+          scan an ISBN you can see the subjects, author, awards, and other information displayed as a visual. You can then tap the different nodes to see new
+          connections. This way, you can find something new by going down a rabbit hole of subject terms or genres. 
+          <br/>
+          You can switch between a list and graph view. The list view provides a more accessible way to navigate the connections by organizing everything into
+          a list.
+        </p>
 
-        <Heading>The technical side of things</Heading>
+        <Heading>My Library</Heading>
         <P>
-          This project also explores the technical aspects of building agentic software, including the use of test-driven
-          and spec-driven development to guide the coding process and reduce errors. As an open project, the code is open
-          source, so others can contribute or take the code and put their own spin on it. It is also designed to try to
-          work with different systems.
+          The shelf icon in the top right of the app directs you to the My Library section. with four
+          sections:
+          <ul>
+            <li>Lists</li>
+              <li>Here you can view and create new lists. You can also export files to upload into another system</li>
+            <li>Recommendations</li>
+              <li>This section allows you to find recommendations based on your saved lists. You can choose to get recommendations
+                for an individual list or for everything you have saved.</li>
+            <li>Find Connection</li>
+              <li>This allows you to enter in books or authors to find connections between them. The system
+              reviews relevant data and tries to find the shortest connection between the two.</li>
+            <li>Import & Export</li>
+              <li>Here you can export your lists and import lists. If you use multiple devices, exporting and importing lists enables you
+                to keep your lists synchronized across devices.
+              </li>
+            <li>Settings</li>
+              <li>Here you can configure your preference for the light or dark view</li>
+              <li>It also allows you to add library links to try to find books in your local library. She below
+                for more detailed instructions on what to do.
+              </li>
+          </ul>
         </P>
-
-        <Title>The Library Feature</Title>
+        
+        <Heading>Works, Books, Authors, and Subject</Heading>
         <P>
-          In my day job, I pretty much exclusively work to find how to help users find books and help them get their hands
-          on that book. Whether it is finding something they could pick up at the library they're already in, or helping
-          them find something they thought they couldn't get. This app is also intended to help you find where to get
-          those books too.
+          These are the 4 primary entities that you can explore using Shelf Thread.
+          Each has a separate page type dedicated to exploring and managing that entity. They each have an option
+          to view the entity's graph representation or use the find connection feature.
         </P>
+        <ul>
+          <li>Work</li>
+            <li>A work is a page that contains all the various editions of a book.
+              For example, you can find an audiobook edition or editions published in different years.
+              It is also where some general information about the book exists. For example, you can see if the book is in series and
+              what other works the author of that book has written.
+            </li>
+          <li>Book</li>
+            <li>A book page contains information specific to a particular edition of a work.
+              This includes details such as the publication date, format, and ISBN. You can add subjects, genres, formats, and notes
+              to book pages. Before editing a book page, you need to save it to a list first. Book pages provide
+              some options to try to find the book such as searching Open Library (which lends digital versions of books), WorldCat (which compiles what
+              books across the country own), and an option to search and buy from Bookshop.org. If you have configured library links,
+              you will also see the options to search your local library.
+            </li>
+          <li>Author</li>
+            <li>An author page includes details such as the author's biography, list of works, and other relevant information. You can also find
+              lists of what authors influence and author and who they themselves influnced. If they've won awards, you should be able to find them here too.
+            </li>
+          <li>Subject</li>
+          <li>These pages contain lists of books that can be organized by categories like most read and newest. A short description
+            may also display if one can be found.
+          </li>
+        </ul>
 
-        <Heading>Locating books in your local library</Heading>
+        <Heading>Setting up the library links</Heading>
         <P>
-          The main feature to do this is the feature to locate books in your local library. Within the app's My Library
-          section, there is a way to add local library links. To do this you just need to go to your library's website and
+          Within the app's My Library section, there is a way to add local library links. To do this you just need to go to your library's website and
           catalog to find how that system searches for ISBNs and titles.
         </P>
         <P>
@@ -99,21 +134,6 @@ export default function About() {
           library. There's no guarantee it's there, but it might just be. And don't forget, you can always reach out to
           your library for help! You can repeat this process and instead do everything the same but for title, using{" "}
           {"{title}"}.
-        </P>
-
-        <Heading>Other options to access books</Heading>
-        <P>
-          There are currently two other ways to hopefully get the book. First, there's Open Library. Open Library is a
-          community catalog, and it freely provides data for things like this app. Its main purpose, however, is to
-          provide access to books. Now it doesn't provide access to everything, but you might be able to sign up and check
-          out a book for free through that system. The service is called digital lending. In essence it means that someone
-          could lend a digital version of a book they own and don't use or lend out. You can borrow those ebooks just like
-          you might from your library's Libby, Overdrive, or Hoopla.
-        </P>
-        <P>
-          Finally the app links to a search in bookshop.org. Bookshop.org is a great site for buying both new and used
-          books from bookstores. You can even get e-books. The store supports local bookstores, so you can search for your
-          local store on the site, and your purchase will help those brick and mortar book-retreats.
         </P>
       </View>
       <Footer />
