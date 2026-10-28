@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getPreferences } from "./preferences";
 import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -100,6 +101,12 @@ export async function isOnAnyList(type: ListMember["type"], id: string): Promise
   return (await getAllLists()).some((l) => holds(l, type, id));
 }
 
+/** The list a save with no list picked lands on: the chosen one while it's live, else the "Saved …" list if it exists. */
+export function defaultListFor(lists: SavedList[], kind: SavedList["kind"], preferredId: string | null): SavedList | undefined {
+  const live = lists.filter((l) => !l.deletedAt && l.kind === kind);
+  return live.find((l) => l.id === preferredId) ?? live.find((l) => l.name === DEFAULT_LIST_NAMES[kind]);
+}
+
 /** Puts `member` on the default list unless some live list already holds it. One queued write, so concurrent calls share one default list. */
 export function ensureOnAList(member: Omit<ListMember, "addedAt">): Promise<void> {
   return enqueueWrite(KEY, async () => {
@@ -108,7 +115,8 @@ export function ensureOnAList(member: Omit<ListMember, "addedAt">): Promise<void
     const kind = kindOf(member.type);
     const now = Date.now();
     const entry = { ...member, addedAt: now };
-    const index = lists.findIndex((l) => !l.deletedAt && l.kind === kind && l.name === DEFAULT_LIST_NAMES[kind]);
+    const target = defaultListFor(lists, kind, (await getPreferences()).defaultListIds[kind]);
+    const index = target ? lists.indexOf(target) : -1;
     if (index === -1) {
       lists.push(stamp({ id: newListId(), name: DEFAULT_LIST_NAMES[kind], description: "", kind, members: [entry], createdAt: now }));
     } else {

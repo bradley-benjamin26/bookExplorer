@@ -1,11 +1,13 @@
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import * as Haptics from "expo-haptics";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { isIsbnBarcode } from "../src/batchScan";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
 import { routes } from "../src/navigation";
+import { getPreferences, type Preferences } from "../src/storage/preferences";
 import { useThemedStyles, type Theme } from "../src/theme";
 
 export default function Scan() {
@@ -14,15 +16,25 @@ export default function Scan() {
   const [permission, requestPermission] = useCameraPermissions();
   const hasScanned = useRef(false);
   const [batch, setBatch] = useState(false);
+  const [prefs, setPrefs] = useState<Preferences | null>(null);
+
+  useEffect(() => {
+    getPreferences().then((p) => {
+      setPrefs(p);
+      setBatch(p.startInBatchScan);
+    });
+  }, []);
 
   const handleScanned = (result: BarcodeScanningResult) => {
     if (!isIsbnBarcode(result.data)) return;
     if (hasScanned.current) return;
     hasScanned.current = true;
+    if (prefs?.scanHaptics) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     router.replace(routes.book(result.data));
   };
 
-  if (!permission) {
+  // Waits for preferences too, so a batch-first setting doesn't flash the single scanner.
+  if (!permission || !prefs) {
     return <View style={styles.permissionScreen} />;
   }
 
@@ -37,7 +49,7 @@ export default function Scan() {
     );
   }
 
-  if (batch) return <BatchScan onExit={() => setBatch(false)} />;
+  if (batch) return <BatchScan haptics={prefs.scanHaptics} onExit={() => setBatch(false)} />;
 
   // The live camera view is deliberately always dark, regardless of the
   // app's own light/dark theme — a bright white scanning overlay would wash
