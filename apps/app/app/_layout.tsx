@@ -108,7 +108,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             ref={titleRef("Feedback form")}
             accessibilityRole="link"
             accessibilityLabel="Feedback form, opens Google Forms"
-            onPress={() => Linking.openURL("https://docs.google.com/forms/d/e/1FAIpQLSd5IdFiysBxBOIY73TJU0KPnzGulwXak7fpNOgIe2XQwL9Jw/viewform?usp=dialog")}
+            onPress={() => Linking.openURL("https://docs.google.com/forms/d/e/1FAIpQLSd5IdFiysBxBOIYJ73TJU0KPnzGulwXak7fpNOgIe2XQwL9Jw/viewform?usp=dialog")}
             style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
               styles.feedbackLink,
               pressed && styles.pressed,
