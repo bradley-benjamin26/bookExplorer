@@ -10,7 +10,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
@@ -20,6 +20,7 @@ import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { WebTooltip } from "../src/components/WebTooltip";
 import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
+import { titleRef } from "../src/webTitle";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
@@ -93,6 +94,32 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             </Button>
           </View>
         )}
+        <View
+          style={[
+            styles.feedbackBanner,
+            { backgroundColor: theme.colors.paper, borderColor: theme.colors.border, borderLeftColor: theme.colors.cover },
+          ]}
+          accessibilityRole="summary"
+        >
+          <Text style={{ color: theme.colors.ink, fontFamily: theme.fonts.body, fontSize: theme.typeScale.xs, lineHeight: 20 }}>
+            Hello! Thank you for trying out Shelf Thread. This is a librarian's hobby project, and I'm curious to see if people would actually use something like this. Please fill out this feedback form to share your experience!
+          </Text>
+          <Pressable
+            ref={titleRef("Feedback form")}
+            accessibilityRole="link"
+            accessibilityLabel="Feedback form, opens Google Forms"
+            onPress={() => Linking.openURL("https://docs.google.com/forms/d/e/1FAIpQLSd5IdFiysBxBOIY73TJU0KPnzGulwXak7fpNOgIe2XQwL9Jw/viewform?usp=dialog")}
+            style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
+              styles.feedbackLink,
+              pressed && styles.pressed,
+              focused && { outlineWidth: 2, outlineColor: theme.colors.cover, outlineStyle: "solid" },
+            ]}
+          >
+            <Text style={{ color: theme.colors.cover, fontFamily: theme.fonts.bodySemiBold, fontSize: theme.typeScale.xs, lineHeight: 20, textDecorationLine: "underline" }}>
+              Share your experience in the feedback form
+            </Text>
+          </Pressable>
+        </View>
         <View style={styles.stackArea}>
           <Stack
             screenOptions={{
@@ -143,5 +170,18 @@ const styles = StyleSheet.create({
   content: { flex: 1, width: "100%", maxWidth: CONTENT_MAX_WIDTH },
   stackArea: { flex: 1 },
   notice: { padding: 12, gap: 8, alignItems: "center" },
+  feedbackBanner: {
+    marginHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  feedbackLink: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingVertical: 4 },
+  pressed: { opacity: 0.6 },
   headerRight: { paddingRight: 16 },
 });

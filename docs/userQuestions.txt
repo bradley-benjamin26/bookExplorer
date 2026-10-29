@@ -1,0 +1,22 @@
+The following are questions to be asked to the users outlined in personas.txt. Subagents should be deployed
+to review the application and answer the questions following the persona characteristics. If the agent makes an assumption
+that is outside of the persona document, please list the assumption. Testers could potential go straight to shelfthread.com if that is easier for testing.
+
+1) What are your initial impressions when you view the application. Which do you like better, the mobile
+view or the desktop view. Why?
+2) Search for a book that might interest you. Were you able to find one? Go to its page. Describe your experience. Is the information presented helpful? Is some unhelpful?
+2a) Navigate between work and an edition, does the distinction make sense?
+2b) Try to add terms and notes to a book page.
+3) Click on the graph view button. Click on a few nodes to explore the experience. What are your thoughts about the experience?
+3a) Click on a subject term and view its page. Is the page helpful or not? Describe your experience.
+4) Save some items to a list. View the recommendations based on the list. What are your thoughts? Did you find any good recommendations?
+5) Search for an author and try to access its page. Where you able to find and access it? Describe your experience and thoughts.
+Is the information helpful or unhelpful?
+6) Compare the standard/light view with the dark view. What do you like or not like about each one. Which do you prefer?
+7) What are your 3 favorite things about this app?
+8) What are your 3 least favorite things about this app?
+9) What new features would interest you in this app?
+10) What are your thoughts about the application overall?
+11) Do you find the app easy to use? Did you need to use any accessibility features?
+How did that work out?
+12) Would you use this app again?
