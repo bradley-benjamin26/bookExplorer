@@ -104,7 +104,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               contentStyle: { backgroundColor: theme.colors.paper },
             }}
           >
-            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerTitle: "", headerRight: inHeader(<MyLibraryButton />) }} />
+            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<MyLibraryButton />) }} />
             <Stack.Screen
               name="scan"
               options={{ title: "Scan Barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}

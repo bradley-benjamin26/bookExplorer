@@ -7,6 +7,13 @@ import { useTheme } from "../theme";
 export function HeaderTitle({ children }: { children: string }) {
   const router = useRouter();
   const { colors, fonts, typeScale } = useTheme();
+  if (children === "Shelf Thread") {
+    return (
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, color: colors.ink, fontSize: typeScale.lg }}>
+        Shelf Thread
+      </Text>
+    );
+  }
   return (
     <View>
       <Pressable

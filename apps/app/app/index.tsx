@@ -2,7 +2,7 @@ import { isValidIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Linking, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { NODE_LABELS } from "../src/graphLabels";
@@ -50,9 +50,6 @@ export default function Home() {
       <View style={styles.inner}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.title} accessibilityRole="header">
-              Shelf Thread
-            </Text>
             <Text style={styles.subtitle}>find your next read</Text>
             <Pressable
               ref={titleRef("Read about this project")}
@@ -63,6 +60,21 @@ export default function Home() {
               <Text style={styles.aboutLink}>About Shelf Thread</Text>
             </Pressable>
           </View>
+        </View>
+
+        <View style={styles.feedbackBanner} accessibilityRole="summary">
+          <Text style={styles.feedbackText}>
+            Hello! Thank you for trying out Shelf Thread. This is a librarian's hobby project, and I'm curious to see if people would actually use something like this. Please fill out this feedback form to share your experience!
+          </Text>
+          <Pressable
+            ref={titleRef("Feedback form")}
+            accessibilityRole="link"
+            accessibilityLabel="Feedback form, opens Google Forms"
+            onPress={() => Linking.openURL("https://docs.google.com/forms/d/e/1FAIpQLSd5IdFiysBxBOIY73TJU0KPnzGulwXak7fpNOgIe2XQwL9Jw/viewform?usp=dialog")}
+            style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [styles.feedbackLink, pressed && styles.pressed, focused && styles.focused]}
+          >
+            <Text style={styles.feedbackLinkText}>Share your experience in the feedback form</Text>
+          </Pressable>
         </View>
 
         <Pressable
@@ -165,10 +177,23 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       justifyContent: "space-between",
       alignItems: "flex-start",
       marginTop: spacing.md,
-      marginBottom: spacing.xxl,
+      marginBottom: spacing.lg,
     },
-    title: { fontFamily: fonts.display, fontSize: typeScale.xl, color: colors.ink },
     subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
+    feedbackBanner: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.cover,
+      borderRadius: radii.sm,
+      backgroundColor: colors.paper,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      gap: spacing.sm,
+    },
+    feedbackText: { fontFamily: fonts.body, fontSize: typeScale.sm, lineHeight: 22, color: colors.ink },
+    feedbackLink: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingVertical: spacing.xs },
+    feedbackLinkText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, lineHeight: 22, color: colors.cover, textDecorationLine: "underline" },
     aboutLink: {
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
