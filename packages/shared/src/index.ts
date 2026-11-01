@@ -462,6 +462,7 @@ export const HardcoverListSummarySchema = z.object({ id: z.number().int(), name:
 export const HardcoverListBooksSchema = z.object({
   name: z.string(),
   description: z.string(),
+  booksCount: z.number().int(),
   books: z.array(z.object({ hardcoverBookId: z.number().int(), title: z.string(), isbn: z.string().nullable() })),
 });
 export const HardcoverProgressSchema = z.object({

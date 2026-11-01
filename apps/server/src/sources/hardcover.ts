@@ -29,14 +29,16 @@ export class HardcoverUnauthorizedError extends Error {
 }
 
 /** One authenticated GraphQL call; the caller picks whose token it runs on. */
-export async function hardcoverGraphql<T>(query: string, variables: object, authorization: string): Promise<T> {
+export async function hardcoverGraphql<T>(query: string, variables: object, authorization: string, opts: { retry?: boolean } = {}): Promise<T> {
+  const init = {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authorization },
+    body: JSON.stringify({ query, variables }),
+  };
   let res: Response;
   try {
-    res = await fetchWithTimeout(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: authorization },
-      body: JSON.stringify({ query, variables }),
-    });
+    // retry: false uses plain fetch, as hardcoverOAuth's token calls do: fetchWithTimeout retries 5xx and timeouts, which would repeat a mutation.
+    res = opts.retry === false ? await fetch(ENDPOINT, { ...init, signal: AbortSignal.timeout(10_000) }) : await fetchWithTimeout(ENDPOINT, init);
   } catch (err) {
     // fetchWithTimeout turns 429/503 into this before we see the response.
     if (err instanceof UpstreamUnavailableError) throw new HardcoverRateLimitError(Math.max(1, Math.ceil(err.retryAfterMs / 1000)));

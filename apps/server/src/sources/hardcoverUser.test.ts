@@ -24,20 +24,23 @@ describe("hardcoverUser", () => {
       lists_by_pk: {
         name: "L",
         description: null,
+        books_count: 2,
         list_books: [
           { book_id: 1, book: { title: "A", default_physical_edition: { isbn_13: "D13", isbn_10: null } }, edition: { isbn_13: null, isbn_10: "E10" } },
           { book_id: "2", book: { title: "B", default_physical_edition: { isbn_13: null, isbn_10: "D10" } }, edition: null },
         ],
       },
     });
-    expect((await listBooks(1, "T"))?.books).toEqual([
+    const got = await listBooks(1, "T");
+    expect(got?.booksCount).toBe(2);
+    expect(got?.books).toEqual([
       { hardcoverBookId: 1, title: "A", isbn: "E10" },
       { hardcoverBookId: 2, title: "B", isbn: "D10" },
     ]);
   });
 
   it("listBooks yields isbn null when no edition has one", async () => {
-    gql.mockResolvedValue({ lists_by_pk: { name: "L", description: "d", list_books: [{ book_id: 1, book: { title: "A", default_physical_edition: null }, edition: null }] } });
+    gql.mockResolvedValue({ lists_by_pk: { name: "L", description: "d", books_count: 1, list_books: [{ book_id: 1, book: { title: "A", default_physical_edition: null }, edition: null }] } });
     expect((await listBooks(1, "T"))?.books[0].isbn).toBeNull();
   });
 
@@ -51,6 +54,14 @@ describe("hardcoverUser", () => {
     await expect(createList({ name: "n", description: "" }, "T")).rejects.toThrow();
     gql.mockResolvedValue({ insert_list: { id: "9" } });
     expect(await createList({ name: "n", description: "" }, "T")).toBe(9);
+  });
+
+  it("mutations opt out of retries so a timeout cannot duplicate a list or row", async () => {
+    gql.mockResolvedValueOnce({ insert_list: { id: 9 } }).mockResolvedValueOnce({}).mockResolvedValueOnce({ list_books: [{ id: 7 }] }).mockResolvedValue({});
+    await createList({ name: "n", description: "" }, "T");
+    await addListBook(1, 2, "T");
+    await removeListBook(1, 2, "T");
+    expect(gql.mock.calls.map((c) => c[3])).toEqual([{ retry: false }, { retry: false }, undefined, { retry: false }]);
   });
 
   it("addListBook sends no position", async () => {

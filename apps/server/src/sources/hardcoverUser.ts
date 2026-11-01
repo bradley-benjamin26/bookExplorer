@@ -41,10 +41,11 @@ export async function listBooks(listId: number, auth: string): Promise<Hardcover
     lists_by_pk: {
       name: string;
       description: string | null;
+      books_count: number | string | null;
       list_books: { book_id: number | string; book: { title: string; default_physical_edition: Edition } | null; edition: Edition }[];
     } | null;
   }>(
-    `query($id: Int!) { lists_by_pk(id: $id) { name description list_books(order_by: {position: asc}) { book_id book { title default_physical_edition { isbn_13 isbn_10 } } edition { isbn_13 isbn_10 } } } }`,
+    `query($id: Int!) { lists_by_pk(id: $id) { name description books_count list_books(order_by: {position: asc}) { book_id book { title default_physical_edition { isbn_13 isbn_10 } } edition { isbn_13 isbn_10 } } } }`,
     { id: listId },
     auth
   );
@@ -53,6 +54,7 @@ export async function listBooks(listId: number, auth: string): Promise<Hardcover
   return {
     name: list.name,
     description: list.description ?? "",
+    booksCount: Number(list.books_count ?? 0),
     books: list.list_books.map((b) => ({
       hardcoverBookId: Number(b.book_id),
       title: b.book?.title ?? "",
@@ -65,7 +67,8 @@ export async function createList(input: { name: string; description: string }, a
   const data = await hardcoverGraphql<{ insert_list: { id: number | string | null } | null }>(
     `mutation($name: String!, $description: String!) { insert_list(object: {name: $name, description: $description, privacy_setting_id: 3}) { id } }`,
     input,
-    auth
+    auth,
+    { retry: false }
   );
   const id = data.insert_list?.id;
   if (id == null) throw new Error("Hardcover did not create the list");
@@ -76,7 +79,8 @@ export async function addListBook(listId: number, bookId: number, auth: string):
   await hardcoverGraphql(
     `mutation($listId: Int!, $bookId: Int!) { insert_list_book(object: {list_id: $listId, book_id: $bookId}) { id } }`,
     { listId, bookId },
-    auth
+    auth,
+    { retry: false }
   );
 }
 
@@ -87,7 +91,7 @@ export async function removeListBook(listId: number, bookId: number, auth: strin
     auth
   );
   for (const row of data.list_books) {
-    await hardcoverGraphql(`mutation($id: Int!) { delete_list_book(id: $id) { id } }`, { id: Number(row.id) }, auth);
+    await hardcoverGraphql(`mutation($id: Int!) { delete_list_book(id: $id) { id } }`, { id: Number(row.id) }, auth, { retry: false });
   }
 }
 

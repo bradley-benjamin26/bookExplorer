@@ -89,3 +89,25 @@ it("throws on GraphQL errors", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ errors: [{ message: "boom" }] }));
   await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toThrow("boom");
 });
+
+it("sends a no-retry call through plain fetch, so a timed-out mutation is never repeated", async () => {
+  const fetchMock = vi.fn(async () => Response.json({ data: { ok: 1 } }));
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    expect(await hardcoverGraphql("mutation", {}, "Bearer x", { retry: false })).toEqual({ ok: 1 });
+    expect(fetchWithTimeout).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].signal).toBeInstanceOf(AbortSignal);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("maps a no-retry 429 the same way", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 429, headers: { "Retry-After": "4" } })));
+  try {
+    await expect(hardcoverGraphql("mutation", {}, "Bearer x", { retry: false })).rejects.toMatchObject({ retryAfterSeconds: 4 });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
