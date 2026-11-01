@@ -140,5 +140,6 @@ export async function lookupByIsbn(isbn: string): Promise<HardcoverBookData | nu
  * data is as usable as another's since Hardcover ratings/reviews are
  * recorded per book, not per edition. */
 export function lookupByAnyIsbn(isbns: string[]): Promise<HardcoverBookData | null> {
-  return tryEachIsbn(isbns, lookupByIsbn, { sourceName: "hardcover", isEmpty: (result) => !result, fallback: null });
+  // Hardcover's 60 requests a minute are shared by every page; cap the tries.
+  return tryEachIsbn(isbns, lookupByIsbn, { sourceName: "hardcover", isEmpty: (result) => !result, fallback: null, maxAttempts: 5 });
 }
