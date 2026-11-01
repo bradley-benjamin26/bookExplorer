@@ -18,10 +18,10 @@
     <meta name="twitter:description" content="Scan or search a book, then follow the threads between authors, subjects and works." />
     <meta name="twitter:image" content="https://shelfthread.com/og-image.png" />
     <!-- social:end -->
-     <script type="application/json+ld">
+     <script type="application/ld+json">
      {
        "@context": "https://schema.org",
-       "@type": ["website", "WebApplication", "Product"],
+       "@type": ["WebSite", "WebApplication"],
        "name": "Shelf Thread",
        "url": "https://shelfthread.com/",
        "applicationCategory": "EducationalApplication",
@@ -29,12 +29,13 @@
        "offers": {
          "@type": "Offer",
          "url": "https://shelfthread.com/",
-         "price": "0"
+         "price": "0",
+         "priceCurrency": "USD"
        },
        "potentialAction": {
          "@type": "SearchAction",
          "target": "https://shelfthread.com/search?q={search_term_string}",
-         "query-input": "required name=search_term_string","
+         "query-input": "required name=search_term_string"
        },
        "featureList": [
          "Scan a book's ISBN barcode",
