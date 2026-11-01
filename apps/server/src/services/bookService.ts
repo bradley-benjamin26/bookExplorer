@@ -9,6 +9,7 @@ import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { getWorkDetail } from "./workService.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
+import { canonicalizeSubjects } from "./subjectCanon.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
 
@@ -19,8 +20,9 @@ const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
 // downstream lookup (and the cache key) on the same form.
 
 /** Shared by the /api/books route (a future /api/graph/book route would reuse this too). */
-export function getBookDetail(rawIsbn: string): Promise<Book | null> {
+export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): Promise<Book | null> {
   const isbn = normalizeIsbn(rawIsbn);
+  // The cached result is public catalog data, so it is shared across users whichever token fetched it.
   return bookCache.wrap(isbn, async (entry) => {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
@@ -29,13 +31,13 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const authors =
       ol.authors.length || !ol.workId
         ? ol.authors
-        : (await getWorkDetail(ol.workId).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
+        : (await getWorkDetail(ol.workId, hardcoverAuth).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
 
     // LOC subject/genre headings, Hardcover, and Open Library's own ratings
     // — same shared pipeline a work page uses (see bookEnrichment.ts),
     // started here, alongside everything else below, since none of it
     // depends on any of it.
-    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId, entry);
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId, entry, hardcoverAuth);
 
     // Best-effort match of the work itself (not a specific edition or film
     // adaptation) to a Wikidata item, so its Wikipedia lead can be used as
@@ -77,6 +79,8 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !wikipedia?.text || !hasRating;
     const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(optionalSource(entry, "googleBooks", null)) : null;
     const locMetadata = await locMetadataPromise;
+    const olTerms = splitSubjectTerms(ol.subjects);
+    const canon = await canonicalizeSubjects([...locMetadata.subjects, ...olTerms.subjects], entry);
 
     const coverUrl = ol.coverUrl ?? hc?.coverUrl ?? gb?.coverUrl ?? null;
     const coverSource = ol.coverUrl ? "openLibrary" : hc?.coverUrl ? "hardcover" : gb?.coverUrl ? "googleBooks" : null;
@@ -103,14 +107,19 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
       blendHardcoverAndOpenLibraryRating(hc, olRatings) ??
       (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks" as const] } : null);
 
-    const olTerms = splitSubjectTerms(ol.subjects);
     const result: Book = {
       isbn,
       title: ol.title,
       authors,
-      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
+      subjects: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.subjects },
+        { source: "openLibrary", labels: olTerms.subjects },
+      ], canon),
       awards: olTerms.awards,
-      genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
+      genres: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.genres },
+        { source: "wikidata", labels: wikidataGenres },
+      ]),
       description,
       descriptionSource,
       descriptionSourceUrl: wikipedia?.url ?? null,

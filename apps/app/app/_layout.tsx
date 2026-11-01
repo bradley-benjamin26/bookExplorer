@@ -22,6 +22,7 @@ import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
 import { titleRef } from "../src/webTitle";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
+import { loadSession } from "../src/hardcoverSession";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
@@ -43,7 +44,7 @@ export default function RootLayout() {
   const [migrated, setMigrated] = useState(false);
   const [migrationFailed, setMigrationFailed] = useState(false);
   const migrate = useCallback(() => {
-    migrateStorage()
+    Promise.all([migrateStorage(), loadSession().catch(() => {})])
       .then(() => setMigrationFailed(false), () => setMigrationFailed(true))
       .finally(() => setMigrated(true));
   }, []);
@@ -153,6 +154,8 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="hardcover" options={{ title: "My Hardcover Account", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="hardcover-connected" options={{ title: "Hardcover", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />

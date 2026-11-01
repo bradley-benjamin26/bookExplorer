@@ -2,11 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary, listChanges } from "./listMembership";
 import { getSavedItems } from "./savedItems";
-import { addToList, createList, getList, type SavedList } from "./savedLists";
+import { addToList, createList, getList, setMemberHardcoverId, type SavedList } from "./savedLists";
 import { getSavedWork, saveWorkFromApi, updateSavedWork } from "./savedWorks";
 import type { Work } from "@book-explorer/shared";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
+const push = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
+vi.mock("../api/client", () => ({
+  ApiError: class extends Error {},
+  addHardcoverListBook: push.add,
+  removeHardcoverListBook: push.remove,
+}));
 
 const emma = { type: "work" as const, id: "OL1W", title: "Emma" };
 const work = { openLibraryWorkId: "OL1W", title: "Emma", authors: [], subjects: [], genres: [] } as unknown as Work;
@@ -89,4 +95,25 @@ describe("leavesLibrary", () => {
   it("is false while any list stays ticked", () => expect(leavesLibrary([list("a", true), list("b", false)], m, new Set(["b"]))).toBe(false));
   it("is false while the holding list stays ticked", () => expect(leavesLibrary([list("a", true), list("b", false)], m, new Set(["a"]))).toBe(false));
   it("is false for an item on no list yet", () => expect(leavesLibrary([list("a", false)], m, new Set())).toBe(false));
+});
+
+describe("applyListChanges Hardcover pushes", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("a failed push keeps the local add and reports the retry message", async () => {
+    push.add.mockRejectedValue(new Error("boom"));
+    const a = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+    const issue = vi.fn();
+    await applyListChanges(emma, { add: [a.id], remove: [] }, async () => {}, issue);
+    expect((await getList(a.id))!.members).toHaveLength(1);
+    expect(issue).toHaveBeenCalledWith("Saved here. Hardcover didn't update; use Sync with Hardcover on the list to retry.");
+  });
+
+  it("a remove on a linked list sends the member's hardcoverBookId", async () => {
+    const a = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+    await addToList(a.id, emma);
+    await setMemberHardcoverId(a.id, "work", "OL1W", 77);
+    await applyListChanges(emma, { add: [], remove: [a.id] }, async () => {});
+    expect(push.remove).toHaveBeenCalledWith(5, 77);
+  });
 });

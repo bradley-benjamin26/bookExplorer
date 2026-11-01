@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
 import { setPreferences } from "./preferences";
-import { addToList, createList, defaultListFor, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, removeFromList } from "./savedLists";
+import { addToList, createList, defaultListFor, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, linkList, removeFromList, replaceMembers, setMemberHardcoverId } from "./savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -109,5 +109,32 @@ describe("savedLists", () => {
     spy.mockRejectedValueOnce(new Error("disk"));
     await expect(getList("x")).rejects.toThrow("disk");
     spy.mockRestore();
+  });
+
+  it("linkList links, unlinks by removing the key, and bumps the version", async () => {
+    const list = await createList({ name: "L", kind: "book", hardcoverListId: 4 });
+    expect(list.hardcoverListId).toBe(4);
+    await linkList(list.id, 7);
+    expect((await getList(list.id))?.hardcoverListId).toBe(7);
+    await linkList(list.id, null);
+    const after = (await getList(list.id))!;
+    expect("hardcoverListId" in after).toBe(false);
+    expect(after.updatedAt).toBeGreaterThanOrEqual(list.updatedAt);
+  });
+
+  it("setMemberHardcoverId sets the id on the matching member only", async () => {
+    const list = await createList({ name: "L", kind: "book" });
+    await addToList(list.id, dune);
+    await addToList(list.id, emma);
+    await setMemberHardcoverId(list.id, "book", dune.id, 12);
+    expect((await getList(list.id))?.members).toMatchObject([{ id: dune.id, hardcoverBookId: 12 }, { id: emma.id }]);
+    expect((await getList(list.id))?.members[1].hardcoverBookId).toBeUndefined();
+  });
+
+  it("replaceMembers swaps the members array", async () => {
+    const list = await createList({ name: "L", kind: "book" });
+    await addToList(list.id, dune);
+    await replaceMembers(list.id, [{ ...emma, addedAt: 3, hardcoverBookId: 2 }]);
+    expect((await getList(list.id))?.members).toEqual([{ ...emma, addedAt: 3, hardcoverBookId: 2 }]);
   });
 });

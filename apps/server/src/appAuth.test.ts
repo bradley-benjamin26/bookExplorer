@@ -47,3 +47,7 @@ describe("isPublicPath", () => {
     }
   });
 });
+
+describe("isPublicPath OAuth callback", () => {
+  it("treats the OAuth callback as public", () => expect(isPublicPath("/api/hardcover/callback?code=x")).toBe(true));
+});

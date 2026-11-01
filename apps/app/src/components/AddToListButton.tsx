@@ -1,8 +1,10 @@
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { createHardcoverList } from "../api/client";
 import { confirmLeave } from "../confirm";
+import { getSessionToken } from "../hardcoverSession";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import { getPreferences } from "../storage/preferences";
 import {
@@ -35,12 +37,16 @@ export function CreateListForm({
   const [chosenKind, setChosenKind] = useState<SavedList["kind"]>("book");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [onHardcover, setOnHardcover] = useState(false);
+  const showHardcover = !!getSessionToken() && (kind ?? chosenKind) === "book";
 
   const submit = async () => {
     setError("");
     setBusy(true);
     try {
-      const list = await createList({ name, description, kind: kind ?? chosenKind });
+      // Hardcover first: if it fails, nothing is created here.
+      const hardcoverListId = showHardcover && onHardcover ? (await createHardcoverList({ name: name.trim(), description })).id : undefined;
+      const list = await createList({ name, description, kind: kind ?? chosenKind, hardcoverListId });
       // Clear first: a failing onCreated must not leave the form able to create a duplicate on retry.
       setName("");
       setDescription("");
@@ -80,6 +86,12 @@ export function CreateListForm({
         multiline
         accessibilityLabel="List description"
       />
+      {showHardcover && (
+        <View style={styles.switchRow}>
+          <Text style={styles.fieldLabel}>Also create on Hardcover</Text>
+          <Switch value={onHardcover} onValueChange={setOnHardcover} trackColor={{ true: theme.colors.cover }} accessibilityLabel="Also create on Hardcover" />
+        </View>
+      )}
       {error ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
           {error}
@@ -177,7 +189,7 @@ export function AddToListButton({
     setBusy(true); // also blocks a second tap while the confirm is up
     try {
       if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
-      await applyListChanges(member, listChanges(lists, member, checked), onSave);
+      await applyListChanges(member, listChanges(lists, member, checked), onSave, setError);
       onChange?.();
       setOpen(false);
     } catch (e) {
@@ -309,6 +321,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     form: { paddingVertical: spacing.md },
     kindRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
     fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },
+    switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.md },
     fieldLabelSpaced: { marginTop: spacing.md },
     input: {
       borderWidth: 1,

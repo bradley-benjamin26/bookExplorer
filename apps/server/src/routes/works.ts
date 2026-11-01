@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { userAuthorization } from "../services/hardcoverAccount.js";
 import { getWorkDetail } from "../services/workService.js";
 import { isOpenLibraryWorkId } from "../validation.js";
 
@@ -9,7 +10,7 @@ export async function worksRoutes(app: FastifyInstance) {
       reply.code(400);
       return { error: `"${workId}" is not an Open Library work id` };
     }
-    const work = await getWorkDetail(workId);
+    const work = await getWorkDetail(workId, await userAuthorization(req.headers["x-hardcover-session"]));
 
     if (!work) {
       reply.code(404);

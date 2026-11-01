@@ -38,6 +38,7 @@ export type Review = z.infer<typeof ReviewSchema>;
 export const TaggedTermSchema = z.object({
   label: z.string(),
   sources: z.array(z.enum(["openLibrary", "lcsh", "wikidata"])),
+  slug: z.string().optional(),
 });
 export type TaggedTerm = z.infer<typeof TaggedTermSchema>;
 
@@ -62,10 +63,11 @@ export function splitSubjectTerms(labels: string[]): { subjects: string[]; award
   return { subjects, awards: [...awards.values()] };
 }
 
-/** Dedupe key: near-duplicate subjects ("Science-Fiction" / "science fiction", "X, fiction" / "X") share one. */
+/** Dedupe key: normalized spellings like "Science-Fiction" / "science fiction", comma inversions and "X, fiction" / "X" share one. */
 export function subjectKey(label: string): string {
   const plain = label.trim().toLowerCase();
-  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
+  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "")
+    .replace(/,/g, " ").replace(/\s+/g, " ").trim() || plain;
 }
 
 // The Library of Congress catalog record's call number, Dewey class and
@@ -386,9 +388,11 @@ export const SavedListExportSchema = z.object({
         id: z.string().min(1).max(200),
         title: text,
         addedAt: z.number().int().nonnegative(),
+        hardcoverBookId: z.number().int().positive().optional(),
       })
     )
     .max(MAX_IMPORT_RECORDS),
+  hardcoverListId: z.number().int().positive().optional(),
   createdAt: z.number().int().nonnegative(),
 });
 
@@ -452,3 +456,20 @@ export function normalizeTitle(title: string): string {
   const noLeadingArticle = noTrailingArticle.replace(/^(the|a|an)\s+/, "");
   return noLeadingArticle.replace(/[^a-z0-9]+/g, " ").trim();
 }
+
+export const HardcoverAccountSchema = z.object({ username: z.string() });
+export const HardcoverHandoffSchema = HardcoverAccountSchema.extend({ token: z.string() });
+
+export const HardcoverListSummarySchema = z.object({ id: z.number().int(), name: z.string(), description: z.string(), booksCount: z.number().int() });
+export const HardcoverListBooksSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  books: z.array(z.object({ hardcoverBookId: z.number().int(), title: z.string(), isbn: z.string().nullable() })),
+});
+export const HardcoverProgressSchema = z.object({
+  status: z.enum(["want", "reading", "read", "paused", "dnf"]).nullable(),
+  percent: z.number().min(0).max(100).nullable(),
+});
+export type HardcoverListSummary = z.infer<typeof HardcoverListSummarySchema>;
+export type HardcoverListBooks = z.infer<typeof HardcoverListBooksSchema>;
+export type HardcoverProgress = z.infer<typeof HardcoverProgressSchema>;

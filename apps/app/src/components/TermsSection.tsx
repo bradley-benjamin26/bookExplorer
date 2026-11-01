@@ -90,7 +90,7 @@ export function TermsSection({
                   ref={titleRef(`View ${titleCase(label)}`)}
                   key={label}
                   style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
-                  onPress={() => router.push(routes.subject(slugifySubject(label)))}
+                  onPress={() => router.push(routes.subject(tagged?.find((term) => term.label === label)?.slug ?? slugifySubject(label)))}
                   accessibilityRole="button"
                   accessibilityLabel={titleCase(label)}
                 >

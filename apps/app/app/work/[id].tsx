@@ -12,6 +12,7 @@ import { EditionsSection } from "../../src/components/EditionsSection";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
 import { RatingBadge } from "../../src/components/RatingBadge";
+import { HardcoverProgress } from "../../src/components/HardcoverProgress";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
@@ -131,6 +132,7 @@ export default function WorkDetail() {
           </Pressable>
         ))}
         <RatingBadge rating={data.rating} />
+        <HardcoverProgress type="work" id={data.openLibraryWorkId} />
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (

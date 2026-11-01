@@ -30,6 +30,8 @@ function skosUrl(uri: string): string | null {
 
 interface Suggest2Hit {
   aLabel: string;
+  vLabel?: string;
+  more?: { variantLabels?: string[] };
   uri: string;
 }
 interface Suggest2Response {
@@ -66,27 +68,62 @@ function labelVariants(name: string): string[] {
 }
 
 /**
- * Resolves a subject heading's own label (e.g. "Fairy tales") to its LCSH
- * authority URI via id.loc.gov's suggest2 endpoint. Requires an exact
- * slug match (see slugifySubject) against the label or its singular/plural variant —
- * a left-anchored near-miss like "Fairy tales--Adaptations" is a different,
- * more specific heading and must not be treated as a match. Never throws:
- * any failure (network error, non-ok response, no hits, no match) degrades
- * to `null`.
+ * Resolves an LCSH authority via id.loc.gov's suggest2 endpoint. Requires an
+ * exact slug match (see slugifySubject) against the authorized label, a
+ * variant label, or its singular/plural variant — a left-anchored near-miss
+ * like "Fairy tales--Adaptations" is a different, more specific heading and
+ * must not be treated as a match. Never throws; failures and no-match results
+ * both return null, while the status helper keeps those cases distinguishable
+ * for cache TTL decisions.
  */
-export async function findSubjectHeadingUri(name: string): Promise<string | null> {
+export interface SubjectHeading {
+  uri: string;
+  heading: string;
+  variants: string[];
+}
+
+export interface SubjectHeadingLookup {
+  heading: SubjectHeading | null;
+  failed: boolean;
+  error?: unknown;
+}
+
+export async function findSubjectHeadingWithStatus(name: string): Promise<SubjectHeadingLookup> {
   try {
     const url = `${SUGGEST_URL}?q=${encodeURIComponent(name)}`;
     const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
-    if (!res.ok) return null;
+    if (!res.ok) return { heading: null, failed: true, error: new Error(`Library of Congress request failed: ${res.status}`) };
     const data = (await res.json()) as Suggest2Response;
     // Compared as slugs: Open Library's collapsed "science fiction authorship" is LCSH's "Science fiction--Authorship".
     const targets = labelVariants(name).map(slugifySubject);
-    const hit = (data.hits ?? []).find((h) => typeof h.aLabel === "string" && targets.includes(slugifySubject(h.aLabel)));
-    return hit?.uri ?? null;
-  } catch {
-    return null;
+    const hit = (data.hits ?? []).find((candidate) => {
+      const labels = [
+        candidate.aLabel,
+        candidate.vLabel,
+        ...(candidate.more?.variantLabels ?? []),
+      ];
+      return labels.some((label) => typeof label === "string" && targets.includes(slugifySubject(label)));
+    });
+    if (!hit || typeof hit.aLabel !== "string" || typeof hit.uri !== "string") return { heading: null, failed: false };
+    return { heading: { uri: hit.uri, heading: hit.aLabel, variants: hit.more?.variantLabels ?? [] }, failed: false };
+  } catch (error) {
+    return { heading: null, failed: true, error };
   }
+}
+
+export async function findSubjectHeading(name: string): Promise<SubjectHeading | null> {
+  return (await findSubjectHeadingWithStatus(name)).heading;
+}
+
+export async function findSubjectHeadingUri(name: string): Promise<string | null> {
+  return (await findSubjectHeading(name))?.uri ?? null;
+}
+
+export function naturalSubjectLabel(heading: string, variants: string[]): string {
+  const inverted = /^([^,]+), ([^,]+)$/.exec(heading);
+  if (!inverted) return heading;
+  const natural = `${inverted[2]} ${inverted[1]}`;
+  return variants.find((variant) => variant.toLowerCase() === natural.toLowerCase()) ?? heading;
 }
 
 // Memory-only, no namespace: keys are user-typed text (same reason as searchCache).

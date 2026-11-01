@@ -272,19 +272,19 @@ function workGraph(work: WorkLinks): Graph {
   // genre via the shared "genre:<slug>" node id, same as any other repeated
   // genre would).
   const GENRE_SUBJECT_PREFIX = /^genre:\s*/i;
-  const plainSubjects: string[] = [];
+  const plainSubjects: { label: string; slug?: string }[] = [];
   const genresFromSubjects: string[] = [];
-  for (const { label: subject } of work.subjects) {
-    if (GENRE_SUBJECT_PREFIX.test(subject)) {
-      genresFromSubjects.push(subject.replace(GENRE_SUBJECT_PREFIX, "").trim());
+  for (const { label, slug } of work.subjects) {
+    if (GENRE_SUBJECT_PREFIX.test(label)) {
+      genresFromSubjects.push(label.replace(GENRE_SUBJECT_PREFIX, "").trim());
     } else {
-      plainSubjects.push(subject);
+      plainSubjects.push({ label, slug });
     }
   }
 
   for (const subject of plainSubjects.slice(0, MAX_WORK_SUBJECTS)) {
-    const nodeId = `subject:${slugifySubject(subject)}`;
-    nodes.push({ id: nodeId, type: "subject", label: subject, navigable: true });
+    const nodeId = `subject:${subject.slug ?? slugifySubject(subject.label)}`;
+    nodes.push({ id: nodeId, type: "subject", label: subject.label, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "subject" });
   }
 

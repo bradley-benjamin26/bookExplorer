@@ -2,8 +2,10 @@ import { slugifySubject, type Subject, type SubjectConcept } from "@book-explore
 import { TtlCache } from "../cache.js";
 import * as locLinkedData from "../sources/locLinkedData.js";
 import * as openLibrary from "../sources/openLibrary.js";
+import type { OpenLibrarySubject } from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { optionalSource } from "./bookEnrichment.js";
+import { canonicalizeSubjects } from "./subjectCanon.js";
 
 const subjectCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subject");
 const subjectBooksCache = new TtlCache<Subject | null>(1000 * 60 * 60 * 24, 1000, "subjectBooks");
@@ -86,24 +88,56 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
     const ol = await loadOlSubject(slug);
     if (!ol) return null;
 
+    const canonical = (await canonicalizeSubjects([ol.name], entry)).get(ol.name) ?? null;
+    let subjectData = ol;
+    if (canonical) {
+      const alreadyLoaded = new Set([slugifySubject(slug), slugifySubject(ol.name)]);
+      const variantSlugs = [...new Set([canonical.slug, ...canonical.variants.map(slugifySubject)])]
+        .filter((variantSlug) => !alreadyLoaded.has(variantSlug))
+        .slice(0, 2);
+      const variantSubjects = await Promise.all(
+        variantSlugs.map((variantSlug) =>
+          openLibrary.getSubject(variantSlug).catch(
+            optionalSource<OpenLibrarySubject | null>(entry, "openLibrary subject variant", null)
+          )
+        )
+      );
+      const works = new Map(ol.works.map((work) => [work.workId, work]));
+      let workCount = ol.workCount;
+      for (const variant of variantSubjects) {
+        if (!variant) continue;
+        workCount = Math.max(workCount, variant.workCount);
+        for (const work of variant.works) {
+          if (!works.has(work.workId)) works.set(work.workId, work);
+        }
+      }
+      subjectData = { ...ol, name: canonical.display, workCount, works: [...works.values()] };
+    }
+
     // Matching by name alone confuses same-spelled things ("ghosts" the
     // supernatural vs. a TV series), so the Wikidata item LCSH itself links
     // its heading to is trusted first; only a heading with no such link (or
     // no heading at all) falls back to a — stricter — Wikidata name search.
-    const lcshUri = await locLinkedData
-      .findSubjectHeadingUri(ol.name)
-      .catch(optionalSource<string | null>(entry, "loc subject heading", null));
+    const lcshUri =
+      canonical?.uri ??
+      (await locLinkedData.findSubjectHeadingUri(ol.name).catch(optionalSource<string | null>(entry, "loc subject heading", null)));
     const lcshConcepts = lcshUri
       ? await locLinkedData.fetchBroaderNarrower(lcshUri).catch(optionalSource(entry, "loc broader/narrower", locLinkedData.EMPTY))
       : locLinkedData.EMPTY;
     const qid =
       lcshConcepts.wikidataId ??
-      (await wikidata.searchConceptQid(ol.name).catch(optionalSource<string | null>(entry, "wikidata concept search", null)));
+      (await wikidata.searchConceptQid(subjectData.name).catch(optionalSource<string | null>(entry, "wikidata concept search", null)));
     const [wikidataConcepts, description] = await Promise.all([
       qid ? wikidata.fetchRelatedConcepts(qid).catch(optionalSource<SubjectConcept[]>(entry, "wikidata related concepts", [])) : [],
       qid ? wikidata.fetchDescription(qid).catch(optionalSource<string | null>(entry, "wikidata description", null)) : null,
     ]);
-    return toSubject(slugifySubject(slug), ol, qid, description, mergeSubjectConcepts(wikidataConcepts, lcshConcepts));
+    return toSubject(
+      canonical?.slug ?? slugifySubject(slug),
+      subjectData,
+      qid,
+      description,
+      mergeSubjectConcepts(wikidataConcepts, lcshConcepts)
+    );
   });
 }
 

@@ -34,6 +34,7 @@ export const routes = {
   recommendations: (): Href => "/recommendations",
   backup: (): Href => "/backup",
   settings: (): Href => "/settings",
+  hardcover: (): Href => "/hardcover",
   about: (): Href => "/about",
   lists: (): Href => "/lists",
   list: (id: string): Href => ({ pathname: "/lists/[id]", params: { id } }),

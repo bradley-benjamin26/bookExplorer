@@ -15,6 +15,8 @@ import { suggestRoutes } from "./routes/suggest.js";
 import { ogRoutes } from "./routes/og.js";
 import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
 import { initPersistentCache } from "./cache.js";
+import { openAccountStore } from "./accountStore.js";
+import { hardcoverRoutes } from "./routes/hardcover.js";
 
 // Behind a load balancer or reverse proxy (most hosting platforms), every
 // request arrives from the proxy's own IP — without trusting its
@@ -26,7 +28,7 @@ import { initPersistentCache } from "./cache.js";
 // dodge the limit. Off unless TRUST_PROXY is set (see trustProxy.ts).
 const app = Fastify({ logger: true, trustProxy: parseTrustProxy(process.env.TRUST_PROXY) });
 
-await app.register(cors, { origin: true });
+await app.register(cors, { origin: true, methods: ["GET", "HEAD", "POST", "DELETE"] });
 
 // A required source in a cooldown (see httpClient.ts) is a temporary 503 the
 // app can explain, not a generic 500.
@@ -72,11 +74,21 @@ await app.register(searchRoutes);
 await app.register(seriesRoutes);
 await app.register(pathRoutes);
 await app.register(suggestRoutes);
+await app.register(hardcoverRoutes);
 if (process.env.WEB_INDEX_HTML) {
   await app.register(ogRoutes, { indexHtml: process.env.WEB_INDEX_HTML, origin: process.env.PUBLIC_WEB_URL });
 }
 
 if (process.env.CACHE_DB_PATH) initPersistentCache(process.env.CACHE_DB_PATH);
+
+// A bad ACCOUNT_DB_PATH must not stop the server booting; the account routes just report 503.
+if (process.env.ACCOUNT_DB_PATH) {
+  try {
+    openAccountStore(process.env.ACCOUNT_DB_PATH);
+  } catch (err) {
+    console.error("Could not open the Hardcover account store; sign-in is disabled:", err);
+  }
+}
 
 if (process.env.NODE_ENV === "production" && !process.env.GOOGLE_BOOKS_API_KEY) {
   app.log.warn("GOOGLE_BOOKS_API_KEY is not set; the keyless Google Books quota is usually exhausted, so cover/description fallbacks will fail");

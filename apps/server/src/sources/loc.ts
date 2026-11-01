@@ -146,18 +146,32 @@ export function fetchMetadataByAnyIsbn(isbns: string[], maxAttempts = 5): Promis
   });
 }
 
-/** Merges label lists from different sources into source-tagged terms, deduplicated case-insensitively (first-seen spelling wins, sources accumulate on that first-seen entry in the order their list was passed). */
-export function mergeTaggedTerms(...lists: { source: TaggedTerm["sources"][number]; labels: string[] }[]): TaggedTerm[] {
+interface CanonicalSubject {
+  uri: string;
+  display: string;
+  slug: string;
+}
+
+/** Merges source-tagged labels, using LCSH authority identity when available and first-seen spelling otherwise. */
+export function mergeTaggedTerms(
+  lists: { source: TaggedTerm["sources"][number]; labels: string[] }[],
+  canon?: Map<string, CanonicalSubject | null>
+): TaggedTerm[] {
   const merged = new Map<string, TaggedTerm>();
   for (const { source, labels } of lists) {
     for (const label of labels) {
-      const key = subjectKey(label);
+      const canonical = canon?.get(label) ?? undefined;
+      const key = canonical?.uri ?? subjectKey(label);
       if (!key) continue;
       const existing = merged.get(key);
       if (existing) {
         if (!existing.sources.includes(source)) existing.sources.push(source);
       } else {
-        merged.set(key, { label, sources: [source] });
+        merged.set(key, {
+          label: canonical?.display ?? label,
+          sources: [source],
+          ...(canonical && { slug: canonical.slug }),
+        });
       }
     }
   }

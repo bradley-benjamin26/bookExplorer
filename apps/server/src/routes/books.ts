@@ -1,5 +1,6 @@
 import { isValidIsbn } from "@book-explorer/shared";
 import type { FastifyInstance } from "fastify";
+import { userAuthorization } from "../services/hardcoverAccount.js";
 import { getBookDetail } from "../services/bookService.js";
 
 export async function booksRoutes(app: FastifyInstance) {
@@ -9,7 +10,7 @@ export async function booksRoutes(app: FastifyInstance) {
       reply.code(400);
       return { error: `"${isbn}" is not a valid ISBN-10 or ISBN-13` };
     }
-    const book = await getBookDetail(isbn);
+    const book = await getBookDetail(isbn, await userAuthorization(req.headers["x-hardcover-session"]));
 
     if (!book) {
       reply.code(404);
