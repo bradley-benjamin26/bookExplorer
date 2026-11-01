@@ -197,4 +197,17 @@ describe("mergeSnapshots", () => {
       expect(merged.lists[0]).toMatchObject({ name: "New", members: [two, one] });
     }
   });
+
+  it("keeps a member's Hardcover link when the newer copy lacks it", () => {
+    const m = { type: "work" as const, id: "OL1W", title: "Dune", addedAt: 1 };
+    const a = snap({ lists: [list("x", 10, { members: [{ ...m, hardcoverBookId: 9 }] })] });
+    const b = snap({ lists: [list("x", 20, { members: [m] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) expect(merged.lists[0].members).toEqual([{ ...m, hardcoverBookId: 9 }]);
+  });
+
+  it("a newer unlinked list stays unlinked", () => {
+    const a = snap({ lists: [list("x", 10, { hardcoverListId: 4 })] });
+    const b = snap({ lists: [list("x", 20)] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) expect(merged.lists[0].hardcoverListId).toBeUndefined();
+  });
 });
