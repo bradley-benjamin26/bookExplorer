@@ -8,7 +8,7 @@ export interface CacheEntryOptions {
 }
 
 // Bump when a cached value's shape (or its ids, e.g. subject slugs) changes so old persisted rows are ignored.
-const CACHE_SCHEMA_VERSION = 2;
+const CACHE_SCHEMA_VERSION = 3;
 const PURGE_INTERVAL_MS = 1000 * 60 * 60;
 
 // Optional second tier shared by every TtlCache that has a namespace. Off

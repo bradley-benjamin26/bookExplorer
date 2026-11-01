@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awardFamily, BookSchema, slugifySubject, splitSubjectTerms, subjectKey } from "@book-explorer/shared";
+import { awardFamily, BookSchema, slugifySubject, splitSubjectTerms, subjectKey, TaggedTermSchema } from "@book-explorer/shared";
 import { isSubjectSlug } from "./validation.js";
 
 describe("subject term cleaning", () => {
@@ -20,6 +20,15 @@ describe("subject term cleaning", () => {
     expect(subjectKey("Science-Fiction")).toBe(subjectKey("science fiction"));
     expect(subjectKey("Dune (Imaginary place), fiction")).toBe(subjectKey("Dune (Imaginary Place)"));
     expect(subjectKey("Fiction")).not.toBe("");
+  });
+  it("keys comma-inverted and subdivided spellings together", () => {
+    expect(subjectKey("Horror tales, American")).toBe(subjectKey("Horror tales--American"));
+    expect(subjectKey("Horror tales, American")).toBe("horror tales american");
+    expect(subjectKey(",")).not.toBe("");
+  });
+  it("parses tagged terms with and without a canonical slug", () => {
+    expect(TaggedTermSchema.parse({ label: "X", sources: ["lcsh"] }).slug).toBeUndefined();
+    expect(TaggedTermSchema.parse({ label: "X", sources: ["lcsh"], slug: "x" }).slug).toBe("x");
   });
   it("parses a cached Book that predates awards", () => {
     const bookWithoutAwards = {

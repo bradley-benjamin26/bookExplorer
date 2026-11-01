@@ -81,8 +81,29 @@ describe("parseModsRecord catalog fields", () => {
 });
 
 describe("mergeTaggedTerms", () => {
+  it("merges canonical LCSH variants and carries the canonical slug", () => {
+    const canonical = {
+      uri: "sh85062085",
+      heading: "Horror tales, American",
+      display: "American horror tales",
+      slug: "horror_tales_american",
+    };
+    const canon = new Map([
+      ["Horror tales, American", canonical],
+      ["American horror tales", canonical],
+    ]);
+
+    expect(mergeTaggedTerms([
+      { source: "lcsh", labels: ["Horror tales, American"] },
+      { source: "openLibrary", labels: ["American horror tales", "Zombies"] },
+    ], canon)).toEqual([
+      { label: "American horror tales", slug: "horror_tales_american", sources: ["lcsh", "openLibrary"] },
+      { label: "Zombies", sources: ["openLibrary"] },
+    ]);
+  });
+
   it("tags each list's labels with that list's source", () => {
-    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["Mystery"] })).toEqual([
+    expect(mergeTaggedTerms([{ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["Mystery"] }])).toEqual([
       { label: "Fiction", sources: ["lcsh"] },
       { label: "Mystery", sources: ["openLibrary"] },
     ]);
@@ -90,7 +111,7 @@ describe("mergeTaggedTerms", () => {
 
   it("merges a label appearing in more than one list, case-insensitively, recording both sources", () => {
     expect(
-      mergeTaggedTerms({ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["fiction", "Science Fiction"] })
+      mergeTaggedTerms([{ source: "lcsh", labels: ["Fiction"] }, { source: "openLibrary", labels: ["fiction", "Science Fiction"] }])
     ).toEqual([
       { label: "Fiction", sources: ["lcsh", "openLibrary"] },
       { label: "Science Fiction", sources: ["openLibrary"] },
@@ -98,7 +119,7 @@ describe("mergeTaggedTerms", () => {
   });
 
   it("keeps first-seen spelling when the same label recurs with different casing", () => {
-    expect(mergeTaggedTerms({ source: "lcsh", labels: ["B", "A"] }, { source: "openLibrary", labels: ["C", "a"] })).toEqual([
+    expect(mergeTaggedTerms([{ source: "lcsh", labels: ["B", "A"] }, { source: "openLibrary", labels: ["C", "a"] }])).toEqual([
       { label: "B", sources: ["lcsh"] },
       { label: "A", sources: ["lcsh", "openLibrary"] },
       { label: "C", sources: ["openLibrary"] },
@@ -106,20 +127,20 @@ describe("mergeTaggedTerms", () => {
   });
 
   it("skips blank/whitespace-only labels", () => {
-    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Fiction", "  ", ""] }, { source: "openLibrary", labels: ["Mystery"] })).toEqual([
+    expect(mergeTaggedTerms([{ source: "lcsh", labels: ["Fiction", "  ", ""] }, { source: "openLibrary", labels: ["Mystery"] }])).toEqual([
       { label: "Fiction", sources: ["lcsh"] },
       { label: "Mystery", sources: ["openLibrary"] },
     ]);
   });
 
   it('merges "Science Fiction" (lcsh) and "science-fiction" (openLibrary) into one term with both sources', () => {
-    expect(mergeTaggedTerms({ source: "lcsh", labels: ["Science Fiction"] }, { source: "openLibrary", labels: ["science-fiction"] })).toEqual([
+    expect(mergeTaggedTerms([{ source: "lcsh", labels: ["Science Fiction"] }, { source: "openLibrary", labels: ["science-fiction"] }])).toEqual([
       { label: "Science Fiction", sources: ["lcsh", "openLibrary"] },
     ]);
   });
 
   it("returns an empty array when given no lists or only empty lists", () => {
-    expect(mergeTaggedTerms()).toEqual([]);
-    expect(mergeTaggedTerms({ source: "lcsh", labels: [] }, { source: "openLibrary", labels: [] })).toEqual([]);
+    expect(mergeTaggedTerms([])).toEqual([]);
+    expect(mergeTaggedTerms([{ source: "lcsh", labels: [] }, { source: "openLibrary", labels: [] }])).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { getWorkDetail } from "./workService.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, findWorkQid, optionalSource } from "./bookEnrichment.js";
+import { canonicalizeSubjects } from "./subjectCanon.js";
 
 const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
 
@@ -78,6 +79,8 @@ export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): P
     const needsGoogleBooks = (!ol.coverUrl && !hc?.coverUrl) || !wikipedia?.text || !hasRating;
     const gb = needsGoogleBooks ? await googleBooks.lookupByIsbn(isbn).catch(optionalSource(entry, "googleBooks", null)) : null;
     const locMetadata = await locMetadataPromise;
+    const olTerms = splitSubjectTerms(ol.subjects);
+    const canon = await canonicalizeSubjects([...locMetadata.subjects, ...olTerms.subjects], entry);
 
     const coverUrl = ol.coverUrl ?? hc?.coverUrl ?? gb?.coverUrl ?? null;
     const coverSource = ol.coverUrl ? "openLibrary" : hc?.coverUrl ? "hardcover" : gb?.coverUrl ? "googleBooks" : null;
@@ -104,14 +107,19 @@ export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): P
       blendHardcoverAndOpenLibraryRating(hc, olRatings) ??
       (gb?.rating ? { average: gb.rating.average, count: gb.rating.count, sources: ["googleBooks" as const] } : null);
 
-    const olTerms = splitSubjectTerms(ol.subjects);
     const result: Book = {
       isbn,
       title: ol.title,
       authors,
-      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
+      subjects: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.subjects },
+        { source: "openLibrary", labels: olTerms.subjects },
+      ], canon),
       awards: olTerms.awards,
-      genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
+      genres: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.genres },
+        { source: "wikidata", labels: wikidataGenres },
+      ]),
       description,
       descriptionSource,
       descriptionSourceUrl: wikipedia?.url ?? null,

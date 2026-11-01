@@ -5,6 +5,7 @@ import * as wikidata from "../sources/wikidata.js";
 import { englishOrNull } from "../language.js";
 import { mergeTaggedTerms } from "../sources/loc.js";
 import { startCommonEnrichment, blendHardcoverAndOpenLibraryRating, fetchMoreByAuthor, findWorkQid, optionalSource } from "./bookEnrichment.js";
+import { canonicalizeSubjects } from "./subjectCanon.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
@@ -31,7 +32,7 @@ export function getWorkLinks(workId: string): Promise<WorkLinks | null> {
       openLibraryWorkId: workId,
       title: ol.title,
       authors: ol.authors,
-      subjects: mergeTaggedTerms({ source: "openLibrary", labels: terms.subjects }),
+      subjects: mergeTaggedTerms([{ source: "openLibrary", labels: terms.subjects }]),
       awards: terms.awards,
       genres: [],
       editions: [],
@@ -78,6 +79,7 @@ export function getWorkDetail(workId: string, hardcoverAuth?: string | null): Pr
     ]);
 
     const olTerms = splitSubjectTerms(ol.subjects);
+    const canon = await canonicalizeSubjects([...locMetadata.subjects, ...olTerms.subjects], entry);
     const olDescription = englishOrNull(ol.description);
     // Only with an LCCN, since the summary is credited to (and linked from) its catalog record.
     const locSummary = locMetadata.lccn ? englishOrNull(locMetadata.summary) : null;
@@ -92,9 +94,15 @@ export function getWorkDetail(workId: string, hardcoverAuth?: string | null): Pr
       // Library has no cover recorded for just has none instead of falling
       // any further.
       coverUrl: ol.coverUrl ?? hc?.coverUrl ?? null,
-      subjects: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.subjects }, { source: "openLibrary", labels: olTerms.subjects }),
+      subjects: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.subjects },
+        { source: "openLibrary", labels: olTerms.subjects },
+      ], canon),
       awards: olTerms.awards,
-      genres: mergeTaggedTerms({ source: "lcsh", labels: locMetadata.genres }, { source: "wikidata", labels: wikidataGenres }),
+      genres: mergeTaggedTerms([
+        { source: "lcsh", labels: locMetadata.genres },
+        { source: "wikidata", labels: wikidataGenres },
+      ]),
       rating: blendHardcoverAndOpenLibraryRating(hc, olRatings),
       reviews: hc?.reviews ?? [],
       ...(series && { series }),

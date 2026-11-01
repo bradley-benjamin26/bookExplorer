@@ -38,6 +38,7 @@ export type Review = z.infer<typeof ReviewSchema>;
 export const TaggedTermSchema = z.object({
   label: z.string(),
   sources: z.array(z.enum(["openLibrary", "lcsh", "wikidata"])),
+  slug: z.string().optional(),
 });
 export type TaggedTerm = z.infer<typeof TaggedTermSchema>;
 
@@ -62,10 +63,11 @@ export function splitSubjectTerms(labels: string[]): { subjects: string[]; award
   return { subjects, awards: [...awards.values()] };
 }
 
-/** Dedupe key: near-duplicate subjects ("Science-Fiction" / "science fiction", "X, fiction" / "X") share one. */
+/** Dedupe key: normalized spellings like "Science-Fiction" / "science fiction", comma inversions and "X, fiction" / "X" share one. */
 export function subjectKey(label: string): string {
   const plain = label.trim().toLowerCase();
-  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "") || plain;
+  return plain.replace(/[-_]/g, " ").replace(/\s+/g, " ").trim().replace(/,\s*fiction$/, "")
+    .replace(/,/g, " ").replace(/\s+/g, " ").trim() || plain;
 }
 
 // The Library of Congress catalog record's call number, Dewey class and
