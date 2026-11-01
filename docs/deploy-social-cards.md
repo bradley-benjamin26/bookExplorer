@@ -1,6 +1,6 @@
 # Deploying link-preview cards
 
-Shared links (`/work/...`, `/book/...`, `/author/...`, `/subject/...`, `/graph/...`) show a title, description and image in chat and social apps. The static site can't do that per page, so the API server renders the tags for crawlers only. People's page loads stay static and fast.
+Shared links (`/work/...`, `/book/...`, `/author/...`, `/subject/...`, `/graph/...`) show a title, description and image in chat and social apps. The static site can't do that per page, so the API server renders the tags for crawlers only. On book, work, author and subject pages it also adds schema.org JSON-LD describing the item, for search engines. People's page loads stay static and fast.
 
 ## Server
 
@@ -23,7 +23,7 @@ shelfthread.com {
     root * /var/www/shelfthread
 
     @preview {
-        header_regexp ua User-Agent (?i)(twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|whatsapp|telegrambot|redditbot|bluesky|mastodon|embedly|pinterest|skypeuripreview|iframely)
+        header_regexp ua User-Agent (?i)(googlebot|google-inspectiontool|bingbot|duckduckbot|applebot|yandexbot|twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|whatsapp|telegrambot|redditbot|bluesky|mastodon|embedly|pinterest|skypeuripreview|iframely)
         path / /work/* /book/* /author/* /subject/* /graph/*
     }
     handle @preview {
@@ -76,3 +76,17 @@ curl -s -A Twitterbot --resolve shelfthread.com:443:127.0.0.1 https://shelfthrea
 ```
 
 Then try the X and Facebook card validators, which go through Cloudflare like real previews.
+
+For the JSON-LD, check that search crawlers get it too, then paste a page URL into Google's Rich Results Test (search.google.com/test/rich-results). Expect "No items detected" for rich results: Book, Person and CollectionPage don't earn rich snippets. Check that the parsed structured data lists the page's item:
+
+```
+curl -s -A Googlebot --resolve shelfthread.com:443:127.0.0.1 https://shelfthread.com/author/OL26320A | grep ld+json
+```
+
+## Search crawlers and load
+
+Search crawlers fetch many more pages than link-preview bots, and each page they request now goes through `/og`. Three effects to watch:
+
+- `/og` shares the API's per-IP rate limit (100 requests a minute). A busy Googlebot or Bingbot address can get 429s on page HTML; Search Console's crawl stats show these. Exempting `/og` isn't safe on its own, since anyone could fake a crawler User-Agent to skip the limit.
+- An uncached page triggers upstream lookups (Hardcover, Google Books, Wikidata) that count against their quotas.
+- If `WEB_INDEX_HTML` is unreadable, crawlers get a 500 for every page instead of the static file.

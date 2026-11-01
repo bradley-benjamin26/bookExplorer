@@ -20,7 +20,7 @@ export async function ogRoutes(app: FastifyInstance, opts: { indexHtml: string; 
     }
     let meta = null;
     try {
-      meta = await pageMeta(path);
+      meta = await pageMeta(path, origin);
     } catch (err) {
       req.log.warn(err, "page lookup failed; serving default tags");
     }
