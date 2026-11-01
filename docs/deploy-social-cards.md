@@ -65,6 +65,8 @@ Caddy sets `X-Forwarded-For` to Cloudflare's `CF-Connecting-IP` header (the visi
 
 Anyone who learns the Droplet's IP could skip Cloudflare and send a fake `CF-Connecting-IP` to dodge the limit. Close that with a DigitalOcean Cloud Firewall that allows inbound 80 and 443 only from Cloudflare's ranges (https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6), plus SSH from your own IP.
 
+Also set `HOST=127.0.0.1` in the server's `.env` on the Droplet, so the API can't be reached on port 3001 even without the firewall. Caddy still reaches it.
+
 To check: request an `/api/...` endpoint (not `/health`, which has no limit) from two different networks and confirm each gets its own `x-ratelimit-remaining` count.
 
 ## Check it

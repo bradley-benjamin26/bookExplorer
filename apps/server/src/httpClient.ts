@@ -16,8 +16,8 @@ const DEFAULT_HOST_LIMIT = { perSecond: 10, concurrent: 6 };
 const HOST_LIMITS: Record<string, { perSecond: number; concurrent: number }> = {
   "openlibrary.org": { perSecond: 3, concurrent: 4 },
   "api.hardcover.app": { perSecond: 1, concurrent: 2 },
-  "www.wikidata.org": { perSecond: 5, concurrent: 4 },
-  "query.wikidata.org": { perSecond: 5, concurrent: 4 },
+  // Wikimedia asks API clients to send requests one at a time.
+  "www.wikidata.org": { perSecond: 2, concurrent: 1 },
 };
 
 // A host that answers 429/503 (or fails to connect this many times in a row)
