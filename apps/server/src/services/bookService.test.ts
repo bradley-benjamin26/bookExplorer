@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as googleBooks from "../sources/googleBooks.js";
 import * as openLibrary from "../sources/openLibrary.js";
+import * as loc from "../sources/loc.js";
+import * as subjectCanon from "./subjectCanon.js";
 import { startCommonEnrichment } from "./bookEnrichment.js";
 import { getBookDetail } from "./bookService.js";
 import { getWorkDetail } from "./workService.js";
@@ -11,6 +13,7 @@ vi.mock("../sources/googleBooks.js", () => ({ lookupByIsbn: vi.fn() }));
 vi.mock("../sources/wikidata.js", () => ({ fetchGenres: vi.fn() }));
 vi.mock("../sources/wikipedia.js", () => ({ fetchWikipediaExtract: vi.fn() }));
 vi.mock("../sources/loc.js", () => ({ mergeTaggedTerms: vi.fn(() => []) }));
+vi.mock("./subjectCanon.js", () => ({ canonicalizeSubjects: vi.fn(async () => new Map()) }));
 vi.mock("./bookEnrichment.js", () => ({
   startCommonEnrichment: vi.fn(() => ({
     locMetadataPromise: Promise.resolve({ subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null }),
@@ -122,6 +125,46 @@ describe("getBookDetail LOC summary", () => {
     expect(book?.description).toBe("A summary from the catalog.");
     expect(book?.descriptionSource).toBe("loc");
     expect(book?.loc).toEqual({ lcc: "PS1", ddc: "813", lccn: "2001012345" });
+  });
+
+  describe("getBookDetail subject canonicalization", () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it("canonicalizes LOC and Open Library subjects together, only for the subject merge", async () => {
+      const canon = new Map([
+        ["Horror tales, American", {
+          uri: "sh85062085", heading: "Horror tales, American", display: "American horror tales", slug: "horror_tales_american", variants: [],
+        }],
+        ["American horror tales", {
+          uri: "sh85062085", heading: "Horror tales, American", display: "American horror tales", slug: "horror_tales_american", variants: [],
+        }],
+      ]);
+      vi.mocked(subjectCanon.canonicalizeSubjects).mockResolvedValue(canon);
+      vi.mocked(openLibrary.lookupByIsbn).mockResolvedValue({
+        title: "T", authors: [{ name: "A" }], subjects: ["American horror tales"], coverUrl: "ol.jpg",
+        description: null, workId: null,
+      } as never);
+      vi.mocked(startCommonEnrichment).mockReturnValueOnce({
+        locMetadataPromise: Promise.resolve({
+          subjects: ["Horror tales, American"], genres: [], lcc: null, ddc: null, lccn: null, summary: null,
+        }),
+        hardcoverPromise: Promise.resolve(null),
+        olRatingsPromise: Promise.resolve(null),
+      } as unknown as ReturnType<typeof startCommonEnrichment>);
+      vi.mocked(googleBooks.lookupByIsbn).mockResolvedValue(null);
+
+      await getBookDetail("9780000000020");
+
+      expect(subjectCanon.canonicalizeSubjects).toHaveBeenCalledWith(["Horror tales, American", "American horror tales"], expect.any(Object));
+      expect(loc.mergeTaggedTerms).toHaveBeenCalledWith([
+        { source: "lcsh", labels: ["Horror tales, American"] },
+        { source: "openLibrary", labels: ["American horror tales"] },
+      ], canon);
+      expect(loc.mergeTaggedTerms).toHaveBeenCalledWith([
+        { source: "lcsh", labels: [] },
+        { source: "wikidata", labels: [] },
+      ]);
+    });
   });
 
   it("omits loc, and ignores the LOC summary, when there is no LCCN", async () => {

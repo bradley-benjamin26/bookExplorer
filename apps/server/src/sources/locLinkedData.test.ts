@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetUpstreamState } from "../httpClient.js";
-import { fetchBroaderNarrower, findSubjectHeadingUri } from "./locLinkedData.js";
+import {
+  fetchBroaderNarrower,
+  findSubjectHeading,
+  findSubjectHeadingUri,
+  findSubjectHeadingWithStatus,
+  naturalSubjectLabel,
+} from "./locLinkedData.js";
 
 // Mocked network failures must not leave a real cooldown on id.loc.gov for the next test.
 beforeEach(() => resetUpstreamState());
@@ -96,6 +102,79 @@ describe("findSubjectHeadingUri", () => {
 
     const uri = await findSubjectHeadingUri("Zzzznonexistentsubjectzzzz");
     expect(uri).toBeNull();
+  });
+});
+
+describe("findSubjectHeading", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("resolves a variant spelling to its authority heading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({
+        hits: [{
+          aLabel: "Horror tales, American",
+          vLabel: "American horror tales",
+          uri: "http://id.loc.gov/authorities/subjects/sh85062085",
+          more: { variantLabels: ["American horror tales"] },
+        }],
+      })
+    );
+
+    await expect(findSubjectHeading("American horror tales")).resolves.toEqual({
+      uri: "http://id.loc.gov/authorities/subjects/sh85062085",
+      heading: "Horror tales, American",
+      variants: ["American horror tales"],
+    });
+  });
+
+  it("matches vLabel even when more.variantLabels is absent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({
+        hits: [{
+          aLabel: "Horror tales, American",
+          vLabel: "American horror tales",
+          uri: "http://id.loc.gov/authorities/subjects/sh85062085",
+        }],
+      })
+    );
+
+    await expect(findSubjectHeading("American horror tales")).resolves.toEqual({
+      uri: "http://id.loc.gov/authorities/subjects/sh85062085",
+      heading: "Horror tales, American",
+      variants: [],
+    });
+  });
+
+  it("rejects a near-miss even when the query matches the start of the heading", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockJsonResponse({
+        hits: [{ aLabel: "Horror tales, American--History", uri: "http://id.loc.gov/authorities/subjects/sh85062085" }],
+      })
+    );
+
+    await expect(findSubjectHeading("American horror tales")).resolves.toBeNull();
+  });
+
+  it("distinguishes a failed lookup from a definitive no-match", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("network error"); }));
+    await expect(findSubjectHeadingWithStatus("Outage")).resolves.toMatchObject({ heading: null, failed: true });
+
+    resetUpstreamState();
+    vi.stubGlobal("fetch", mockJsonResponse({ hits: [] }));
+    await expect(findSubjectHeadingWithStatus("Unmatched")).resolves.toEqual({ heading: null, failed: false });
+  });
+});
+
+describe("naturalSubjectLabel", () => {
+  it("uses a matching natural-order variant only for a simple inverted heading", () => {
+    expect(naturalSubjectLabel("Horror tales, American", ["American horror tales"])).toBe("American horror tales");
+    expect(naturalSubjectLabel("Horror tales, American", [])).toBe("Horror tales, American");
+    expect(naturalSubjectLabel("Tales, Horror, American", ["American Horror Tales"])).toBe("Tales, Horror, American");
   });
 });
 

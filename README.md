@@ -49,9 +49,10 @@ curl http://localhost:3001/health
 On a deployed server, run `npm start --workspace=apps/server` instead (no file watching).
 
 Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
-server's public-API cache in SQLite across restarts (otherwise it is memory-only).
-Set it on a deployed server: repeat lookups are then served from disk instead of
-from Open Library. It caches only public API data, never user data.
+server's namespaced public-data caches in SQLite across restarts (otherwise they
+are memory-only).
+This includes resolved Library of Congress subject mappings, so subject
+canonicalization survives restarts too. It caches only public data, never user data.
 
 Set `USER_EMAIL` (in `apps/server/.env`) to your contact address. It is sent in the
 `User-Agent` header to Open Library, Wikidata, Wikipedia and the Library of Congress
@@ -182,6 +183,12 @@ through it, and retry.
 - From a book's detail screen, drill into its authors, subjects, and related
   works, or tap **View as Graph** for the interactive force-directed graph
   explorer.
+- When a subject matches a Library of Congress Subject Headings (LCSH) authority
+  record, its authorized and variant spellings share one displayed subject and
+  canonical page/graph link. For example, "Horror tales, American" and "American
+  horror tales" resolve to the same natural-order subject, and the subject page
+  combines Open Library's books under the matched spellings. Unmatched subjects
+  keep their existing behavior; genre/form terms are not canonicalized.
 
 Barcode scanning uses the native camera on iOS/Android; on web it falls back to a
 JS-based scanner reading your webcam. A manual ISBN entry field is always

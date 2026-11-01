@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { normalizeTitle } from "@book-explorer/shared";
-import { buildAuthorLinksGraph, buildWorkLinksGraph, cleanGraph } from "./graphService.js";
-import { getWorkLinks } from "./workService.js";
+import { buildAuthorLinksGraph, buildWorkGraph, buildWorkLinksGraph, cleanGraph } from "./graphService.js";
+import { getWorkDetail, getWorkLinks } from "./workService.js";
 import { getAuthorLinks } from "./authorService.js";
 
 vi.mock("./authorService.js", () => ({ getAuthorDetail: vi.fn(), getAuthorLinks: vi.fn() }));
@@ -127,6 +127,31 @@ describe("buildWorkLinksGraph", () => {
     const [a, b] = [await buildWorkLinksGraph("OL10W"), await buildWorkLinksGraph("OL11W")];
     expect(a?.edges).toContainEqual({ source: "work:OL10W", target: "subject:science_fiction_authorship", relation: "subject" });
     expect(b?.edges).toContainEqual({ source: "work:OL11W", target: "subject:science_fiction_authorship", relation: "subject" });
+  });
+
+  it("uses a canonical subject slug in both work graph builders and falls back without one", async () => {
+    const canonicalWork = {
+      openLibraryWorkId: "OL14W", title: "T", authors: [],
+      subjects: [{ label: "American horror tales", slug: "horror_tales_american", sources: ["lcsh"] }],
+      genres: [], awards: [], editions: [],
+    };
+    vi.mocked(getWorkLinks).mockResolvedValueOnce(canonicalWork as never);
+    vi.mocked(getWorkDetail).mockResolvedValueOnce(canonicalWork as never);
+
+    const linksGraph = await buildWorkLinksGraph("OL14W");
+    const fullGraph = await buildWorkGraph("OL14W");
+    const expectedNode = { id: "subject:horror_tales_american", type: "subject", label: "American horror tales", navigable: true };
+    expect(linksGraph?.nodes).toContainEqual(expectedNode);
+    expect(fullGraph?.nodes).toContainEqual(expectedNode);
+
+    vi.mocked(getWorkLinks).mockResolvedValueOnce({
+      ...canonicalWork,
+      openLibraryWorkId: "OL15W",
+      subjects: [{ label: "Zombies", sources: ["openLibrary"] }],
+    } as never);
+    expect((await buildWorkLinksGraph("OL15W"))?.nodes).toContainEqual({
+      id: "subject:zombies", type: "subject", label: "Zombies", navigable: true,
+    });
   });
 
   it("links an author's Wikidata award and a work's Open Library award to one award node", async () => {
