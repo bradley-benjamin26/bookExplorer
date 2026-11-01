@@ -18,6 +18,75 @@
     <meta name="twitter:description" content="Scan or search a book, then follow the threads between authors, subjects and works." />
     <meta name="twitter:image" content="https://shelfthread.com/og-image.png" />
     <!-- social:end -->
+     <script type="application/json+ld">
+     {
+       "@context": "https://schema.org",
+       "@type": ["website", "WebApplication", "Product"],
+       "name": "Shelf Thread",
+       "url": "https://shelfthread.com/",
+       "applicationCategory": "EducationalApplication",
+       "abstract": "Scan or search a book, then follow the threads between authors, subjects and works.",
+       "offers": {
+         "@type": "Offer",
+         "url": "https://shelfthread.com/",
+         "price": "0"
+       },
+       "potentialAction": {
+         "@type": "SearchAction",
+         "target": "https://shelfthread.com/search?q={search_term_string}",
+         "query-input": "required name=search_term_string","
+       },
+       "featureList": [
+         "Scan a book's ISBN barcode",
+         "Search for books online",
+         "View connections between authors, subjects and works",
+         "Create and manage book lists",
+         "Get recommendations based on your book lists",
+         "Find books in your local library's catalog",
+         "Access book details and metadata",
+         "Export lists to CSV or other formats to import into your favorite tracking apps",
+         "Explore book connections to find related works and authors"
+       ],
+       "additionalProperty": [
+         {
+           "@type": "PropertyValue",
+           "name": "Scan a book's ISBN barcode",
+           "value": "https://shelfthread.com/scan"
+         },
+         {
+           "@type": "PropertyValue",
+           "name": "Search for books online",
+           "value": "https://shelfthread.com/search"
+         },
+         {
+           "@type": "PropertyValue",
+           "name": "View connections between authors, subjects and works",
+           "value": "https://shelfthread.com/connections"
+         },
+         {
+          "@type": "PropertyValue",
+          "name": "Create and manage book lists",
+          "value": "https://shelfthread.com/lists"
+         },
+         {
+           "@type": "PropertyValue",
+           "name": "Get recommendations based on your book lists",
+           "value": "https://shelfthread.com/recommendations"
+         },
+         {
+          "@type": "PropertyValue",
+          "name": "Add links to your local library's catalog",
+          "value": "https://shelfthread.com/settings"
+         },
+         {
+           "@type": "PropertyValue",
+           "name": "Export lists to CSV or other formats to import into your favorite tracking apps",
+           "value": "https://shelfthread.com/backup"
+         }
+       ]
+
+     }
+     </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
