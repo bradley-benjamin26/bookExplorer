@@ -1,21 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, isValidQid, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
+import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
 
-describe("isValidQid", () => {
-  it("accepts a well-formed QID", () => {
-    expect(isValidQid("Q42")).toBe(true);
-    expect(isValidQid("Q123456")).toBe(true);
+describe("wbSearchEntities error bodies", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("rejects anything that isn't a QID", () => {
-    // Open Library's remote_ids.wikidata field is free-text on a wiki anyone can edit, so
-    // this has to fail closed on garbage rather than pass it through to a network request.
-    expect(isValidQid("")).toBe(false);
-    expect(isValidQid("42")).toBe(false);
-    expect(isValidQid("Q0")).toBe(false);
-    expect(isValidQid("Q01")).toBe(false);
-    expect(isValidQid("QABC")).toBe(false);
-    expect(isValidQid("Q42 ")).toBe(false);
+  it("an HTTP 200 error body rejects with Wikidata's own message", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ error: { info: "maxlag exceeded" } }) })));
+    await expect(searchConceptQid("Ghosts")).rejects.toThrow("Wikidata search error: maxlag exceeded");
   });
 });
 

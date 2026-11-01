@@ -1,6 +1,6 @@
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
-import { isValidQid } from "./wikidata.js";
+import { isWikidataQid } from "../validation.js";
 
 export interface WikipediaExtract {
   text: string;
@@ -37,7 +37,7 @@ interface PageSummary {
  * a transient failure get cached as a false "nothing here."
  */
 export async function fetchWikipediaExtract(qid: string): Promise<WikipediaExtract | null> {
-  if (!isValidQid(qid)) return null;
+  if (!isWikidataQid(qid)) return null;
 
   const title = await getEnglishWikipediaTitle(qid);
   if (!title) return null;

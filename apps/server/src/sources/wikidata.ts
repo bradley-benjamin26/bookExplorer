@@ -1,9 +1,11 @@
 import type { AuthorRelation, Series, SeriesMember, SubjectConcept } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
+import { isWikidataQid } from "../validation.js";
 
 interface WbSearchResult {
   search: { id: string; label?: string; description?: string }[];
+  error?: { info?: string };
 }
 
 const AUTHOR_KEYWORDS = ["writer", "author", "novelist", "poet", "playwright", "journalist", "historian", "philosopher", "scholar"];
@@ -108,14 +110,10 @@ async function wbSearchEntities(name: string, limit: number): Promise<WbSearchRe
   )}&language=en&format=json&type=item&limit=${limit}`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Wikidata search failed: ${res.status}`);
-  return res.json();
-}
-
-// Cheap fail-fast validation before spending a network round trip on an id
-// that can't possibly resolve to anything — Open Library's `remote_ids.wikidata`
-// field is free-text on a wiki anyone can edit, so it isn't trustworthy input.
-export function isValidQid(qid: string): boolean {
-  return /^Q[1-9]\d*$/.test(qid);
+  // Wikidata reports some failures as HTTP 200 with an `error` body instead of a results list.
+  const body: WbSearchResult = await res.json();
+  if (!Array.isArray(body.search)) throw new Error(`Wikidata search error: ${body.error?.info ?? "no results list"}`);
+  return body;
 }
 
 interface WbStatement {
@@ -230,7 +228,7 @@ async function searchReverseStatementQids(property: string, qid: string, limit =
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Wikidata search failed: ${res.status}`);
   const body = (await res.json()) as { query?: { search?: { title: string }[] } };
-  return (body.query?.search ?? []).map((r) => r.title).filter(isValidQid);
+  return (body.query?.search ?? []).map((r) => r.title).filter(isWikidataQid);
 }
 
 interface ResolvedItem {
@@ -332,7 +330,7 @@ function toConceptRelations(
 
 /** Influenced-by (P737, and its inverse), notable works (P800), and literary movement (P135), and awards (P166). */
 export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[]> {
-  if (!isValidQid(qid)) return [];
+  if (!isWikidataQid(qid)) return [];
 
   const [centerEntities, influencedQids] = await Promise.all([
     wbGetEntities([qid], "claims"),
@@ -358,7 +356,7 @@ export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[
 
 /** Broader (P279) and narrower (inverse P279) concepts. */
 export async function fetchRelatedConcepts(qid: string): Promise<SubjectConcept[]> {
-  if (!isValidQid(qid)) return [];
+  if (!isWikidataQid(qid)) return [];
 
   const [centerEntities, narrowerQids] = await Promise.all([
     wbGetEntities([qid], "claims"),
@@ -376,7 +374,7 @@ export async function fetchRelatedConcepts(qid: string): Promise<SubjectConcept[
 
 /** Pen names (P742). */
 export async function fetchPseudonyms(qid: string): Promise<string[]> {
-  if (!isValidQid(qid)) return [];
+  if (!isWikidataQid(qid)) return [];
   const entities = await wbGetEntities([qid], "claims");
   return [...new Set(claimStrings(entities[qid], "P742"))];
 }
@@ -389,7 +387,7 @@ export async function fetchPseudonyms(qid: string): Promise<string[]> {
  * fallback for when LOC has nothing.
  */
 export async function fetchGenres(qid: string): Promise<string[]> {
-  if (!isValidQid(qid)) return [];
+  if (!isWikidataQid(qid)) return [];
   const entities = await wbGetEntities([qid], "claims");
   const genreQids = claimItemIds(entities[qid], "P136");
   if (genreQids.length === 0) return [];
@@ -403,7 +401,7 @@ export async function fetchGenres(qid: string): Promise<string[]> {
 
 /** English description (e.g. "genre of literature"), or null when Wikidata has none. */
 export async function fetchDescription(qid: string): Promise<string | null> {
-  if (!isValidQid(qid)) return null;
+  if (!isWikidataQid(qid)) return null;
   const entities = await wbGetEntities([qid], "descriptions", "en");
   return entities[qid]?.descriptions?.en?.value ?? null;
 }
@@ -431,7 +429,7 @@ export function seriesOrdinal(entity: WbEntity | undefined, seriesQid: string): 
 export async function fetchWorkSeries(
   workQid: string
 ): Promise<{ name: string; position: string | null; wikidataId: string } | null> {
-  if (!isValidQid(workQid)) return null;
+  if (!isWikidataQid(workQid)) return null;
   const entities = await wbGetEntities([workQid], "claims");
   // The same series can be listed twice (duplicate statements), so only the first distinct one is used.
   const seriesQid = claimItemIds(entities[workQid], "P179")[0];
@@ -449,7 +447,7 @@ export type SeriesWithAuthors = Omit<Series, "members"> & {
 };
 
 export async function fetchSeries(seriesQid: string): Promise<SeriesWithAuthors | null> {
-  if (!isValidQid(seriesQid)) return null;
+  if (!isWikidataQid(seriesQid)) return null;
   const [memberQids, seriesResolved] = await Promise.all([
     searchReverseStatementQids("P179", seriesQid, 100),
     resolveItems([seriesQid]),
