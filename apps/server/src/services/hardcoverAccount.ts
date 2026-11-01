@@ -88,6 +88,15 @@ export async function userAuthorization(sessionToken: unknown): Promise<string |
   }
 }
 
+// Book and work pages treat Hardcover as optional enrichment, so a broken account lookup falls back to the server key.
+export async function lookupAuthorization(sessionToken: unknown): Promise<string | null> {
+  if (!accountEnabled()) return null;
+  return userAuthorization(sessionToken).catch((err) => {
+    console.error("Hardcover account lookup failed:", err instanceof Error ? err.message : "unknown error");
+    return null;
+  });
+}
+
 export const forgetSession = (sessionToken: string): void => deleteSession(sessionToken);
 
 export function getAccount(sessionToken: unknown): { username: string } | null {
