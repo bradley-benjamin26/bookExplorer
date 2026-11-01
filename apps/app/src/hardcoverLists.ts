@@ -16,6 +16,8 @@ export async function pushAdd(list: SavedList, member: ListMember): Promise<"pus
 
 export async function pushRemove(list: SavedList, member: ListMember): Promise<void> {
   if (!list.hardcoverListId || !member.hardcoverBookId) return;
+  // Hardcover deletes by book, so a work and its edition share a row; keep it while the other is still listed.
+  if (list.members.some((m) => m.hardcoverBookId === member.hardcoverBookId && !(m.type === member.type && m.id === member.id))) return;
   await removeHardcoverListBook(list.hardcoverListId, member.hardcoverBookId);
 }
 
@@ -27,6 +29,7 @@ export async function importList(hardcoverListId: number): Promise<{ list: Saved
 }
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const MAX_RATE_LIMIT_RETRIES = 5;
 
 export async function copyToHardcover(
   list: SavedList,
@@ -47,12 +50,12 @@ export async function copyToHardcover(
   const missing: string[] = [];
   let done = 0;
   for (const m of todo) {
-    for (;;) {
+    for (let tries = 0; ; tries++) {
       try {
         if ((await pushAdd(linked, m)) === "missing") missing.push(m.title);
         break;
       } catch (e) {
-        if (!(e instanceof ApiError && e.status === 429)) throw e;
+        if (!(e instanceof ApiError && e.status === 429) || tries >= MAX_RATE_LIMIT_RETRIES) throw e;
         await sleep((e.retryAfterSeconds ?? 60) * 1000);
       }
     }
@@ -65,6 +68,8 @@ export async function syncWithHardcover(list: SavedList): Promise<{ missing: str
   if (!list.hardcoverListId) throw new Error("This list isn't linked to Hardcover.");
   const { missing } = await copyToHardcover(list, () => {});
   const remote = await fetchHardcoverList(list.hardcoverListId);
+  // Reconcile drops members missing remotely, so a short page would delete real members.
+  if (remote.books.length < remote.booksCount) throw new Error("Hardcover sent only part of this list, so nothing was removed. Try again later.");
   const latest = await getList(list.id); // re-read so ids just set by the push are included
   if (!latest) throw new Error("This list no longer exists.");
   await replaceMembers(list.id, reconcile(latest.members, remote.books, Date.now()));
