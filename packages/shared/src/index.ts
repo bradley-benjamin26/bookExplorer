@@ -455,3 +455,17 @@ export function normalizeTitle(title: string): string {
 
 export const HardcoverAccountSchema = z.object({ username: z.string() });
 export const HardcoverHandoffSchema = HardcoverAccountSchema.extend({ token: z.string() });
+
+export const HardcoverListSummarySchema = z.object({ id: z.number().int(), name: z.string(), description: z.string(), booksCount: z.number().int() });
+export const HardcoverListBooksSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  books: z.array(z.object({ hardcoverBookId: z.number().int(), title: z.string(), isbn: z.string().nullable() })),
+});
+export const HardcoverProgressSchema = z.object({
+  status: z.enum(["want", "reading", "read", "paused", "dnf"]).nullable(),
+  percent: z.number().min(0).max(100).nullable(),
+});
+export type HardcoverListSummary = z.infer<typeof HardcoverListSummarySchema>;
+export type HardcoverListBooks = z.infer<typeof HardcoverListBooksSchema>;
+export type HardcoverProgress = z.infer<typeof HardcoverProgressSchema>;
