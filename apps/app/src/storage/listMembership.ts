@@ -1,3 +1,4 @@
+import { pushAdd, pushRemove } from "../hardcoverLists";
 import { unsaveBook } from "./savedBooks";
 import { removeSaved } from "./savedItems";
 import { addToList, deleteList, getList, isOnAnyList, removeFromList, type ListMember, type SavedList } from "./savedLists";
@@ -33,9 +34,36 @@ export async function unsaveIfUnlisted(member: Pick<ListMember, "type" | "id">):
  * Adds first and removes last, so a move between lists never leaves the item on none
  * (which would unsave it and lose its notes). `save` runs whenever the member ends up on a list.
  */
-export async function applyListChanges(member: Member, changes: { add: string[]; remove: string[] }, save: () => Promise<unknown>): Promise<void> {
-  for (const id of changes.add) await addToList(id, member);
-  for (const id of changes.remove) await removeFromList(id, member.type, member.id);
+export async function applyListChanges(
+  member: Member,
+  changes: { add: string[]; remove: string[] },
+  save: () => Promise<unknown>,
+  onHardcoverIssue?: (message: string) => void,
+): Promise<void> {
+  const report = (message: string) => onHardcoverIssue?.(message);
+  for (const id of changes.add) {
+    await addToList(id, member);
+    const list = await getList(id);
+    const added = list?.members.find((m) => m.type === member.type && m.id === member.id);
+    if (!list || !added) continue;
+    try {
+      if ((await pushAdd(list, added)) === "missing") report("Saved here, but Hardcover doesn't have this book yet.");
+    } catch {
+      report("Saved here. Hardcover didn't update; use Sync with Hardcover on the list to retry.");
+    }
+  }
+  for (const id of changes.remove) {
+    // Read before removing: the push needs the member's hardcoverBookId.
+    const list = await getList(id);
+    const held = list?.members.find((m) => m.type === member.type && m.id === member.id);
+    await removeFromList(id, member.type, member.id);
+    if (!list || !held) continue;
+    try {
+      await pushRemove(list, held);
+    } catch {
+      report("Removed here. Hardcover didn't update, so it may come back on the next sync.");
+    }
+  }
   // Saving is idempotent, so also run it for a member already listed but unsaved.
   if (!(await unsaveIfUnlisted(member))) await save();
 }

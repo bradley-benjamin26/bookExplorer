@@ -9,6 +9,9 @@ import {
   GraphSchema,
   HardcoverAccountSchema,
   HardcoverHandoffSchema,
+  HardcoverListBooksSchema,
+  HardcoverListSummarySchema,
+  HardcoverProgressSchema,
   PathResultSchema,
   SeriesSchema,
   SubjectSchema,
@@ -61,7 +64,7 @@ export const API_BASE_URL = resolveApiBaseUrl();
 const APP_SHARED_SECRET = process.env.EXPO_PUBLIC_APP_SHARED_SECRET;
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(message: string, public status: number, public retryAfterSeconds?: number) {
     super(message);
   }
 }
@@ -94,7 +97,8 @@ async function request<T>(path: string, init: RequestInit, schema?: ZodType<T, Z
     // — preferring `message` when present surfaces that real reason instead
     // of a message that reads the same whether Wikidata timed out or the
     // author genuinely doesn't exist.
-    throw new ApiError(body.message ?? body.error ?? `Request failed: ${path}`, res.status);
+    const retryAfter = body.retryAfterSeconds ?? (Number(res.headers.get("Retry-After")) || undefined);
+    throw new ApiError(body.message ?? body.error ?? `Request failed: ${path}`, res.status, res.status === 429 ? retryAfter : undefined);
   }
   if (!schema) return undefined;
   const json = await res.json();
@@ -131,6 +135,30 @@ export function fetchHardcoverAccount(): Promise<{ username: string }> {
 
 export async function disconnectHardcover(): Promise<void> {
   await sendJson("DELETE", "/api/hardcover/session", {});
+}
+
+export function fetchHardcoverLists() {
+  return getJson("/api/hardcover/lists", z.array(HardcoverListSummarySchema));
+}
+
+export function fetchHardcoverList(id: number) {
+  return getJson(`/api/hardcover/lists/${id}`, HardcoverListBooksSchema);
+}
+
+export async function createHardcoverList(input: { name: string; description: string }): Promise<{ id: number }> {
+  return (await sendJson("POST", "/api/hardcover/lists", input, z.object({ id: z.number() })))!;
+}
+
+export async function addHardcoverListBook(listId: number, member: { type: "book" | "work"; id: string }): Promise<{ hardcoverBookId: number }> {
+  return (await sendJson("POST", `/api/hardcover/lists/${listId}/books`, member, z.object({ hardcoverBookId: z.number() })))!;
+}
+
+export async function removeHardcoverListBook(listId: number, bookId: number): Promise<void> {
+  await sendJson("DELETE", `/api/hardcover/lists/${listId}/books/${bookId}`, {});
+}
+
+export function fetchHardcoverProgress(type: "book" | "work", id: string) {
+  return getJson(`/api/hardcover/progress/${type}/${encodeURIComponent(id)}`, HardcoverProgressSchema);
 }
 
 export function fetchBookByIsbn(isbn: string): Promise<Book> {
