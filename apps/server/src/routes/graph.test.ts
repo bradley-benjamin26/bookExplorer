@@ -15,3 +15,15 @@ describe("GET /api/graph/subject/:id", () => {
     expect(buildSubjectGraph).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /api/graph/:type/:id", () => {
+  it("returns 400 for inherited object names used as a graph type", async () => {
+    const app = Fastify();
+    await app.register(graphRoutes);
+    for (const type of ["constructor", "toString", "__proto__", "valueOf"]) {
+      const res = await app.inject({ method: "GET", url: `/api/graph/${type}/x` });
+      expect(res.statusCode, type).toBe(400);
+    }
+    await app.close();
+  });
+});

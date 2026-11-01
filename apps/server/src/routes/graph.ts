@@ -17,7 +17,7 @@ const ID_VALIDATORS: Partial<Record<GraphType, (id: string) => boolean>> = {
 };
 
 function isGraphType(value: string): value is GraphType {
-  return value in BUILDERS;
+  return Object.hasOwn(BUILDERS, value);
 }
 
 export async function graphRoutes(app: FastifyInstance) {
