@@ -5,7 +5,7 @@ import * as openLibrary from "../sources/openLibrary.js";
 import * as wikidata from "../sources/wikidata.js";
 import { fetchWikipediaExtract } from "../sources/wikipedia.js";
 
-// Wikidata data changes rarely and its SPARQL endpoint is rate-limited, so
+// Wikidata data changes rarely and its API is rate-limited, so
 // author lookups are cached longer than book lookups.
 const authorCache = new TtlCache<Author | null>(1000 * 60 * 60 * 24, 1000, "author");
 
@@ -23,12 +23,15 @@ export function getAuthorLinks(openLibraryId: string): Promise<AuthorLinks | nul
   // shortcut: an author only in the persistent tier gets the lighter lookup; read that tier too if it shows up in timings
   const full = authorCache.get(openLibraryId);
   if (full !== undefined) return Promise.resolve(full);
-  return authorLinksCache.wrap(openLibraryId, async () => {
+  return authorLinksCache.wrap(openLibraryId, async (entry) => {
     const ol = await openLibrary.getAuthor(openLibraryId);
     if (!ol) return null;
-    const qid = ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name));
+    const qid = ol.wikidataId ?? (await wikidata.searchAuthorQid(ol.name).catch(optionalSource<string | null>(entry, "wikidata author search", null)));
     const [relations, rawPseudonyms] = qid
-      ? await Promise.all([wikidata.fetchAuthorRelations(qid), wikidata.fetchPseudonyms(qid)])
+      ? await Promise.all([
+          wikidata.fetchAuthorRelations(qid).catch(optionalSource<AuthorRelation[]>(entry, "wikidata relations", [])),
+          wikidata.fetchPseudonyms(qid).catch(optionalSource<string[]>(entry, "wikidata pseudonyms", [])),
+        ])
       : [[], []];
     return { openLibraryId, name: ol.name, relations, pseudonyms: ownPseudonyms(rawPseudonyms, ol.name) };
   });

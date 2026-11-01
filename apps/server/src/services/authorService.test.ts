@@ -74,6 +74,24 @@ describe("getAuthorLinks", () => {
     expect(links).toEqual({ openLibraryId: "OL1A", name: "Frank Herbert", relations: [], pseudonyms: ["F. P. Herbert"] });
   });
 
+  it("serves Open Library's name when every Wikidata call fails, and retries Wikidata next time", async () => {
+    vi.mocked(openLibrary.getAuthor).mockResolvedValue({ name: "Ann", wikidataId: null, bio: null, birthDate: null, deathDate: null } as never);
+    vi.mocked(wikidata.searchAuthorQid).mockReset().mockRejectedValue(new Error("Wikidata down"));
+    expect(await getAuthorLinks("OL21A")).toEqual({ openLibraryId: "OL21A", name: "Ann", relations: [], pseudonyms: [] });
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 6 * 60_000); // past DEGRADED_TTL_MS (5 min)
+    await getAuthorLinks("OL21A");
+    vi.useRealTimers();
+    expect(wikidata.searchAuthorQid).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves empty relations when the relation lookups fail", async () => {
+    vi.mocked(wikidata.fetchAuthorRelations).mockRejectedValue(new Error("Wikidata down"));
+    vi.mocked(wikidata.fetchPseudonyms).mockRejectedValue(new Error("Wikidata down"));
+    expect(await getAuthorLinks("OL22A")).toEqual({ openLibraryId: "OL22A", name: "Frank Herbert", relations: [], pseudonyms: [] });
+  });
+
   it("reuses a fully loaded author when one is already cached", async () => {
     await getAuthorDetail("OL2A");
     const links = await getAuthorLinks("OL2A");
