@@ -20,7 +20,7 @@ export function seal(plain: string): string {
 export function open(sealed: string): string {
   const [iv, tag, ct] = sealed.split(".").map((p) => Buffer.from(p, "base64url"));
   if (!iv || !tag || !ct) throw new Error("Malformed sealed value");
-  const d = createDecipheriv("aes-256-gcm", key(), iv);
+  const d = createDecipheriv("aes-256-gcm", key(), iv, { authTagLength: 16 });
   d.setAuthTag(tag);
   return Buffer.concat([d.update(ct), d.final()]).toString("utf8");
 }

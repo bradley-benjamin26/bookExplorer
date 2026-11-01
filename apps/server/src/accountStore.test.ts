@@ -69,5 +69,25 @@ describe("accountStore", () => {
     updateTokens("t", { accessToken: "a2", refreshToken: "r2", expiresAt: 2000 });
     expect(getSession("t")).toMatchObject({ accessToken: "a2", refreshToken: "r2", expiresAt: 2000, username: "ann" });
   });
+  it("saving a pending state or handoff purges expired rows", async () => {
+    const path = `${process.env.TMPDIR ?? "/tmp"}/acct-purge-${Date.now()}.db`;
+    closeAccountStore();
+    openAccountStore(path);
+    vi.useFakeTimers();
+    savePending("old", { verifier: "v", returnTo: "/r" });
+    saveHandoff("old", "tok");
+    vi.setSystemTime(Date.now() + 10 * 60_000 + 1);
+    savePending("new", { verifier: "v", returnTo: "/r" });
+    saveHandoff("new", "tok");
+    closeAccountStore();
+    const { createRequire } = await import("node:module");
+    const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
+    const raw = new sqlite.DatabaseSync(path);
+    const counts = ["oauth_pending", "handoffs"].map((t) => (raw.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n);
+    raw.close();
+    (await import("node:fs")).rmSync(path);
+    expect(counts).toEqual([1, 1]);
+    openAccountStore(":memory:");
+  });
   it("getSession on an unknown token → null", () => expect(getSession("nope")).toBeNull());
 });

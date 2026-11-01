@@ -44,7 +44,8 @@ function tokenPost(url: string, form: Record<string, string>): Promise<Response>
 async function readTokens(res: Response): Promise<HardcoverTokens> {
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
-    if (res.status === 401 || (res.status === 400 && body?.error === "invalid_grant")) throw new HardcoverAuthRevokedError("Hardcover authorization revoked");
+    // A 401 is invalid_client, a server misconfig: treating it as revoked would delete every session.
+    if (res.status === 400 && body?.error === "invalid_grant") throw new HardcoverAuthRevokedError("Hardcover authorization revoked");
     throw new Error(`Hardcover token endpoint returned ${res.status}`);
   }
   const j = (await res.json()) as { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown };

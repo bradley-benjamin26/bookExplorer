@@ -46,6 +46,8 @@ export function closeAccountStore(): void {
 export const accountStoreOpen = (): boolean => db !== undefined;
 
 export function savePending(state: string, value: { verifier: string; returnTo: string }): void {
+  // Abandoned connects never reach takePending, so expired rows are cleared here.
+  conn().prepare("DELETE FROM oauth_pending WHERE created_at < ?").run(Date.now() - PENDING_TTL_MS);
   conn().prepare("INSERT OR REPLACE INTO oauth_pending VALUES (?, ?, ?, ?)").run(state, value.verifier, value.returnTo, Date.now());
 }
 
@@ -59,6 +61,7 @@ export function takePending(state: string): { verifier: string; returnTo: string
 }
 
 export function saveHandoff(code: string, sessionToken: string): void {
+  conn().prepare("DELETE FROM handoffs WHERE expires_at < ?").run(Date.now());
   conn().prepare("INSERT OR REPLACE INTO handoffs VALUES (?, ?, ?)").run(sha256(code), seal(sessionToken), Date.now() + HANDOFF_TTL_MS);
 }
 

@@ -62,9 +62,11 @@ it("refreshTokens throws HardcoverAuthRevokedError on invalid_grant", async () =
   await expect(refreshTokens("old")).rejects.toBeInstanceOf(HardcoverAuthRevokedError);
 });
 
-it("401 is revoked; other failures are plain errors without secrets", async () => {
-  fetchMock.mockResolvedValueOnce(res(401, {}));
-  await expect(refreshTokens("old-rt")).rejects.toBeInstanceOf(HardcoverAuthRevokedError);
+it("only invalid_grant is revoked; a 401 (invalid_client) and other failures are plain errors without secrets", async () => {
+  fetchMock.mockResolvedValueOnce(res(401, { error: "invalid_client" }));
+  const e0 = await refreshTokens("old-rt").catch((e) => e);
+  expect(e0).not.toBeInstanceOf(HardcoverAuthRevokedError);
+  expect(e0.message).toBe("Hardcover token endpoint returned 401");
   fetchMock.mockResolvedValueOnce(res(400, { error: "invalid_request" }));
   const e1 = await refreshTokens("old-rt").catch((e) => e);
   expect(e1).not.toBeInstanceOf(HardcoverAuthRevokedError);

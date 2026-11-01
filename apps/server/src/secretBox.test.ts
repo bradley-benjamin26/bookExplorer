@@ -11,6 +11,11 @@ describe("secretBox", () => {
     const s = seal("a");
     expect(() => open(s.slice(0, -2) + "AA")).toThrow();
   });
+  it("rejects a truncated auth tag", () => {
+    const [iv, tag, ct] = seal("a").split(".");
+    const short = Buffer.from(tag, "base64url").subarray(0, 4).toString("base64url");
+    expect(() => open(`${iv}.${short}.${ct}`)).toThrow();
+  });
   it("rejects the wrong key", () => {
     const s = seal("a");
     vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 8).toString("base64"));
