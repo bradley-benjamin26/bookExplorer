@@ -27,7 +27,6 @@ export default function HardcoverAccount() {
 
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [skipped, setSkipped] = useState<string[]>([]);
   const remote = useQuery({ queryKey: ["hardcover", "lists"], queryFn: fetchHardcoverLists, enabled: hasToken && !!account.data, retry: false });
   const local = useQuery({ queryKey: ["hardcover", "linked"], queryFn: getAllLists, enabled: hasToken && !!account.data });
   const linkedTo = (id: number) => local.data?.find((l) => l.hardcoverListId === id);
@@ -35,12 +34,10 @@ export default function HardcoverAccount() {
   const doImport = async (id: number) => {
     setBusy(true);
     setError("");
-    setSkipped([]);
     try {
       const { list, skipped: s } = await importList(id);
-      setSkipped(s);
       await queryClient.invalidateQueries({ queryKey: ["hardcover"] });
-      router.push(routes.list(list.id));
+      router.push({ pathname: "/lists/[id]", params: { id: list.id, ...(s.length ? { skipped: JSON.stringify(s) } : {}) } });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -100,7 +97,6 @@ export default function HardcoverAccount() {
             </View>
           );
         })}
-        {skipped.length ? <Text style={styles.helpText}>No ISBN on Hardcover, so not imported: {skipped.join(", ")}.</Text> : null}
       </>
     );
   else if (account.error) body = <Text style={styles.errorText}>{account.error.message}</Text>;

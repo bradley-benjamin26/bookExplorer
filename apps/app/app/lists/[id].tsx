@@ -19,7 +19,7 @@ import { getList, getLists, linkList, type ListMember, type SavedList } from "..
 import { useThemedStyles, type Theme } from "../../src/theme";
 
 export default function ListDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, skipped } = useLocalSearchParams<{ id: string; skipped?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
@@ -29,7 +29,14 @@ export default function ListDetail() {
 
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
-  const [summary, setSummary] = useState("");
+  const [summary, setSummary] = useState(() => {
+    try {
+      const t: string[] = skipped ? JSON.parse(skipped) : [];
+      return t.length ? `Not imported (no ISBN on Hardcover): ${t.join(", ")}.` : "";
+    } catch {
+      return "";
+    }
+  });
 
   const load = useCallback(() => {
     setLoadError("");

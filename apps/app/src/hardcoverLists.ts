@@ -33,16 +33,17 @@ export async function copyToHardcover(
   onProgress: (done: number, total: number) => void,
   sleep: (ms: number) => Promise<void> = wait,
 ): Promise<{ missing: string[]; skippedAuthors: number }> {
-  const wasLinked = list.hardcoverListId !== undefined;
   let linked = list;
-  if (!wasLinked) {
+  if (list.hardcoverListId === undefined) {
+    // Members keep stale ids after an Unlink; strip them so an interrupted copy resumes by pushing exactly the unpushed ones (a stale id would look pushed and reconcile would then delete the member).
+    const members = list.members.map(({ hardcoverBookId: _stale, ...m }) => m);
+    await replaceMembers(list.id, members);
     const { id } = await createHardcoverList({ name: list.name, description: list.description ?? "" });
     await linkList(list.id, id);
-    linked = { ...list, hardcoverListId: id };
+    linked = { ...list, members, hardcoverListId: id };
   }
-  const books = list.members.filter((m) => m.type !== "author");
-  // A fresh list pushes everything: members keep stale ids after an Unlink, and skipping them would leave them off Hardcover, so the next reconcile would delete them locally.
-  const todo = wasLinked ? books.filter((m) => m.hardcoverBookId === undefined) : books;
+  const books = linked.members.filter((m) => m.type !== "author");
+  const todo = books.filter((m) => m.hardcoverBookId === undefined);
   const missing: string[] = [];
   let done = 0;
   for (const m of todo) {

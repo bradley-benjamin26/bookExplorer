@@ -116,7 +116,7 @@ describe("hardcoverLists", () => {
     expect(sentIds()).toEqual(["b"]);
   });
 
-  it("copyToHardcover on an unlinked list pushes every member, even ones with stale ids", async () => {
+  it("copyToHardcover on an unlinked list pushes every member, after stripping stale ids", async () => {
     create.mockResolvedValue({ id: 9 });
     add.mockResolvedValue({ hardcoverBookId: 2 });
     const l = await seed(["a", "b"]);
@@ -150,5 +150,25 @@ describe("hardcoverLists", () => {
     await syncWithHardcover(l);
     expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["a", "888"]);
     await expect(syncWithHardcover(await seed(["z"]))).rejects.toThrow("This list isn't linked to Hardcover.");
+  });
+
+  it("an interrupted fresh copy followed by sync keeps every local member", async () => {
+    create.mockResolvedValue({ id: 9 });
+    let next = 0;
+    const remote: number[] = [];
+    add.mockImplementation(async () => {
+      if (next === 1 && !remote.includes(-1)) {
+        remote.push(-1);
+        throw new ApiError("boom", 500);
+      }
+      remote.push(++next);
+      return { hardcoverBookId: next };
+    });
+    fetchList.mockImplementation(async () => ({ name: "A", description: "", books: remote.filter((n) => n > 0).map((n) => ({ hardcoverBookId: n, title: "t", isbn: null })) }));
+    const l = await seed(["a", "b", "c"]);
+    await replaceMembers(l.id, l.members.map((m) => ({ ...m, hardcoverBookId: 99 })));
+    await expect(copyToHardcover((await getList(l.id))!, () => {}, vi.fn())).rejects.toThrow("boom");
+    await syncWithHardcover((await getList(l.id))!);
+    expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["a", "b", "c"]);
   });
 });
