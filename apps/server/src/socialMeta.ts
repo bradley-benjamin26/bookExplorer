@@ -3,6 +3,7 @@ import { getAuthorDetail } from "./services/authorService.js";
 import { getBookDetail } from "./services/bookService.js";
 import { getSubjectDetail } from "./services/subjectService.js";
 import { getWorkDetail } from "./services/workService.js";
+import { authorJsonLd, bookJsonLd, type JsonLd, renderJsonLd, subjectJsonLd, workJsonLd } from "./structuredData.js";
 import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "./validation.js";
 
 /** Where shared links point; the same value the app uses for its own share links. */
@@ -12,6 +13,7 @@ export interface PageMeta {
   title: string;
   description: string;
   image: string | null;
+  jsonLd?: JsonLd;
 }
 
 const SITE = "Shelf Thread";
@@ -26,7 +28,16 @@ function describe(text: string | null | undefined, title: string): string {
   return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
-type Lookup = (id: string) => Promise<PageMeta | null>;
+type Lookup = (id: string, origin: string) => Promise<PageMeta | null>;
+
+/** Structured data is extra: a detail it can't read (e.g. an older cached shape) must not cost the page its card. */
+function safeLd(build: () => JsonLd): JsonLd | undefined {
+  try {
+    return build();
+  } catch {
+    return undefined;
+  }
+}
 
 const withAuthors = (d: { title: string; authors: { name: string }[] }) =>
   d.authors.length ? `${d.title} by ${d.authors.map((a) => a.name).join(", ")}` : d.title;
@@ -34,36 +45,44 @@ const withAuthors = (d: { title: string; authors: { name: string }[] }) =>
 const LOOKUPS: Record<string, { valid: (id: string) => boolean; load: Lookup }> = {
   work: {
     valid: isOpenLibraryWorkId,
-    load: async (id) => {
+    load: async (id, origin) => {
       const w = await getWorkDetail(id);
-      return w && { title: withAuthors(w), description: describe(w.description, w.title), image: w.coverUrl };
+      if (!w) return null;
+      const description = describe(w.description, w.title);
+      return { title: withAuthors(w), description, image: w.coverUrl, jsonLd: safeLd(() => workJsonLd(w, description, origin)) };
     },
   },
   book: {
     valid: isValidIsbn,
-    load: async (id) => {
+    load: async (id, origin) => {
       const b = await getBookDetail(id);
-      return b && { title: withAuthors(b), description: describe(b.description, b.title), image: b.coverUrl };
+      if (!b) return null;
+      const description = describe(b.description, b.title);
+      return { title: withAuthors(b), description, image: b.coverUrl, jsonLd: safeLd(() => bookJsonLd(b, description, origin)) };
     },
   },
   author: {
     valid: isOpenLibraryAuthorId,
-    load: async (id) => {
+    load: async (id, origin) => {
       const a = await getAuthorDetail(id);
-      return a && { title: a.name, description: describe(a.bio, a.name), image: a.photoUrl ?? null };
+      if (!a) return null;
+      const description = describe(a.bio, a.name);
+      return { title: a.name, description, image: a.photoUrl ?? null, jsonLd: safeLd(() => authorJsonLd(a, description, origin)) };
     },
   },
   subject: {
     valid: (slug) => isSubjectSlugInput(slug),
-    load: async (slug) => {
+    load: async (slug, origin) => {
       const s = await getSubjectDetail(slug);
-      return s && { title: s.name, description: describe(s.description, s.name), image: s.books[0]?.coverUrl ?? null };
+      if (!s) return null;
+      const description = describe(s.description, s.name);
+      return { title: s.name, description, image: s.books[0]?.coverUrl ?? null, jsonLd: safeLd(() => subjectJsonLd(s, description, origin)) };
     },
   },
 };
 
 /** Card text for a web path, from public data only; null for anything unknown, malformed or not found. */
-export async function pageMeta(path: string): Promise<PageMeta | null> {
+export async function pageMeta(path: string, origin = DEFAULT_WEB_ORIGIN): Promise<PageMeta | null> {
   let parts: string[];
   try {
     parts = path.split("/").slice(1).map(decodeURIComponent);
@@ -77,8 +96,9 @@ export async function pageMeta(path: string): Promise<PageMeta | null> {
   const lookup = Object.hasOwn(LOOKUPS, type) ? LOOKUPS[type] : undefined;
   if (!lookup || (explore && type === "book") || !lookup.valid(id)) return null;
   try {
-    const meta = await lookup.load(id);
-    return meta && (explore ? { ...meta, title: `Explore ${meta.title}` } : meta);
+    const meta = await lookup.load(id, origin);
+    // An explore page isn't the item's own page, so it gets the card but no JSON-LD.
+    return meta && (explore ? { ...meta, title: `Explore ${meta.title}`, jsonLd: undefined } : meta);
   } catch {
     return null;
   }
@@ -106,6 +126,7 @@ export function renderSocialTags(meta: PageMeta | null, url: string, origin = DE
     `<meta name="twitter:title" content="${e(title)}" />`,
     `<meta name="twitter:description" content="${e(description)}" />`,
     `<meta name="twitter:image" content="${e(image)}" />`,
+    ...(meta?.jsonLd ? [renderJsonLd(meta.jsonLd)] : []),
   ].join("\n    ");
 }
 

@@ -34,7 +34,7 @@ describe("pageMeta", () => {
   it("uses the default description when there is none", async () => {
     vi.mocked(getAuthorDetail).mockResolvedValue({ name: "Ann", bio: null } as never);
     const meta = await pageMeta("/author/OL1A");
-    expect(meta).toEqual({
+    expect(meta).toMatchObject({
       title: "Ann",
       description: "Explore Ann on Shelf Thread: its authors, subjects and connections.",
       image: null,
@@ -123,4 +123,33 @@ describe("injectSocialTags", () => {
     expect(out).toContain("$& $1 $$ $`");
     expect(injectSocialTags("<head></head>", "$&")).toBe("<head>$&</head>");
   });
+});
+
+describe("JSON-LD", () => {
+  it("item pages carry JSON-LD built with the given origin", async () => {
+    vi.mocked(getAuthorDetail).mockResolvedValue({ openLibraryId: "OL1A", name: "Ann", bio: "b", pseudonyms: [], relations: [] } as never);
+    const meta = await pageMeta("/author/OL1A", "https://site.test");
+    expect(meta?.jsonLd).toMatchObject({ "@type": "Person", url: "https://site.test/author/OL1A", description: "b" });
+  });
+
+  it("graph explore pages get a card but no JSON-LD", async () => {
+    vi.mocked(getWorkDetail).mockResolvedValue({ ...work, openLibraryWorkId: "OL1W", subjects: [], genres: [], awards: [] } as never);
+    const meta = await pageMeta("/graph/work/OL1W");
+    expect(meta?.title).toMatch(/^Explore /);
+    expect(meta?.jsonLd).toBeUndefined();
+  });
+
+  it("renderSocialTags emits the script only when there is JSON-LD", () => {
+    const base = { title: "T", description: "d", image: null };
+    expect(renderSocialTags(base, "u")).not.toContain("ld+json");
+    expect(renderSocialTags(null, "u")).not.toContain("ld+json");
+    expect(renderSocialTags({ ...base, jsonLd: { "@type": "Book" } }, "u")).toContain('<script type="application/ld+json">{"@type":"Book"}</script>');
+  });
+});
+
+it("a detail the JSON-LD builder can't read still gets its card", async () => {
+  vi.mocked(getWorkDetail).mockResolvedValue(work as never); // no subjects/genres/awards arrays
+  const meta = await pageMeta("/work/OL1W");
+  expect(meta?.title).toBe("Dune by Frank Herbert, Brian Herbert");
+  expect(meta?.jsonLd).toBeUndefined();
 });

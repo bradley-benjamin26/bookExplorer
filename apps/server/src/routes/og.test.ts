@@ -30,7 +30,7 @@ describe("GET /og/*", () => {
   it("serves the page's tags with the /og prefix stripped from og:url", async () => {
     lookup = async () => ({ title: "Dune", description: "Sand.", image: null });
     const res = await get("/og/work/OL1W?x=1");
-    expect(pageMeta).toHaveBeenCalledWith("/work/OL1W");
+    expect(pageMeta).toHaveBeenCalledWith("/work/OL1W", "https://site.test");
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toContain("text/html");
     expect(res.headers["cache-control"]).toBe("public, max-age=3600");
@@ -57,6 +57,13 @@ describe("GET /og/*", () => {
       throw new Error("boom");
     };
     await expectDefaultCard();
+  });
+
+  it("serves the page's JSON-LD inside the social block; the default card has none", async () => {
+    lookup = async () => ({ title: "Dune", description: "Sand.", image: null, jsonLd: { "@type": "Book", name: "Dune" } });
+    expect((await get("/og/work/OL1W")).body).toContain('"@type":"Book"');
+    lookup = async () => null;
+    expect((await get("/og/work/OL1W")).body).not.toContain("ld+json");
   });
 
   it("returns 500 when the index file is missing", async () => {

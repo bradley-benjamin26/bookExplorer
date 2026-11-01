@@ -1,6 +1,6 @@
 # Deploying link-preview cards
 
-Shared links (`/work/...`, `/book/...`, `/author/...`, `/subject/...`, `/graph/...`) show a title, description and image in chat and social apps. The static site can't do that per page, so the API server renders the tags for crawlers only. People's page loads stay static and fast.
+Shared links (`/work/...`, `/book/...`, `/author/...`, `/subject/...`, `/graph/...`) show a title, description and image in chat and social apps. The static site can't do that per page, so the API server renders the tags for crawlers only. On book, work, author and subject pages it also adds schema.org JSON-LD describing the item, for search engines. People's page loads stay static and fast.
 
 ## Server
 
@@ -23,7 +23,7 @@ shelfthread.com {
     root * /var/www/shelfthread
 
     @preview {
-        header_regexp ua User-Agent (?i)(twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|whatsapp|telegrambot|redditbot|bluesky|mastodon|embedly|pinterest|skypeuripreview|iframely)
+        header_regexp ua User-Agent (?i)(googlebot|bingbot|duckduckbot|applebot|yandexbot|twitterbot|facebookexternalhit|slackbot|discordbot|linkedinbot|whatsapp|telegrambot|redditbot|bluesky|mastodon|embedly|pinterest|skypeuripreview|iframely)
         path / /work/* /book/* /author/* /subject/* /graph/*
     }
     handle @preview {
@@ -76,3 +76,9 @@ curl -s -A Twitterbot --resolve shelfthread.com:443:127.0.0.1 https://shelfthrea
 ```
 
 Then try the X and Facebook card validators, which go through Cloudflare like real previews.
+
+For the JSON-LD, check that search crawlers get it too, then paste a page URL into Google's Rich Results Test (search.google.com/test/rich-results):
+
+```
+curl -s -A Googlebot --resolve shelfthread.com:443:127.0.0.1 https://shelfthread.com/author/OL26320A | grep ld+json
+```
