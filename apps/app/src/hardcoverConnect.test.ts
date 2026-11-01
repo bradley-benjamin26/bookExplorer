@@ -21,11 +21,27 @@ describe("parseConnectReturn", () => {
 
 describe("redeemOnce", () => {
   beforeEach(() => vi.clearAllMocks());
-  it("redeems a code once and skips it the second time", async () => {
-    mocks.redeem.mockResolvedValue({ token: "t", username: "u" });
-    expect(await redeemOnce("code1")).toBe(true);
-    expect(await redeemOnce("code1")).toBe(false);
-    expect(mocks.redeem).toHaveBeenCalledTimes(1);
+  it("redeems a code once; a second call during the first waits for the saved session", async () => {
+    let finish!: (v: { token: string; username: string }) => void;
+    mocks.redeem.mockReturnValue(new Promise((r) => (finish = r)));
+    const first = redeemOnce("code1");
+    let secondDone = false;
+    const second = redeemOnce("code1").then(() => (secondDone = true));
+    await Promise.resolve();
+    expect(secondDone).toBe(false);
+    finish({ token: "t", username: "u" });
+    await Promise.all([first, second]);
     expect(mocks.save).toHaveBeenCalledWith("t");
+    await redeemOnce("code1");
+    expect(mocks.redeem).toHaveBeenCalledTimes(1);
+  });
+  it("shares a failure with the waiting caller and forgets it so a retry can run", async () => {
+    mocks.redeem.mockRejectedValueOnce(new Error("expired"));
+    const first = redeemOnce("code2");
+    await expect(redeemOnce("code2")).rejects.toThrow("expired");
+    await expect(first).rejects.toThrow("expired");
+    mocks.redeem.mockResolvedValueOnce({ token: "t2", username: "u" });
+    await redeemOnce("code2");
+    expect(mocks.redeem).toHaveBeenCalledTimes(2);
   });
 });

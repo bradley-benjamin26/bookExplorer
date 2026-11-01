@@ -15,15 +15,18 @@ export function parseConnectReturn(url: string): { handoff: string } | { error: 
 }
 
 // On Android the auth-session redirect can also deep-link into the connected screen, and the code is single use.
-const redeemed = new Set<string>();
+// Callers share one in-flight redemption, so a second caller resolves only once the session is saved.
+const redeemed = new Map<string, Promise<void>>();
 
-/** Redeems and saves a handoff code; false when this code was already redeemed. */
-export async function redeemOnce(handoff: string): Promise<boolean> {
-  if (redeemed.has(handoff)) return false;
-  redeemed.add(handoff);
-  const { token } = await redeemHardcoverHandoff(handoff);
-  await saveSession(token);
-  return true;
+/** Redeems and saves a handoff code once; repeat calls await the same redemption (and see its error). */
+export function redeemOnce(handoff: string): Promise<void> {
+  let p = redeemed.get(handoff);
+  if (!p) {
+    p = redeemHardcoverHandoff(handoff).then(({ token }) => saveSession(token));
+    redeemed.set(handoff, p);
+    p.catch(() => redeemed.delete(handoff)); // a failure must not be remembered as success
+  }
+  return p;
 }
 
 export async function connectHardcover(): Promise<"connected" | "cancelled" | "redirected"> {
