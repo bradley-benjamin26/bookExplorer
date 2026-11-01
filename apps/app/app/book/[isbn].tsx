@@ -16,6 +16,7 @@ import { DetailTop } from "../../src/components/DetailTop";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
+import { HardcoverProgress } from "../../src/components/HardcoverProgress";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton, type SaveSheetHandle } from "../../src/components/AddToListButton";
@@ -149,6 +150,7 @@ export default function BookDetail() {
           </Pressable>
         ))}
         <RatingBadge rating={data.rating} />
+        <HardcoverProgress type="book" id={isbn} />
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
 
