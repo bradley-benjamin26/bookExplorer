@@ -45,7 +45,9 @@
       ],
       "expo-font",
       "expo-sharing",
-      "expo-image"
+      "expo-image",
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

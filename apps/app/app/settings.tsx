@@ -281,6 +281,7 @@ function PreferencesSections() {
 }
 
 export default function Settings() {
+  const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [libraries, setLibraries] = useState<Library[]>([]);
@@ -327,6 +328,11 @@ export default function Settings() {
         </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
+
+      <Text style={styles.sectionTitle} accessibilityRole="header">Hardcover</Text>
+      <Button variant="pill" onPress={() => router.push(routes.hardcover())} style={styles.historyButton}>
+        My Hardcover Account
+      </Button>
 
       <PreferencesSections />
 

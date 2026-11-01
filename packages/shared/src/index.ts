@@ -452,3 +452,6 @@ export function normalizeTitle(title: string): string {
   const noLeadingArticle = noTrailingArticle.replace(/^(the|a|an)\s+/, "");
   return noLeadingArticle.replace(/[^a-z0-9]+/g, " ").trim();
 }
+
+export const HardcoverAccountSchema = z.object({ username: z.string() });
+export const HardcoverHandoffSchema = HardcoverAccountSchema.extend({ token: z.string() });

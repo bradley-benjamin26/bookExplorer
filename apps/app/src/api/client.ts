@@ -1,11 +1,14 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { z, type ZodType, type ZodTypeDef } from "zod";
+import { clearSession, getSessionToken } from "../hardcoverSession";
 import {
   AuthorRefSchema,
   AuthorSchema,
   BookSchema,
   GraphSchema,
+  HardcoverAccountSchema,
+  HardcoverHandoffSchema,
   PathResultSchema,
   SeriesSchema,
   SubjectSchema,
@@ -70,13 +73,20 @@ export class ApiError extends Error {
 // silently and surface later as a confusing render-time bug (or not at all,
 // if the missing field just happened to render as blank).
 // `signal` is React Query's, so leaving a screen cancels its in-flight request.
-async function getJson<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: APP_SHARED_SECRET ? { "X-App-Key": APP_SHARED_SECRET } : undefined,
-    signal,
-  });
+function headers(extra?: Record<string, string>): Record<string, string> | undefined {
+  const h: Record<string, string> = { ...extra };
+  if (APP_SHARED_SECRET) h["X-App-Key"] = APP_SHARED_SECRET;
+  const session = getSessionToken();
+  if (session) h["X-Hardcover-Session"] = session;
+  return Object.keys(h).length ? h : undefined;
+}
+
+async function request<T>(path: string, init: RequestInit, schema?: ZodType<T, ZodTypeDef, unknown>): Promise<T | undefined> {
+  const res = await fetch(`${API_BASE_URL}${path}`, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
+    // A rejected session is dead; drop it so the app reads as signed out.
+    if (res.status === 401 && path.startsWith("/api/hardcover/")) await clearSession();
     // Routes that deliberately return 404 set `error` to a specific message
     // ("No author found for id ..."). An unhandled exception instead gets
     // Fastify's default shape, where `error` is just the generic HTTP status
@@ -86,12 +96,41 @@ async function getJson<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>,
     // author genuinely doesn't exist.
     throw new ApiError(body.message ?? body.error ?? `Request failed: ${path}`, res.status);
   }
+  if (!schema) return undefined;
   const json = await res.json();
   const result = schema.safeParse(json);
   if (!result.success) {
     throw new ApiError(`Unexpected response shape from ${path}: ${result.error.message}`, res.status);
   }
   return result.data;
+}
+
+// Parses every response against the shared zod schema instead of just type-
+// asserting it, so a malformed response fails loudly here instead of as a confusing render-time bug.
+// `signal` is React Query's, so leaving a screen cancels its in-flight request.
+async function getJson<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>, signal?: AbortSignal): Promise<T> {
+  return (await request(path, { headers: headers(), signal }, schema)) as T;
+}
+
+export function sendJson<T>(method: "POST" | "DELETE", path: string, body: unknown, schema?: ZodType<T, ZodTypeDef, unknown>): Promise<T | undefined> {
+  return request(path, { method, headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify(body) }, schema);
+}
+
+export async function startHardcoverConnect(returnTo: string): Promise<string> {
+  const r = await sendJson("POST", "/api/hardcover/connect", { returnTo }, z.object({ authorizeUrl: z.string() }));
+  return r!.authorizeUrl;
+}
+
+export async function redeemHardcoverHandoff(handoff: string): Promise<{ token: string; username: string }> {
+  return (await sendJson("POST", "/api/hardcover/session", { handoff }, HardcoverHandoffSchema))!;
+}
+
+export function fetchHardcoverAccount(): Promise<{ username: string }> {
+  return getJson("/api/hardcover/session", HardcoverAccountSchema);
+}
+
+export async function disconnectHardcover(): Promise<void> {
+  await sendJson("DELETE", "/api/hardcover/session", {});
 }
 
 export function fetchBookByIsbn(isbn: string): Promise<Book> {
