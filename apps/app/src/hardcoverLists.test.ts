@@ -1,19 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
 import { ApiError } from "./api/client";
-import { pushAdd, pushRemove } from "./hardcoverLists";
-import { createList, addToList, getList } from "./storage/savedLists";
+import { copyToHardcover, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
+import { createList, addToList, getList, linkList, replaceMembers } from "./storage/savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
-const { add, remove } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
+const { add, remove, fetchList, create } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetchList: vi.fn(), create: vi.fn() }));
 vi.mock("./api/client", () => ({
   ApiError: class extends Error {
-    constructor(message: string, public status: number) {
+    constructor(message: string, public status: number, public retryAfterSeconds?: number) {
       super(message);
     }
   },
   addHardcoverListBook: add,
   removeHardcoverListBook: remove,
+  fetchHardcoverList: fetchList,
+  createHardcoverList: create,
 }));
 
 const emma = { type: "work" as const, id: "OL1W", title: "Emma" };
@@ -23,6 +25,8 @@ describe("hardcoverLists", () => {
     await AsyncStorage.clear();
     add.mockReset();
     remove.mockReset();
+    fetchList.mockReset();
+    create.mockReset();
   });
 
   it("pushAdd stores the returned hardcoverBookId", async () => {
@@ -58,5 +62,93 @@ describe("hardcoverLists", () => {
     const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
     await pushRemove(l, { ...emma, addedAt: 1, hardcoverBookId: 77 });
     expect(remove).toHaveBeenCalledWith(5, 77);
+  });
+
+  const seed = async (ids: string[], hardcoverListId?: number) => {
+    const l = await createList({ name: "A", kind: "book", hardcoverListId });
+    for (const id of ids) await addToList(l.id, { type: "work", id, title: id });
+    return (await getList(l.id))!;
+  };
+  const sentIds = () => add.mock.calls.map((c) => c[1].id);
+
+  it("copyToHardcover waits Retry-After on 429 and retries the same member", async () => {
+    add
+      .mockResolvedValueOnce({ hardcoverBookId: 1 })
+      .mockRejectedValueOnce(new ApiError("slow", 429, 30))
+      .mockResolvedValue({ hardcoverBookId: 2 });
+    create.mockResolvedValue({ id: 9 });
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    await copyToHardcover(await seed(["a", "b", "c"]), () => {}, sleep);
+    expect(sleep).toHaveBeenCalledWith(30_000);
+    expect(sentIds()).toEqual(["a", "b", "b", "c"]);
+  });
+
+  it("copyToHardcover reports missing titles and continues, and rethrows other errors", async () => {
+    create.mockResolvedValue({ id: 9 });
+    add.mockResolvedValueOnce({ hardcoverBookId: 1 }).mockRejectedValueOnce(new ApiError("no", 404)).mockResolvedValue({ hardcoverBookId: 3 });
+    const progress = vi.fn();
+    const l = await seed(["a", "b", "c"]);
+    expect((await copyToHardcover(l, progress, vi.fn())).missing).toEqual(["b"]);
+    expect(progress).toHaveBeenLastCalledWith(3, 3);
+    add.mockReset();
+    add.mockRejectedValue(new ApiError("boom", 500));
+    await expect(copyToHardcover(await seed(["x"], 5), () => {}, vi.fn())).rejects.toThrow("boom");
+  });
+
+  it("copyToHardcover counts and skips authors", async () => {
+    create.mockResolvedValue({ id: 9 });
+    add.mockResolvedValue({ hardcoverBookId: 1 });
+    const l = await seed(["a"]);
+    await replaceMembers(l.id, [...l.members, { type: "author", id: "OL1A", title: "Au", addedAt: 1 }]);
+    const progress = vi.fn();
+    const r = await copyToHardcover((await getList(l.id))!, progress, vi.fn());
+    expect(r.skippedAuthors).toBe(1);
+    expect(progress).toHaveBeenCalledWith(1, 1);
+    expect(sentIds()).toEqual(["a"]);
+  });
+
+  it("copyToHardcover resumes a linked list: already-pushed members are not re-sent", async () => {
+    add.mockResolvedValue({ hardcoverBookId: 2 });
+    const l = await seed(["a", "b"], 5);
+    await replaceMembers(l.id, [{ ...l.members[0], hardcoverBookId: 1 }, l.members[1]]);
+    await copyToHardcover((await getList(l.id))!, () => {}, vi.fn());
+    expect(create).not.toHaveBeenCalled();
+    expect(sentIds()).toEqual(["b"]);
+  });
+
+  it("copyToHardcover on an unlinked list pushes every member, even ones with stale ids", async () => {
+    create.mockResolvedValue({ id: 9 });
+    add.mockResolvedValue({ hardcoverBookId: 2 });
+    const l = await seed(["a", "b"]);
+    await replaceMembers(l.id, l.members.map((m) => ({ ...m, hardcoverBookId: 99 })));
+    await copyToHardcover((await getList(l.id))!, () => {}, vi.fn());
+    expect(sentIds()).toEqual(["a", "b"]);
+    expect(add.mock.calls[0][0]).toBe(9);
+    expect((await getList(l.id))!.hardcoverListId).toBe(9);
+  });
+
+  it("importList creates a linked book list and reports ISBN-less titles", async () => {
+    fetchList.mockResolvedValue({
+      name: "Faves",
+      description: "d",
+      books: [
+        { hardcoverBookId: 1, title: "One", isbn: "111" },
+        { hardcoverBookId: 2, title: "Two", isbn: null },
+      ],
+    });
+    const { list, skipped } = await importList(7);
+    expect(skipped).toEqual(["Two"]);
+    const saved = (await getList(list.id))!;
+    expect(saved.hardcoverListId).toBe(7);
+    expect(saved.members.map((m) => [m.id, m.hardcoverBookId])).toEqual([["111", 1]]);
+  });
+
+  it("syncWithHardcover pushes then reconciles against the remote, and rejects unlinked lists", async () => {
+    add.mockResolvedValue({ hardcoverBookId: 5 });
+    fetchList.mockResolvedValue({ name: "A", description: "", books: [{ hardcoverBookId: 5, title: "a", isbn: null }, { hardcoverBookId: 8, title: "New", isbn: "888" }] });
+    const l = await seed(["a"], 5);
+    await syncWithHardcover(l);
+    expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["a", "888"]);
+    await expect(syncWithHardcover(await seed(["z"]))).rejects.toThrow("This list isn't linked to Hardcover.");
   });
 });

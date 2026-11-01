@@ -1,10 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
-import { ApiError, disconnectHardcover, fetchHardcoverAccount } from "../src/api/client";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ApiError, disconnectHardcover, fetchHardcoverAccount, fetchHardcoverLists } from "../src/api/client";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
+import { importList } from "../src/hardcoverLists";
+import { routes } from "../src/navigation";
+import { getAllLists } from "../src/storage/savedLists";
 import { connectHardcover } from "../src/hardcoverConnect";
 import { clearSession, getSessionToken } from "../src/hardcoverSession";
 import { useThemedStyles, type Theme } from "../src/theme";
@@ -20,6 +24,28 @@ export default function HardcoverAccount() {
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState("");
   const account = useQuery({ queryKey: ["hardcover", "account"], queryFn: fetchHardcoverAccount, enabled: hasToken, retry: false });
+
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const remote = useQuery({ queryKey: ["hardcover", "lists"], queryFn: fetchHardcoverLists, enabled: hasToken && !!account.data, retry: false });
+  const local = useQuery({ queryKey: ["hardcover", "linked"], queryFn: getAllLists, enabled: hasToken && !!account.data });
+  const linkedTo = (id: number) => local.data?.find((l) => l.hardcoverListId === id);
+
+  const doImport = async (id: number) => {
+    setBusy(true);
+    setError("");
+    setSkipped([]);
+    try {
+      const { list, skipped: s } = await importList(id);
+      setSkipped(s);
+      await queryClient.invalidateQueries({ queryKey: ["hardcover"] });
+      router.push(routes.list(list.id));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setBusy(false);
+  };
 
   const signedOut = !hasToken || status(account.error) === 401;
   const isUnavailable = unavailable || (hasToken && status(account.error) === 503);
@@ -59,7 +85,22 @@ export default function HardcoverAccount() {
       <>
         <Text style={styles.connected}>Connected as @{account.data.username}</Text>
         <Button variant="pill" onPress={disconnect} style={styles.disconnect}>Disconnect</Button>
-        {/* Task 10: import section goes here. */}
+        <Text style={styles.heading} accessibilityRole="header">Import a list from Hardcover</Text>
+        {remote.error ? <Text style={styles.errorText}>{remote.error.message}</Text> : null}
+        {remote.data?.map((l) => {
+          const mine = linkedTo(l.id);
+          return (
+            <View key={l.id} style={styles.row}>
+              <Text style={styles.rowText}>{l.name} · {l.booksCount} books</Text>
+              {mine ? (
+                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))}>Imported</Button>
+              ) : (
+                <Button variant="pill" disabled={busy} onPress={() => doImport(l.id)}>Import</Button>
+              )}
+            </View>
+          );
+        })}
+        {skipped.length ? <Text style={styles.helpText}>No ISBN on Hardcover, so not imported: {skipped.join(", ")}.</Text> : null}
       </>
     );
   else if (account.error) body = <Text style={styles.errorText}>{account.error.message}</Text>;
@@ -80,6 +121,9 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     content: { flexGrow: 1, padding: spacing.lg },
     helpText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, lineHeight: 22, marginBottom: spacing.md },
     connected: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
+    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.xl, marginBottom: spacing.sm },
+    row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },
+    rowText: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
     disconnect: { alignSelf: "flex-start" },
     errorText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm },
   });

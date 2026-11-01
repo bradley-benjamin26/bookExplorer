@@ -11,9 +11,11 @@ import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
 import { shareFile } from "../../src/backupFiles";
 import { shelfSlug } from "../../src/csv";
 import { confirmDestructive, confirmLeave } from "../../src/confirm";
+import { copyToHardcover, syncWithHardcover } from "../../src/hardcoverLists";
+import { getSessionToken } from "../../src/hardcoverSession";
 import { memberHref, routes } from "../../src/navigation";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
-import { getList, getLists, type ListMember, type SavedList } from "../../src/storage/savedLists";
+import { getList, getLists, linkList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useThemedStyles, type Theme } from "../../src/theme";
 
 export default function ListDetail() {
@@ -24,6 +26,10 @@ export default function ListDetail() {
   const [list, setList] = useState<SavedList | null | undefined>(undefined);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
+
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [summary, setSummary] = useState("");
 
   const load = useCallback(() => {
     setLoadError("");
@@ -56,6 +62,29 @@ export default function ListDetail() {
     } catch (e) {
       setError(e instanceof ImportError ? e.message : "Something went wrong. Please try again.");
     }
+  };
+
+  const runHardcover = async (op: (l: SavedList) => Promise<{ missing: string[] }>) => {
+    if (!list) return;
+    setBusy(true);
+    setError("");
+    setSummary("");
+    try {
+      const { missing } = await op(list);
+      setSummary(missing.length ? `Hardcover doesn't have: ${missing.join(", ")}.` : "Hardcover is up to date.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+    setProgress("");
+    setBusy(false);
+    load();
+  };
+  const copy = () => runHardcover((l) => copyToHardcover(l, (d, t) => setProgress(`Copying ${d} of ${t}…`)));
+  const sync = () => runHardcover(syncWithHardcover);
+  const unlink = async () => {
+    if (!(await confirmDestructive("Unlink from Hardcover?", "This list stops syncing. Nothing changes on Hardcover.", "Unlink"))) return;
+    await linkList(id, null);
+    load();
   };
 
   const doDelete = async () => {
@@ -103,6 +132,19 @@ export default function ListDetail() {
             <Text style={styles.error} accessibilityLiveRegion="polite">
               {error}
             </Text>
+          ) : null}
+          {summary ? <Text style={styles.description}>{summary}</Text> : null}
+          {list.kind === "book" && getSessionToken() !== null ? (
+            <View style={styles.exportRow}>
+              {list.hardcoverListId ? (
+                <>
+                  <Button variant="pill" disabled={busy} onPress={sync}>{busy ? "Syncing…" : "Sync with Hardcover"}</Button>
+                  <Button variant="pill" disabled={busy} onPress={unlink}>Unlink</Button>
+                </>
+              ) : (
+                <Button variant="pill" disabled={busy} onPress={copy}>{progress || "Copy to Hardcover"}</Button>
+              )}
+            </View>
           ) : null}
           {list.members.length === 0 ? (
             <Text style={styles.emptyText}>
