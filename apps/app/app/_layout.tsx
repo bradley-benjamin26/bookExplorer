@@ -22,7 +22,7 @@ import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
 import { titleRef } from "../src/webTitle";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
-import { loadSession } from "../src/hardcoverSession";
+import { loadSession, onSessionCleared } from "../src/hardcoverSession";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 
@@ -31,6 +31,8 @@ export default function RootLayout() {
     // Unused queries must outlive a session in memory too, or the next persist would drop them from the offline cache.
     () => new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })
   );
+  // gcTime is Infinity, so signed-out Hardcover data would otherwise linger (and persist) after disconnect or a 401.
+  useEffect(() => onSessionCleared(() => queryClient.removeQueries({ queryKey: ["hardcover"] })), [queryClient]);
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,

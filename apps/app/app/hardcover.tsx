@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError, disconnectHardcover, fetchHardcoverAccount, fetchHardcoverLists } from "../src/api/client";
 import { Button } from "../src/components/Button";
@@ -8,7 +8,7 @@ import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
 import { importList } from "../src/hardcoverLists";
 import { routes } from "../src/navigation";
-import { getAllLists } from "../src/storage/savedLists";
+import { getLists } from "../src/storage/savedLists";
 import { connectHardcover } from "../src/hardcoverConnect";
 import { clearSession, getSessionToken } from "../src/hardcoverSession";
 import { useThemedStyles, type Theme } from "../src/theme";
@@ -27,11 +27,15 @@ export default function HardcoverAccount() {
 
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // State lags a render, so a fast second tap would pass a `busy` check; the ref flips synchronously.
+  const busyRef = useRef(false);
   const remote = useQuery({ queryKey: ["hardcover", "lists"], queryFn: fetchHardcoverLists, enabled: hasToken && !!account.data, retry: false });
-  const local = useQuery({ queryKey: ["hardcover", "linked"], queryFn: getAllLists, enabled: hasToken && !!account.data });
+  const local = useQuery({ queryKey: ["hardcover", "linked"], queryFn: () => getLists(), enabled: hasToken && !!account.data });
   const linkedTo = (id: number) => local.data?.find((l) => l.hardcoverListId === id);
 
   const doImport = async (id: number) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -41,6 +45,7 @@ export default function HardcoverAccount() {
     } catch (err) {
       setError((err as Error).message);
     }
+    busyRef.current = false;
     setBusy(false);
   };
 
@@ -63,9 +68,8 @@ export default function HardcoverAccount() {
   const disconnect = async () => {
     if (!(await confirmDestructive("Disconnect Hardcover?", "ShelfThread will stop using your Hardcover account.", "Disconnect"))) return;
     await disconnectHardcover().catch(() => {}); // best effort: the local session goes either way
-    await clearSession();
+    await clearSession(); // also drops cached Hardcover data, via _layout's onSessionCleared
     setHasToken(false);
-    await queryClient.invalidateQueries({ queryKey: ["hardcover"] });
   };
 
   let body;

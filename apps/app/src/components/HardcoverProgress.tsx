@@ -14,7 +14,8 @@ export function HardcoverProgress({ type, id }: { type: "book" | "work"; id: str
     enabled: !!getSessionToken(),
     staleTime: 5 * 60_000,
   });
-  const label = data ? progressLabel(data) : null;
+  // Cached data can outlive the session, so check the token too.
+  const label = data && getSessionToken() ? progressLabel(data) : null;
   if (!label) return null;
   return (
     <Text accessibilityRole="text" style={styles.text}>

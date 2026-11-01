@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
 import { titleRef } from "../../src/webTitle";
@@ -28,6 +28,8 @@ export default function ListDetail() {
   const [loadError, setLoadError] = useState("");
 
   const [busy, setBusy] = useState(false);
+  // State lags a render, so a fast second tap would pass a `busy` check; the ref flips synchronously.
+  const busyRef = useRef(false);
   const [progress, setProgress] = useState("");
   const [summary, setSummary] = useState(() => {
     try {
@@ -72,7 +74,8 @@ export default function ListDetail() {
   };
 
   const runHardcover = async (op: (l: SavedList) => Promise<{ missing: string[] }>) => {
-    if (!list) return;
+    if (!list || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     setSummary("");
@@ -83,14 +86,21 @@ export default function ListDetail() {
       setError(e instanceof Error ? e.message : String(e));
     }
     setProgress("");
+    busyRef.current = false;
     setBusy(false);
     load();
   };
   const copy = () => runHardcover((l) => copyToHardcover(l, (d, t) => setProgress(`Copying ${d} of ${t}…`)));
   const sync = () => runHardcover(syncWithHardcover);
   const unlink = async () => {
-    if (!(await confirmDestructive("Unlink from Hardcover?", "This list stops syncing. Nothing changes on Hardcover.", "Unlink"))) return;
-    await linkList(id, null);
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      if (!(await confirmDestructive("Unlink from Hardcover?", "This list stops syncing. Nothing changes on Hardcover.", "Unlink"))) return;
+      await linkList(id, null);
+    } finally {
+      busyRef.current = false;
+    }
     load();
   };
 

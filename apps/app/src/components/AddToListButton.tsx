@@ -189,9 +189,15 @@ export function AddToListButton({
     setBusy(true); // also blocks a second tap while the confirm is up
     try {
       if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
-      await applyListChanges(member, listChanges(lists, member, checked), onSave, setError);
+      let issue = "";
+      await applyListChanges(member, listChanges(lists, member, checked), onSave, (m) => {
+        issue = m;
+        setError(m);
+      });
       onChange?.();
-      setOpen(false);
+      // Keep the sheet up so the Hardcover message is seen; reload so a second Done doesn't re-apply the same changes.
+      if (issue) await load(false);
+      else setOpen(false);
     } catch (e) {
       setError(errorText(e));
     } finally {

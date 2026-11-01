@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 
 const KEY = "hardcover-session";
 let token: string | null = null;
+let cleared: (() => void) | null = null;
 
 // shortcut: web keeps the session token in localStorage (XSS-readable); it's our revocable session id, not the Hardcover token. Move to an httpOnly cookie if the web app ever loads third-party scripts
 const store = () =>
@@ -22,7 +23,16 @@ export async function saveSession(value: string): Promise<void> {
   await store().set(value);
 }
 
+// The query client lives in _layout; it registers here so a 401 in api/client can drop cached Hardcover data without an import cycle.
+export function onSessionCleared(listener: () => void): () => void {
+  cleared = listener;
+  return () => {
+    if (cleared === listener) cleared = null;
+  };
+}
+
 export async function clearSession(): Promise<void> {
   token = null;
+  cleared?.();
   await store().del();
 }

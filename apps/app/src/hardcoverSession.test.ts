@@ -38,6 +38,17 @@ describe("hardcoverSession", () => {
     expect(secure.m.size).toBe(0);
   });
 
+  it("clearSession tells the registered listener, which can unregister", async () => {
+    const s = await fresh();
+    const cleared = vi.fn();
+    const off = s.onSessionCleared(cleared);
+    await s.clearSession();
+    expect(cleared).toHaveBeenCalledTimes(1);
+    off();
+    await s.clearSession();
+    expect(cleared).toHaveBeenCalledTimes(1);
+  });
+
   it("loadSession restores the stored token", async () => {
     secure.m.set("hardcover-session", "stored");
     const s = await fresh();
