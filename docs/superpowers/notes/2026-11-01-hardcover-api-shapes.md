@@ -26,10 +26,42 @@ Live: blocked. Introspection: `insert_list_book(object: ListBookInput!) -> ListB
 ## Step 5: author follow
 Introspection: `follows { author, book, character, created_at, edition, followable_id, followable_type, id, list, publisher, series, updated_at, user, user_id }`.
 `insert_follow(followable_id: Int!, followable_type: String!) -> FollowType { error, follow, followable_id, followable_type, id }`; `delete_follow(followable_id: Int!, followable_type: String!) -> FollowDeleteType { error, success }`.
-Follow of an author is supported by the schema: `mutation { insert_follow(followable_type: "Author", followable_id: 123) { id error } }`. **`followable_type` value `"Author"` is a guess (not live-verified; scope-blocked).** Verify with a real token; Task 12 is feasible pending that.
+**Conclusion: BUILD Task 12** (controller ruling).
+Follow of an author is supported by the schema: `mutation { insert_follow(followable_type: "Author", followable_id: 123) { id error } }`. **`followable_type` value `"Author"` is a guess (not live-verified; scope-blocked).** The scope insert_follow needs is not shown by introspection and not documented anywhere I could reach; the plan adds `write:social` (unverified). Owner must confirm both `"Author"` and `write:social` with a real OAuth token.
 
 ## Step 1b: `user_books` privacy
-`user_books` has `privacy_setting_id` (Int) (also `privacy_setting` relation). Live (works with this token): `books(where:{editions:{isbn_13:{_eq:"9780441013593"}}}, limit:1){ user_books(where:{privacy_setting_id:{_eq:1}, review_markdown:{_is_null:false}}, limit:2){ privacy_setting_id rating } }` returned two rows with `privacy_setting_id: 1`. **Public = 1**; add `privacy_setting_id: {_eq: 1}` to the existing QUERY's where clause. (Also saw private lists use `privacy_setting_id: 3` per plan; unverified.)
+`user_books` has `privacy_setting_id` (Int) plus a `privacy_setting` relation. The lookup table is readable with the PAT: `{ privacy_settings { id setting } }` returned `1 = Public`, `2 = Followers only`, `3 = Private`. So **public = 1** (confirmed), and private lists use `privacy_setting_id: 3` (confirmed as "Private"). Live check: `books(where:{editions:{isbn_13:{_eq:"9780441013593"}}}, limit:1){ user_books(where:{privacy_setting_id:{_eq:1}, review_markdown:{_is_null:false}}, limit:2){ privacy_setting_id rating } }` returned two rows with `privacy_setting_id: 1`. Add `privacy_setting_id: {_eq: 1}` to the existing QUERY's where clause.
 
 ## Step 6: cleanup
 No list was created (insert was rejected), so nothing to delete.
+
+## Scope names (finding 4)
+docs.hardcover.app blocks curl/WebFetch (Cloudflare 403), so the docs pages were NOT read directly; the below is from search-result excerpts of the official "Actions & Scopes" page (docs.hardcover.app/api/graphql/actions/) plus live 403s.
+- Confirmed to exist: `read:me` (live 403 for `me`), `write:lists` (live 403 for `insert_list`), `read:me:content`, `read:me:email`, `read:me:roles`, `read:lists`, `read:lists:following`, `read:lists:private`, `read:lists:public`. The `me` query accepts any one of `read:me`, `read:me:content`, `read:me:email`, `read:me:roles`, so the plan's `read:me:content` should satisfy `me` (the 403 just names `read:me`, the first alternative). Docs say a token needs at least one listed scope per action.
+- Seen only in third-party sources: `write:library` (user_book / reading-journal mutations, per a community project).
+- Not confirmed anywhere: `read:catalog`, `read:library`, `write:social` (plan constant). Hardcover's PAT link builder says unknown scopes are silently dropped, so a wrong name fails quietly. Possibly `read:library` should be `read:me:content` or a `read:` library scope; owner must check the OAuth app's scope list in Hardcover settings.
+- Mapping needed by the plan: me = `read:me` or `read:me:content`; read/create lists = `read:lists` / `write:lists`; list books (insert_list_book) = probably `write:lists` (unverified); user_books / reading progress = `read:me:content` for reads, `write:library` for writes (unverified); follow = `write:social` (unverified guess).
+- Plan constant `read:me:content read:catalog read:lists write:lists read:library`: names to flag as unverified are `read:catalog`, `read:library`; `write:library` and `write:social` are missing/unconfirmed.
+
+## Assumptions for later tasks (re-verify at the first real OAuth sign-in, owner's manual check)
+Steps 1-3 were not live-verified (PAT lacks scopes). Later tasks assume exactly:
+1. `me` is an array, read `[0]`:
+```graphql
+{ me { id username } }
+```
+ -> `data.me[0].id`.
+2. Create a private list, selecting `id`:
+```graphql
+mutation { insert_list(object: { name: "ShelfThread spike", description: "spike", privacy_setting_id: 3 }) { id } }
+```
+ (`3` = Private, confirmed above.) Fallback if rejected: `{ errors list { id } }` (ListIdType has `errors`, `id`, `list`). Cleanup: `mutation { delete_list(id: 123) { success } }` (ListDeleteType fields not introspected; check).
+3. Add a book without `position`:
+```graphql
+mutation { insert_list_book(object: { list_id: 123, book_id: 456 }) { id } }
+```
+ If the API demands `position`, pass `books_count + 1`.
+4. Follow an author:
+```graphql
+mutation { insert_follow(followable_type: "Author", followable_id: 789) { id error } }
+```
+The first real OAuth sign-in must confirm each of 1-4 (and the scopes above).
