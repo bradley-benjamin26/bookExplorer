@@ -40,7 +40,8 @@ export function getWorkLinks(workId: string): Promise<WorkLinks | null> {
 }
 
 /** Shared by the /api/works and /api/graph/work routes so both hit the same cache. */
-export function getWorkDetail(workId: string): Promise<Work | null> {
+export function getWorkDetail(workId: string, hardcoverAuth?: string | null): Promise<Work | null> {
+  // The cached result is public catalog data, so it is shared across users whichever token fetched it.
   return workCache.wrap(workId, async (entry) => {
     const olResult = await openLibrary.getWork(workId);
     if (!olResult) return null;
@@ -53,7 +54,7 @@ export function getWorkDetail(workId: string): Promise<Work | null> {
     // is as usable as another's. No Google Books fallback here: this
     // service never otherwise touches Google Books, and a cover/rating
     // alone isn't worth adding a new call against its shared quota for.
-    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment(isbnCandidates, workId, entry);
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment(isbnCandidates, workId, entry, hardcoverAuth);
 
     // Same best-effort Wikidata work match as a scanned book, used here only
     // for its genre (P136) — a "work" page doesn't otherwise touch Wikidata

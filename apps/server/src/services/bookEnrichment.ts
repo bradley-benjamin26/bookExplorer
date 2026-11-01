@@ -40,12 +40,12 @@ export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, 
  * lookups, like the Wikidata work match below, have had a chance to run
  * too).
  */
-export function startCommonEnrichment(isbnCandidates: string[], workId: string | null, entry: CacheEntryOptions) {
+export function startCommonEnrichment(isbnCandidates: string[], workId: string | null, entry: CacheEntryOptions, hardcoverAuth?: string | null) {
   const locMetadataPromise = fetchMetadataByAnyIsbn(isbnCandidates).catch(
     optionalSource(entry, "loc", EMPTY_METADATA)
   );
   const hardcoverPromise = hardcover
-    .lookupByAnyIsbn(isbnCandidates)
+    .lookupByAnyIsbn(isbnCandidates, hardcoverAuth)
     .catch(optionalSource<HardcoverBookData | null>(entry, "hardcover", null));
   const olRatingsPromise: Promise<OpenLibraryRatings | null> = workId
     ? openLibrary.getRatings(workId).catch(optionalSource<OpenLibraryRatings | null>(entry, "openLibrary ratings", null))

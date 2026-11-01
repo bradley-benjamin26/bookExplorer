@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { fetchWithTimeout } from "../httpClient.js";
-import { lookupByAnyIsbn } from "./hardcover.js";
+import { HardcoverRateLimitError, HardcoverUnauthorizedError, hardcoverGraphql, lookupByAnyIsbn, lookupByIsbn } from "./hardcover.js";
 
-vi.mock("../httpClient.js", () => ({ fetchWithTimeout: vi.fn() }));
+vi.mock("../httpClient.js", async () => ({
+  ...(await vi.importActual<typeof import("../httpClient.js")>("../httpClient.js")),
+  fetchWithTimeout: vi.fn(),
+}));
 const noMatch = { ok: true, json: async () => ({ data: { editions: [] } }) } as unknown as Response;
 const match = { ok: true, json: async () => ({ data: { editions: [{ book: { rating: 4, ratings_count: 10, user_books: [] } }] } }) } as unknown as Response;
 const isbns = ["1", "2", "3", "4", "5", "6", "7", "8"];
@@ -22,4 +25,67 @@ it("stops after 5 ISBNs when none match", async () => {
 it("still finds a match on the 5th ISBN", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValueOnce(noMatch).mockResolvedValueOnce(noMatch).mockResolvedValueOnce(noMatch).mockResolvedValueOnce(noMatch).mockResolvedValueOnce(match);
   expect((await lookupByAnyIsbn(isbns))?.rating).toBe(4);
+});
+
+const sentAuth = () => (vi.mocked(fetchWithTimeout).mock.calls[0][1]?.headers as Record<string, string>).Authorization;
+const sentQuery = () => JSON.parse(String(vi.mocked(fetchWithTimeout).mock.calls[0][1]?.body)).query as string;
+
+it("uses the caller's token over the server key", async () => {
+  vi.stubEnv("HARDCOVER_API_KEY", "server");
+  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
+  await lookupByIsbn("1", "Bearer user");
+  expect(sentAuth()).toBe("Bearer user");
+});
+
+it("falls back to the server key when signed out", async () => {
+  vi.stubEnv("HARDCOVER_API_KEY", "server");
+  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
+  await lookupByIsbn("1", null);
+  expect(sentAuth()).toBe("Bearer server");
+});
+
+it("skips Hardcover when neither is set", async () => {
+  vi.stubEnv("HARDCOVER_API_KEY", "");
+  expect(await lookupByIsbn("1")).toBeNull();
+  expect(fetchWithTimeout).not.toHaveBeenCalled();
+});
+
+it("only asks for public reviews, since the result is cached for everyone", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
+  await lookupByIsbn("1");
+  expect(sentQuery()).toContain("privacy_setting_id: { _eq: 1 }");
+});
+
+it("maps a 429 response to HardcoverRateLimitError using Retry-After", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(new Response("", { status: 429, headers: { "Retry-After": "7" } }));
+  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ name: "HardcoverRateLimitError", retryAfterSeconds: 7 });
+});
+
+it("defaults a 429's retry to 60s without Retry-After", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(new Response("", { status: 429 }));
+  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toBeInstanceOf(HardcoverRateLimitError);
+  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ retryAfterSeconds: 60 });
+});
+
+it("maps fetchWithTimeout's UpstreamUnavailableError to HardcoverRateLimitError", async () => {
+  const { UpstreamUnavailableError } = await vi.importActual<typeof import("../httpClient.js")>("../httpClient.js");
+  vi.mocked(fetchWithTimeout).mockRejectedValue(new UpstreamUnavailableError("api.hardcover.app", 1200));
+  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ retryAfterSeconds: 2 });
+});
+
+it("maps 401 to HardcoverUnauthorizedError", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ error: "invalid_token" }, { status: 401 }));
+  await expect(hardcoverGraphql("q", {}, "Bearer secret")).rejects.toBeInstanceOf(HardcoverUnauthorizedError);
+});
+
+it("reports the missing scope on 403 without leaking the token", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ error: "insufficient_scope", scope: "books:read" }, { status: 403 }));
+  const err = await hardcoverGraphql("q", {}, "Bearer secret").catch((e: Error) => e);
+  expect((err as Error).message).toContain("books:read");
+  expect((err as Error).message).not.toContain("secret");
+});
+
+it("throws on GraphQL errors", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ errors: [{ message: "boom" }] }));
+  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toThrow("boom");
 });

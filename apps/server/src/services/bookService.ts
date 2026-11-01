@@ -19,8 +19,9 @@ const bookCache = new TtlCache<Book | null>(1000 * 60 * 60, 1000, "book");
 // downstream lookup (and the cache key) on the same form.
 
 /** Shared by the /api/books route (a future /api/graph/book route would reuse this too). */
-export function getBookDetail(rawIsbn: string): Promise<Book | null> {
+export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): Promise<Book | null> {
   const isbn = normalizeIsbn(rawIsbn);
+  // The cached result is public catalog data, so it is shared across users whichever token fetched it.
   return bookCache.wrap(isbn, async (entry) => {
     const ol = await openLibrary.lookupByIsbn(isbn);
     if (!ol) return null;
@@ -29,13 +30,13 @@ export function getBookDetail(rawIsbn: string): Promise<Book | null> {
     const authors =
       ol.authors.length || !ol.workId
         ? ol.authors
-        : (await getWorkDetail(ol.workId).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
+        : (await getWorkDetail(ol.workId, hardcoverAuth).catch(optionalSource(entry, "work authors", null)))?.authors ?? [];
 
     // LOC subject/genre headings, Hardcover, and Open Library's own ratings
     // — same shared pipeline a work page uses (see bookEnrichment.ts),
     // started here, alongside everything else below, since none of it
     // depends on any of it.
-    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId, entry);
+    const { locMetadataPromise, hardcoverPromise, olRatingsPromise } = startCommonEnrichment([isbn], ol.workId, entry, hardcoverAuth);
 
     // Best-effort match of the work itself (not a specific edition or film
     // adaptation) to a Wikidata item, so its Wikipedia lead can be used as

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "../httpClient.js";
+import { UpstreamUnavailableError, fetchWithTimeout } from "../httpClient.js";
 import { tryEachIsbn } from "../isbnFallback.js";
 
 const ENDPOINT = "https://api.hardcover.app/v1/graphql";
@@ -12,6 +12,50 @@ function authHeader(): string | null {
   const key = process.env.HARDCOVER_API_KEY;
   if (!key) return null;
   return key.startsWith("Bearer ") ? key : `Bearer ${key}`;
+}
+
+export class HardcoverRateLimitError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super(`Hardcover rate limit hit; retry in ${retryAfterSeconds}s`);
+    this.name = "HardcoverRateLimitError";
+  }
+}
+
+export class HardcoverUnauthorizedError extends Error {
+  constructor() {
+    super("Hardcover rejected the token");
+    this.name = "HardcoverUnauthorizedError";
+  }
+}
+
+/** One authenticated GraphQL call; the caller picks whose token it runs on. */
+export async function hardcoverGraphql<T>(query: string, variables: object, authorization: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: authorization },
+      body: JSON.stringify({ query, variables }),
+    });
+  } catch (err) {
+    // fetchWithTimeout turns 429/503 into this before we see the response.
+    if (err instanceof UpstreamUnavailableError) throw new HardcoverRateLimitError(Math.max(1, Math.ceil(err.retryAfterMs / 1000)));
+    throw err;
+  }
+  if (res.status === 429) {
+    const secs = Number(res.headers.get("Retry-After"));
+    throw new HardcoverRateLimitError(secs > 0 ? secs : 60);
+  }
+  if (res.status === 401) throw new HardcoverUnauthorizedError();
+  if (res.status === 403) {
+    // Not a GraphQL errors array: {error, error_description, scope}.
+    const body = (await res.json().catch(() => ({}))) as { scope?: string };
+    throw new Error(`Hardcover token lacks scope${body.scope ? ` "${body.scope}"` : ""}`);
+  }
+  if (!res.ok) throw new Error(`Hardcover request failed: ${res.status}`);
+  const body = (await res.json()) as { data?: T; errors?: { message: string }[] };
+  if (body.errors?.length) throw new Error(`Hardcover GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`);
+  return body.data as T;
 }
 
 export interface HardcoverReview {
@@ -48,9 +92,9 @@ function normalizeReviewText(raw: string): string {
 // each pointing back to one shared `book` record, so the edition is what's
 // queried and the book pulled off it. `user_books` is Hardcover's combined
 // "this user's relationship to this book" record (shelf status, rating,
-// review, ...) — only entries with review text are asked for here, and the
-// API itself is documented to only ever return what each reviewer has
-// marked public, so no privacy filtering is needed on this end.
+// review, ...) — only entries with review text are asked for here. The
+// privacy filter (1 = Public) is explicit because a user's own token may
+// return their private reviews and the result is cached for everyone.
 const QUERY = `
   query BookByIsbn($isbn: String!) {
     editions(where: { _or: [{ isbn_13: { _eq: $isbn } }, { isbn_10: { _eq: $isbn } }] }, limit: 1) {
@@ -60,7 +104,7 @@ const QUERY = `
         image {
           url
         }
-        user_books(where: { review_markdown: { _is_null: false } }, order_by: { rating: desc }, limit: 5) {
+        user_books(where: { review_markdown: { _is_null: false }, privacy_setting_id: { _eq: 1 } }, order_by: { rating: desc }, limit: 5) {
           rating
           review_markdown
           review_has_spoilers
@@ -73,45 +117,31 @@ const QUERY = `
   }
 `;
 
-interface HardcoverGraphQLResponse {
-  data?: {
-    editions?: {
-      book?: {
+interface HardcoverData {
+  editions?: {
+    book?: {
+      rating: number | null;
+      ratings_count: number | null;
+      image?: { url?: string | null } | null;
+      user_books?: {
         rating: number | null;
-        ratings_count: number | null;
-        image?: { url?: string | null } | null;
-        user_books?: {
-          rating: number | null;
-          review_markdown: string | null;
-          review_has_spoilers: boolean | null;
-          user?: { username?: string | null } | null;
-        }[];
-      } | null;
-    }[];
-  };
-  errors?: { message: string }[];
+        review_markdown: string | null;
+        review_has_spoilers: boolean | null;
+        user?: { username?: string | null } | null;
+      }[];
+    } | null;
+  }[];
 }
 
-export async function lookupByIsbn(isbn: string): Promise<HardcoverBookData | null> {
-  const authorization = authHeader();
+export async function lookupByIsbn(isbn: string, authorization?: string | null): Promise<HardcoverBookData | null> {
+  const auth = authorization ?? authHeader();
   // No key configured: Hardcover is simply not consulted, same as Google
   // Books without GOOGLE_BOOKS_API_KEY — this is an optional data source,
   // not a required one.
-  if (!authorization) return null;
+  if (!auth) return null;
 
-  const res = await fetchWithTimeout(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: authorization },
-    body: JSON.stringify({ query: QUERY, variables: { isbn } }),
-  });
-  if (!res.ok) throw new Error(`Hardcover request failed: ${res.status}`);
-
-  const body = (await res.json()) as HardcoverGraphQLResponse;
-  if (body.errors?.length) {
-    throw new Error(`Hardcover GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`);
-  }
-
-  const book = body.data?.editions?.[0]?.book;
+  const data = await hardcoverGraphql<HardcoverData>(QUERY, { isbn }, auth);
+  const book = data?.editions?.[0]?.book;
   if (!book) return null;
 
   const reviews = (book.user_books ?? []).flatMap((ub) =>
@@ -139,7 +169,7 @@ export async function lookupByIsbn(isbn: string): Promise<HardcoverBookData | nu
  * ISBN of its own, only its editions do, and any one edition's Hardcover
  * data is as usable as another's since Hardcover ratings/reviews are
  * recorded per book, not per edition. */
-export function lookupByAnyIsbn(isbns: string[]): Promise<HardcoverBookData | null> {
+export function lookupByAnyIsbn(isbns: string[], authorization?: string | null): Promise<HardcoverBookData | null> {
   // Hardcover's 60 requests a minute are shared by every page; cap the tries.
-  return tryEachIsbn(isbns, lookupByIsbn, { sourceName: "hardcover", isEmpty: (result) => !result, fallback: null, maxAttempts: 5 });
+  return tryEachIsbn(isbns, (isbn) => lookupByIsbn(isbn, authorization), { sourceName: "hardcover", isEmpty: (result) => !result, fallback: null, maxAttempts: 5 });
 }
