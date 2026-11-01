@@ -20,6 +20,7 @@ export interface ListMember {
   id: string;
   title: string;
   addedAt: number;
+  hardcoverBookId?: number;
 }
 
 export interface SavedList extends Versioned {
@@ -29,6 +30,7 @@ export interface SavedList extends Versioned {
   kind: "book" | "author"; // a book list holds books and works
   members: ListMember[];
   createdAt: number;
+  hardcoverListId?: number;
   deletedAt?: number; // tombstone, see SavedItem
 }
 
@@ -72,7 +74,7 @@ export async function getList(id: string): Promise<SavedList | null> {
   return (await getAllLists()).find((l) => l.id === id && !l.deletedAt) ?? null;
 }
 
-export function createList(input: { name: string; description?: string; kind: SavedList["kind"] }): Promise<SavedList> {
+export function createList(input: { name: string; description?: string; kind: SavedList["kind"]; hardcoverListId?: number }): Promise<SavedList> {
   const name = input.name.trim();
   const description = (input.description ?? "").trim();
   // The export schema rejects these, so storing one would break every later backup.
@@ -88,6 +90,7 @@ export function createList(input: { name: string; description?: string; kind: Sa
       kind: input.kind,
       members: [],
       createdAt: now,
+      ...(input.hardcoverListId ? { hardcoverListId: input.hardcoverListId } : {}),
     });
     await write([...(await read()), list]);
     return list;
@@ -139,6 +142,22 @@ export function removeFromList(listId: string, type: ListMember["type"], id: str
   return updateList(listId, (list) =>
     list.members.some((m) => m.type === type && m.id === id) ? { ...list, members: list.members.filter((m) => !(m.type === type && m.id === id)) } : list
   );
+}
+
+/** Links the list to a Hardcover list, or unlinks it with null (the key is removed so the export schema still validates). */
+export function linkList(id: string, hardcoverListId: number | null): Promise<void> {
+  return updateList(id, (list) => {
+    const { hardcoverListId: _, ...rest } = list;
+    return hardcoverListId === null ? rest : { ...rest, hardcoverListId };
+  });
+}
+
+export function setMemberHardcoverId(listId: string, type: ListMember["type"], id: string, hardcoverBookId: number): Promise<void> {
+  return updateList(listId, (list) => ({ ...list, members: list.members.map((m) => (m.type === type && m.id === id ? { ...m, hardcoverBookId } : m)) }));
+}
+
+export function replaceMembers(listId: string, members: ListMember[]): Promise<void> {
+  return updateList(listId, (list) => ({ ...list, members }));
 }
 
 /** Tombstones the list, dropping its members and description as removeSavedBook drops notes. */

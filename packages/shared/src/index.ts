@@ -386,9 +386,11 @@ export const SavedListExportSchema = z.object({
         id: z.string().min(1).max(200),
         title: text,
         addedAt: z.number().int().nonnegative(),
+        hardcoverBookId: z.number().int().positive().optional(),
       })
     )
     .max(MAX_IMPORT_RECORDS),
+  hardcoverListId: z.number().int().positive().optional(),
   createdAt: z.number().int().nonnegative(),
 });
 

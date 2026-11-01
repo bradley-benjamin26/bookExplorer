@@ -3,8 +3,9 @@ import AsyncStorage from "../test/asyncStorageMock";
 import { upsertLibrary } from "./librarySettings";
 import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
 import { ensureSaved, getSavedItems, removeSaved } from "./savedItems";
-import { addToList, createList, getLists } from "./savedLists";
+import { addToList, createList, getLists, linkList, setMemberHardcoverId } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
+import { SnapshotExportSchema } from "@book-explorer/shared";
 import { booksToCsv } from "../csv";
 import { applySnapshot, getSnapshot, migrateStorage, snapshotForList, withListedSaves, type Snapshot } from "./snapshot";
 
@@ -227,5 +228,18 @@ describe("applySnapshot library writes", () => {
     expect(out.lists).toEqual([list]);
     expect(out.libraries).toEqual([]);
     for (const id of ["gone", "nope"]) expect(snapshotForList(snap, id)).toMatchObject({ items: [], books: [], works: [], lists: [] });
+  });
+});
+
+describe("hardcover links", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("export → import keeps hardcoverListId and hardcoverBookId", async () => {
+    const list = await createList({ name: "L", kind: "book" });
+    await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
+    await linkList(list.id, 5);
+    await setMemberHardcoverId(list.id, "book", "9780441013593", 9);
+    const parsed = SnapshotExportSchema.parse(JSON.parse(JSON.stringify(await getSnapshot())));
+    expect(parsed.lists[0]).toMatchObject({ hardcoverListId: 5, members: [{ hardcoverBookId: 9 }] });
   });
 });
