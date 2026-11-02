@@ -224,7 +224,7 @@ export function AddToListButton({
       setError(errorText(e));
       // A failed import may have linked some lists; tick them (they're local rows now) so a retry still adds the book, then reload so it doesn't import them again.
       const fresh = await getLists(kind).catch(() => [] as SavedList[]);
-      const now = listsNotHolding(fresh, member, linkedTo(remoteChecked, fresh));
+      const now = linkedTo(remoteChecked, fresh);
       setChecked((prev) => new Set([...prev, ...now]));
       await load(false);
     } finally {
