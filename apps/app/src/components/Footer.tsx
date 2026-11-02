@@ -1,5 +1,6 @@
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { spacing, useThemedStyles, type Theme } from "../theme";
+import { FEEDBACK_FORM_URL } from "../feedback";
+import { radii, spacing, useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
 
 const WIKIDATA_LOGO_URL =
@@ -16,6 +17,9 @@ export function Footer() {
       </View>
       <Pressable ref={titleRef("Visit Open Library")} onPress={() => Linking.openURL(OPEN_LIBRARY_URL)} accessibilityRole="link">
         <Text style={styles.text}>Built using Open Library APIs</Text>
+      </Pressable>
+      <Pressable ref={titleRef("Open the feedback form")} onPress={() => Linking.openURL(FEEDBACK_FORM_URL)} accessibilityRole="link">
+        <Text style={styles.text}>Share feedback</Text>
       </Pressable>
     </View>
   );
@@ -36,7 +40,7 @@ function createStyles({ colors, fonts, typeScale }: Theme) {
     },
     logoBacking: {
       backgroundColor: "#ffffff",
-      borderRadius: 4,
+      borderRadius: radii.xs,
       paddingHorizontal: 8,
       paddingVertical: 4,
       marginBottom: 4,

@@ -10,6 +10,8 @@ import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
 import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { FeedbackBanner } from "../src/components/FeedbackBanner";
+import { rowFeedback } from "../src/rowFeedback";
 
 type RecentFilter = "all" | "books" | "authors" | "subjects";
 const FILTERS: { value: RecentFilter; label: string }[] = [
@@ -48,6 +50,7 @@ export default function Home() {
     <SafeAreaView style={styles.container}>
       {/* Padding lives on an inner View: react-native-web's SafeAreaView overwrites its own padding with the (zero on desktop) safe-area insets. */}
       <View style={styles.inner}>
+        <FeedbackBanner />
         <View style={styles.header}>
           <View>
             <Text style={styles.subtitle}>find your next read</Text>
@@ -119,7 +122,7 @@ export default function Home() {
               renderItem={({ item }) => (
                 <Pressable
                   ref={titleRef(`Open ${item.title ?? item.id}`)}
-                  style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
+                  style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.recentItem, rowFeedback(theme.colors, { pressed, hovered })]}
                   onPress={() => router.push(recentHref(item))}
                   accessibilityRole="button"
                   accessibilityLabel={
@@ -207,6 +210,9 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       alignItems: "center",
       gap: spacing.md,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },

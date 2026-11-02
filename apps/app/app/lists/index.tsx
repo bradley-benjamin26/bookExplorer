@@ -8,6 +8,7 @@ import { Footer } from "../../src/components/Footer";
 import { routes } from "../../src/navigation";
 import { getLists, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { rowFeedback } from "../../src/rowFeedback";
 import { titleRef } from "../../src/webTitle";
 
 const SECTIONS = [
@@ -74,7 +75,7 @@ export default function Lists() {
                   <Pressable
                     ref={titleRef(`Open ${list.name}`)}
                     key={list.id}
-                    style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                    style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.row, rowFeedback(theme.colors, { pressed, hovered })]}
                     onPress={() => router.push(routes.list(list.id))}
                     accessibilityRole="button"
                     accessibilityLabel={`${list.name}, ${count}`}
@@ -101,7 +102,7 @@ export default function Lists() {
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     error: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.md },
     retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
@@ -120,12 +121,14 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
       alignItems: "center",
       gap: spacing.md,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     rowMain: { flex: 1 },
     rowText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     countText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },
-    pressed: { opacity: 0.6 },
   });
 }

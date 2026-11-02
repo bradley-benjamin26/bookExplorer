@@ -15,7 +15,8 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  sm: 10,
+  xs: 4,
+  sm: 8,
   md: 14,
   pill: 16,
   full: 999,
@@ -54,8 +55,6 @@ export interface Theme {
   radii: typeof radii;
   fonts: typeof fonts;
   typeScale: typeof typeScale;
-  /** A "kicker" label style — small, spaced-out capitals — used above every content section (About, Find This Book, Subjects, ...) so section boundaries read clearly without a divider line. */
-  kicker: { fontSize: number; fontWeight: "700"; color: string; letterSpacing: number; textTransform: "uppercase" };
   /** A soft card treatment (book covers, elevated rows): a hairline border in both themes, plus a drop shadow that only reads clearly in light mode — a dark shadow is close to invisible against a dark surface, so dark mode leans on the border alone for definition. */
   cardStyle: {
     borderWidth: number;
@@ -77,13 +76,6 @@ function buildTheme(scheme: "light" | "dark"): Theme {
     radii,
     fonts,
     typeScale,
-    kicker: {
-      fontSize: typeScale.xs,
-      fontWeight: "700",
-      color: colors.textMuted,
-      letterSpacing: 0.8,
-      textTransform: "uppercase",
-    },
     cardStyle: {
       borderWidth: 1,
       borderColor: colors.cardBorder,

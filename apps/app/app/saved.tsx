@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Footer } from "../src/components/Footer";
 import { routes } from "../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { rowFeedback } from "../src/rowFeedback";
 import { titleRef } from "../src/webTitle";
 
 export default function Saved() {
@@ -16,7 +17,7 @@ export default function Saved() {
         <Pressable
           ref={titleRef(`Open ${label}`)}
           key={label}
-          style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.navRow, rowFeedback(theme.colors, { pressed, hovered })]}
           onPress={() => router.push(href)}
           accessibilityRole="button"
           accessibilityLabel={label}
@@ -33,16 +34,18 @@ export default function Saved() {
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
-    pressed: { opacity: 0.6 },
     navRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
