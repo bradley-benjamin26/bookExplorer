@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { ArrowDownUp, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../src/components/Button";
@@ -20,6 +20,8 @@ const ROUTES = {
   backup: routes.backup,
   settings: routes.settings,
 };
+
+const ICONS = { recommendations: Sparkles, connection: Waypoints, backup: ArrowDownUp, settings: Settings };
 
 type RowDef = (typeof LIBRARY_PRIMARY)[number] | (typeof LIBRARY_TOOLS)[number];
 
@@ -43,11 +45,17 @@ export default function Saved() {
       <ChevronRight size={18} color={colors.inkFaint} />
     </View>
   );
-  const navRow = ({ id, label }: RowDef) => (
-    <PressableRow key={id} label={label} tooltip={`Open ${label}`} onPress={() => router.push(ROUTES[id]())} trailing={chevron}>
-      {id === "hardcover" ? <HardcoverLogo height={22} /> : <Text style={styles.rowText}>{label}</Text>}
-    </PressableRow>
-  );
+  const navRow = ({ id, label }: RowDef) => {
+    const Icon = id === "hardcover" ? null : ICONS[id];
+    return (
+      <PressableRow key={id} label={label} tooltip={`Open ${label}`} onPress={() => router.push(ROUTES[id]())} trailing={chevron}>
+        <View style={styles.navRow}>
+          {Icon ? <Icon size={20} color={colors.cover} /> : <HardcoverLogo height={22} />}
+          <Text style={styles.rowText}>{id === "hardcover" ? "Account" : label}</Text>
+        </View>
+      </PressableRow>
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -116,7 +124,9 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     // Quiet: tools are not the point of this page.
     tools: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xl, marginBottom: spacing.xs },
     group: { marginTop: spacing.md },
-    rowText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
+    // Medium, not semibold: 600 Fraunces reads heavy at 16px row size.
+    rowText: { fontFamily: fonts.displayMedium, fontSize: typeScale.sm, color: colors.ink },
+    navRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
     listText: { flex: 1 },
     count: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },

@@ -111,7 +111,7 @@ export default function About() {
         </AccordionSection>
 
 
-        <AccordionSection title="Works, Books, Authors, and Subject">
+        <AccordionSection title="Works, Books, Authors, and Subjects">
         <P>
           These are the 4 primary entities that you can explore using Shelf Thread.
           Each has a separate page type dedicated to exploring and managing that entity. They each have an option

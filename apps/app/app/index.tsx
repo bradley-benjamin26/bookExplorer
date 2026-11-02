@@ -21,6 +21,14 @@ const FILTERS: { value: RecentFilter; label: string }[] = [
   { value: "subjects", label: "Subjects" },
 ];
 const typeLabel = (item: RecentItem) => NODE_LABELS[item.kind === "book" ? "work" : item.kind];
+// The graph's node colors, so Home previews the same legend the graph uses.
+const KIND_COLOR = { book: "graphWork", work: "graphWork", author: "graphAuthor", subject: "graphSubject" } as const;
+const INTRO_NODES = [
+  ["Book", "graphWork"],
+  ["Author", "graphAuthor"],
+  ["Subject", "graphSubject"],
+  ["Genre", "graphGenre"],
+] as const;
 
 export default function Home() {
   const router = useRouter();
@@ -51,18 +59,23 @@ export default function Home() {
       {/* Padding lives on an inner View: react-native-web's SafeAreaView overwrites its own padding with the (zero on desktop) safe-area insets. */}
       <View style={styles.inner}>
         <FeedbackBanner />
-        <View style={styles.header}>
-          <View>
-            <Pressable
-              ref={titleRef("Read about this project")}
-              onPress={() => router.push(routes.about())}
-              accessibilityRole="link"
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Text style={styles.aboutLink}>About Shelf Thread</Text>
-            </Pressable>
+        {/* First visit only: a returning reader's own threaded recents take this place. */}
+        {recent.length === 0 && (
+          <View style={styles.intro}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.introThread}>
+              <View style={styles.introLine} />
+              {INTRO_NODES.map(([label, color]) => (
+                <View key={label} style={styles.introStop}>
+                  <View style={[styles.introNode, { backgroundColor: theme.colors[color] }]} />
+                  <Text style={styles.introLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.introText}>
+              Start with a book you love, then follow the thread to its author, subjects and genres.
+            </Text>
           </View>
-        </View>
+        )}
 
         {Platform.OS !== "web" && (
           <Pressable
@@ -135,7 +148,7 @@ export default function Home() {
                     {shown.length > 1 && (
                       <View style={[styles.threadLine, index === 0 && styles.threadFirst, index === shown.length - 1 && styles.threadLast]} />
                     )}
-                    <View style={styles.node} />
+                    <View style={[styles.node, { backgroundColor: theme.colors[KIND_COLOR[item.kind]] }]} />
                   </View>
                   <View style={styles.recentText}>
                     <Text style={styles.recentItemText}>{item.title ?? item.id}</Text>
@@ -164,21 +177,14 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     inner: { flex: 1, padding: spacing.lg },
-    header: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      marginTop: spacing.md,
-      marginBottom: spacing.lg,
-    },
-    aboutLink: {
-      fontFamily: fonts.body,
-      fontSize: typeScale.xs,
-      color: colors.cover,
-      textDecorationLine: "underline",
-      marginTop: spacing.sm,
-    },
+    intro: { marginTop: spacing.md, gap: spacing.lg },
+    introThread: { flexDirection: "row" },
+    // Runs between the first and last node centres: four equal cells put those at 1/8 and 7/8.
+    introLine: { position: "absolute", top: 6, left: "12.5%", right: "12.5%", height: 1, backgroundColor: colors.thread },
+    introStop: { flex: 1, alignItems: "center", gap: spacing.xs },
+    introNode: { width: 12, height: 12, borderRadius: 6 },
+    introLabel: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
+    introText: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, lineHeight: 28, color: colors.ink },
     pressed: { opacity: 0.6 },
     focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
     scanButton: {
@@ -220,12 +226,12 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    nodeColumn: { width: 6, alignSelf: "stretch", alignItems: "center", justifyContent: "center" },
+    nodeColumn: { width: 8, alignSelf: "stretch", alignItems: "center", justifyContent: "center" },
     // The row's own padding sits inside the column, so the line meets the next row's line edge to edge.
     threadLine: { position: "absolute", top: -spacing.md, bottom: -spacing.md, width: 1, backgroundColor: colors.thread },
     threadFirst: { top: "50%" },
     threadLast: { bottom: "50%" },
-    node: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.thread },
+    node: { width: 8, height: 8, borderRadius: 4 },
     recentText: { flex: 1 },
     recentItemText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     recentAuthor: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },

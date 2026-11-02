@@ -150,7 +150,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
       borderWidth: 1,
-      borderColor: colors.cardBorder,
+      borderColor: colors.chipTextSubject,
     },
     conceptTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });

@@ -1,6 +1,6 @@
 // "Lists" has no row: My Library shows the lists themselves, with a "See all lists" link.
 export const LIBRARY_PRIMARY = [
-  { id: "hardcover", label: "Hardcover" },
+  { id: "hardcover", label: "Hardcover Account" },
   { id: "recommendations", label: "Recommendations" },
   { id: "connection", label: "Find Connection" },
 ] as const;
