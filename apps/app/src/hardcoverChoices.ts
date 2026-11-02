@@ -6,3 +6,8 @@ export function hardcoverChoices(remote: HardcoverListSummary[], local: SavedLis
   const linked = new Set(local.map((l) => l.hardcoverListId));
   return remote.filter((r) => !linked.has(r.id));
 }
+
+/** The ticked ids still offered, so a list imported before a failed Done is not imported again. */
+export function keepOffered(checked: Set<number>, choices: HardcoverListSummary[]): Set<number> {
+  return new Set(choices.filter((c) => checked.has(c.id)).map((c) => c.id));
+}

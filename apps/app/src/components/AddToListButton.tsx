@@ -5,7 +5,7 @@ import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { createHardcoverList, fetchHardcoverLists } from "../api/client";
 import { confirmLeave } from "../confirm";
-import { hardcoverChoices } from "../hardcoverChoices";
+import { hardcoverChoices, keepOffered } from "../hardcoverChoices";
 import { importChosenLists } from "../hardcoverLists";
 import { getSessionToken } from "../hardcoverSession";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
@@ -170,8 +170,9 @@ export function AddToListButton({
     return Promise.all([getLists(kind), getPreferences(), remote])
       .then(([ls, prefs, rem]) => {
         setLists(ls);
-        setRemoteLists(hardcoverChoices(rem, ls));
-        if (reset) setRemoteChecked(new Set());
+        const choices = hardcoverChoices(rem, ls);
+        setRemoteLists(choices);
+        setRemoteChecked((prev) => keepOffered(reset ? new Set() : prev, choices));
         if (!reset) return;
         const held = ls.filter(holds);
         // On no list yet: start with the default list ticked, so saving there is just Done.
@@ -219,6 +220,8 @@ export function AddToListButton({
       else setOpen(false);
     } catch (e) {
       setError(errorText(e));
+      // A failed import may have linked some lists; reload so a retry doesn't import them again.
+      await load(false);
     } finally {
       setBusy(false);
       refreshStar();

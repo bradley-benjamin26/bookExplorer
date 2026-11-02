@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hardcoverChoices } from "./hardcoverChoices";
+import { hardcoverChoices, keepOffered } from "./hardcoverChoices";
 import type { SavedList } from "./storage/savedLists";
 
 const remote = (id: number) => ({ id, name: `L${id}`, description: "", booksCount: 1 });
@@ -12,5 +12,11 @@ describe("hardcoverChoices", () => {
 
   it("keeps the rest in remote order", () => {
     expect(hardcoverChoices([remote(3), remote(1), remote(2)], [local(1)]).map((l) => l.id)).toEqual([3, 2]);
+  });
+});
+
+describe("keepOffered", () => {
+  it("drops ticked ids no longer offered", () => {
+    expect([...keepOffered(new Set([1, 2, 3]), [remote(2), remote(3)])]).toEqual([2, 3]);
   });
 });
