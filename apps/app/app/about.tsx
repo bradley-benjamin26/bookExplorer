@@ -90,6 +90,9 @@ export default function About() {
         </P>
         <BulletList>
           <BulletItem details={[
+            "This section allows you to connect your Hardcover account to Shelf Thread. By doing so, you can synchronize your reading lists and other data between the two platforms. You can also view your reading progress on pages in Shelf Thread.",
+          ]}>Hardcover</BulletItem>
+          <BulletItem details={[
             "Here you can view and create new lists. You can also export files to upload into another system.",
           ]}>Lists</BulletItem>
           <BulletItem details={[
@@ -106,7 +109,6 @@ export default function About() {
             "It also allows you to add library links to try to find books in your local library. See below for more detailed instructions on what to do.",
           ]}>Settings</BulletItem>
         </BulletList>
-
         <Heading>Works, Books, Authors, and Subject</Heading>
         <P>
           These are the 4 primary entities that you can explore using Shelf Thread.

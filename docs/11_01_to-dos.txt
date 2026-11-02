@@ -1,0 +1,22 @@
+1) When copying list to Hardcover, display a loading popup
+3) Make the reading progress on books/works more visible. Maybe a little bigger font. Include a version of /Users/bbradle1/Downloads/Link logos 2 that is much smaller to fit along with the ZZgkR3ud9u_qWKVWF4TYaThgETX0iEti59wKlrJ8XeQ
+4) Move Hardcover out of settings and to the top line of my Library
+5) Change the Heading "Hardcover" to: this image /Users/bbradle1/Downloads/Link logos 2/Hardcover Logo Darkmode.png and /Users/bbradle1/Downloads/Link logos 2/Hardcover Logo Darkmode.png/Hardcover Logo Lightmode.png
+6) on the home page the "find your next read" is now way below the "Shelf Thread" statement. Can you move it up
+7) Add a small ? icon next to my library. Maybe that the link to About Shelf Thread.
+8) remove the Old link to About Shelf Thread
+9) Remove the lock icon for editing pages
+10) Add a small "edit" link justified right, opposite "genres" (when it appears) on the same line
+This edit is now what enables a user to edit subjects, genres, notes, etc. After a user clicks on edit,
+the link changes to "Save" which saves the changes
+11) Can the "Shelf Thread" at the top of the page on all pages appears the same size as it does oon the homepage?
+12) Turn each section on the about page into an Accordion, so a user can see everything that's there and then
+can drill down to what they want to read.
+13) On Import/Export, change Export CSV to just Export. When a user clicks on it, they now get a choice between csv or JSON (which already exists but only in the lists section)
+14) Save to list changes
+14a) The cancel button should be in the same style as the done button. Make the text read. Do an accessibility check for contrast.
+14b) When a user is logged into their Hardcover account, display their hardcover lists as options as well.
+14c) Have the pop up display in the center rather than emerging from the bottom of the page
+15) On work and book pages, add "View on Hardcover" below view on Open Library in Find this book.
+16) For all normalized subjects containing either commas or hyphens. Turn the comma or pair of hypens into "->".
+This also goes for subject pages (where commas are removed entirely.) https://shelfthread.com/subject/young_adult_fiction_historical_medieval should display as "Young adult fiction->Historical->Medieval" and so on.
