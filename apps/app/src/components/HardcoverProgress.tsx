@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { fetchHardcoverProgress } from "../api/client";
 import { getSessionToken } from "../hardcoverSession";
-import { progressLabel } from "../hardcoverProgressLabel";
+import { progressLabel, progressSpokenLabel } from "../hardcoverProgressLabel";
+import { HardcoverLogo } from "./HardcoverLogo";
 import { useThemedStyles, type Theme } from "../theme";
 
 /** Shows the signed-in user's Hardcover reading state for a book (ISBN) or work (OL id). Renders nothing otherwise. */
@@ -18,14 +19,18 @@ export function HardcoverProgress({ type, id }: { type: "book" | "work"; id: str
   const label = data && getSessionToken() ? progressLabel(data) : null;
   if (!label) return null;
   return (
-    <Text accessibilityRole="text" style={styles.text}>
-      {label} on Hardcover
-    </Text>
+    <View accessible accessibilityRole="text" accessibilityLabel={progressSpokenLabel(label)} style={styles.row}>
+      <Text style={styles.text}>{label}</Text>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <HardcoverLogo height={14} />
+      </View>
+    </View>
   );
 }
 
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    text: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
+    row: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginTop: spacing.xs },
+    text: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink },
   });
 }

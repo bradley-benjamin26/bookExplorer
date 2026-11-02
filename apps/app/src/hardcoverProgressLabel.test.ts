@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HardcoverProgress } from "@book-explorer/shared";
-import { progressLabel } from "./hardcoverProgressLabel";
+import { progressLabel, progressSpokenLabel } from "./hardcoverProgressLabel";
 
 describe("progressLabel", () => {
   it.each<[HardcoverProgress, string | null]>([
@@ -13,5 +13,11 @@ describe("progressLabel", () => {
     [{ status: null, percent: null }, null],
   ])("%j -> %s", (progress, label) => {
     expect(progressLabel(progress)).toBe(label);
+  });
+});
+
+describe("progressSpokenLabel", () => {
+  it("names Hardcover for assistive tech", () => {
+    expect(progressSpokenLabel("Reading · 40%")).toBe("Reading · 40% on Hardcover");
   });
 });
