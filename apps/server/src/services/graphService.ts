@@ -8,34 +8,19 @@ import { getAuthorDetail, getAuthorLinks, type AuthorLinks } from "./authorServi
 import { getSubjectBooks, getSubjectDetail } from "./subjectService.js";
 import { getWorkDetail, getWorkLinks, type WorkLinks } from "./workService.js";
 
-// Caps keep the force-directed layout on the client legible — a subject can
-// have thousands of books, and rendering them all would just produce a
-// solid blob of overlapping nodes rather than anything explorable.
+// Caps keep the client's force layout legible; a subject can have thousands of books.
 const MAX_SUBJECT_BOOKS = 12;
 const MAX_WORK_SUBJECTS = 8;
 const MAX_WORK_GENRES = 6;
 const MAX_AUTHOR_WORKS = 15;
 const MAX_PSEUDONYM_WORKS = 8;
 
-// buildAuthorGraph itself isn't cached (each request recomputes it from the
-// already-cached pieces below), so these give repeat views of the same
-// author graph the same speed the Wikidata-derived side already gets from
-// authorService's cache, instead of re-hitting Open Library every time.
+// buildAuthorGraph isn't cached, so these caches spare repeat views from re-hitting Open Library.
 const authorWorksCache = new TtlCache<OpenLibraryAuthorWork[]>(1000 * 60 * 60, 1000, "authorWorks");
 const pseudonymAuthorCache = new TtlCache<{ openLibraryId: string; name: string } | null>(1000 * 60 * 60 * 24, 1000, "pseudonymAuthor");
 
-// Two different Wikidata items can carry the same English label — e.g. the
-// subject "historical fiction" (Q136472) has a *broader* concept that is
-// also labeled "historical fiction" (Q1196408, a different item entirely).
-// Both slugify to the same node id as the center, so a naive build would
-// produce a node the deduper silently drops (fine) but leave behind its
-// edge now pointing from the center back to itself (not fine — a same-id
-// self-loop that's confusing on screen and, depending on the force layout
-// library, can behave oddly). Building nodes/edges is kept simple and this
-// runs once at the end to clean up both cases, plus drops any edge whose
-// endpoint didn't end up with a matching node at all, so a malformed graph
-// degrades to "missing a connection" instead of crashing the client's
-// force-layout renderer on a dangling reference.
+// Two Wikidata items can share an English label (e.g. "historical fiction" and its broader concept), so
+// they slugify to the center's id. This drops the resulting self-loops and any edge with a missing endpoint.
 export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const byId = new Map<string, GraphNode>();
   for (const node of nodes) {
@@ -87,15 +72,8 @@ function authorNodeId(openLibraryId: string | null, wikidataId: string): string 
   return openLibraryId ? `author:${openLibraryId}` : `author:qid:${wikidataId}`;
 }
 
-// Wikidata's P737 ("influenced by"/its inverse) is nominally for influence
-// between people, but it isn't strictly enforced — it's also used for a
-// work that shaped an author's writing. Confirmed live: J.R.R. Tolkien's
-// Wikidata entry lists "Beowulf" (the poem itself, Open Library id
-// OL16287028W) as an influence, which a blanket "every P737 target is an
-// author" assumption rendered as a work wrongly colored and labeled as a
-// person. An Open Library id's own suffix ("A" for an author record, "W"
-// for a work) is a reliable, already-available signal for which it
-// actually is — no extra Wikidata query needed to tell them apart.
+// Wikidata P737 ("influenced by") sometimes points at a work (e.g. Tolkien -> Beowulf), not a person.
+// An Open Library id's suffix ("A" author, "W" work) tells them apart without another query.
 function influenceNodeTypeAndId(r: { openLibraryId: string | null; wikidataId: string }): { type: GraphNode["type"]; id: string } {
   if (r.openLibraryId?.endsWith("W")) return { type: "work", id: `work:${r.openLibraryId}` };
   return { type: "author", id: authorNodeId(r.openLibraryId, r.wikidataId) };
@@ -121,9 +99,7 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
     if (r.relation === "influencedBy" || r.relation === "influenced") {
       const { type: nodeType, id: nodeId } = influenceNodeTypeAndId(r);
       nodes.push({ id: nodeId, type: nodeType, label: r.label, navigable: !!r.openLibraryId });
-      // A single "influencedBy" relation, direction-encoded: the source was
-      // influenced by the target. Collapses "center influencedBy X" and
-      // "X influenced by center" into the same edge shape either way.
+      // One direction-encoded "influencedBy" relation: the source was influenced by the target.
       edges.push(
         r.relation === "influencedBy"
           ? { source: centerId, target: nodeId, relation: "influencedBy" }
@@ -144,11 +120,7 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
     }
   }
 
-  // Open Library's own full bibliography for this author — Wikidata's P800
-  // "notable work" statements above are usually a curated handful, far
-  // short of what's actually catalogued (confirmed live: an author with 23
-  // Open Library works had only 2 P800 statements on Wikidata), so this
-  // fills the graph out with the rest.
+  // Open Library's full bibliography; Wikidata P800 notable works are usually a curated handful.
   const ownWorks = await authorWorksCache.wrap(author.openLibraryId, () =>
     openLibrary.getAuthorWorks(author.openLibraryId, MAX_AUTHOR_WORKS)
   );
@@ -158,20 +130,8 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
     edges.push({ source: centerId, target: nodeId, relation: "wrote" });
   }
 
-  // Some of an author's books are catalogued in Open Library under a pen
-  // name's own separate author record rather than this one (confirmed
-  // live: George Selden's "Terry Andrews" pseudonym has 5 works under a
-  // distinct Open Library author id that his own record doesn't list) —
-  // Wikidata's P742 pseudonym names are matched to an Open Library author
-  // record on a best-effort basis, same as this app's existing Wikidata
-  // name-search heuristics. A failure to match or fetch one pseudonym's
-  // works is non-fatal to the rest of an otherwise-successful graph.
-  //
-  // Each pseudonym's lookup is fully independent of every other's, so
-  // they're run concurrently rather than one at a time in a loop — an
-  // author with N pseudonyms (this app has seen up to 5) otherwise paid 2N
-  // sequential network round trips (search + works-fetch per name) for no
-  // reason.
+  // Some books sit under a pen name's separate Open Library author record; Wikidata P742 pseudonyms are
+  // matched best-effort, and a failed match is non-fatal. Lookups are independent, so they run concurrently.
   const pseudonymWorkLists = await Promise.all(
     author.pseudonyms.map(async (pseudonym) => {
       try {
@@ -262,15 +222,8 @@ function workGraph(work: WorkLinks): Graph {
     edges.push({ source: centerId, target: node.id, relation: "won" });
   }
 
-  // Open Library sometimes catalogs a genre as a plain subject with a
-  // "genre:" facet prefix (e.g. "genre:Science Fiction") rather than in its
-  // own genres list. Left as-is, that would show up as a "Subject" node
-  // reading literally "genre:science fiction" right next to the real
-  // "Science Fiction" genre node this same work already has — so it's
-  // pulled out of the subjects list, has the prefix stripped, and is merged
-  // into the genres below instead (where it dedupes against a same-named
-  // genre via the shared "genre:<slug>" node id, same as any other repeated
-  // genre would).
+  // Open Library sometimes files a genre as a subject with a "genre:" prefix; pull it out, strip the prefix
+  // and merge it into genres so it doesn't duplicate the real genre node.
   const GENRE_SUBJECT_PREFIX = /^genre:\s*/i;
   const plainSubjects: { label: string; slug?: string }[] = [];
   const genresFromSubjects: string[] = [];
@@ -288,25 +241,16 @@ function workGraph(work: WorkLinks): Graph {
     edges.push({ source: centerId, target: nodeId, relation: "subject" });
   }
 
-  // Genre nodes get their own "genre:" id namespace (rather than reusing
-  // "subject:", even though tapping either lands on the same Subject browse
-  // screen — a genre and a subject can share the same slugified label, e.g.
-  // "Fiction", and giving them distinct ids keeps that from colliding into
-  // one node that's wrongly colored/labeled as whichever type happened to be
-  // added first).
+  // Genres get their own "genre:" id namespace: a genre and a subject can share a slug (e.g. "Fiction")
+  // and must not collapse into one node.
   for (const genre of [...work.genres.map((g) => g.label), ...genresFromSubjects].slice(0, MAX_WORK_GENRES)) {
     const nodeId = `genre:${slugifySubject(genre)}`;
     nodes.push({ id: nodeId, type: "genre", label: genre, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "genre" });
   }
 
-  // A single summary node, not one per edition (that's a much bigger graph
-  // than this app's other nodes — a popular work can have dozens) — its
-  // purpose is teaching the work/edition distinction itself (many people
-  // outside library work don't have a name for it) by pointing at the
-  // dedicated Editions section on this work's own page, which already lists
-  // and lets you pick a specific edition, rather than duplicating that
-  // picker as a second graph layer here.
+  // One summary node, not one per edition (a popular work has dozens); it points at the Editions section,
+  // which already lists the editions.
   if (work.editions.length > 0) {
     const editionsNodeId = `editions:${work.openLibraryWorkId}`;
     nodes.push({ id: editionsNodeId, type: "editions", label: "Editions", navigable: true });
