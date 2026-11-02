@@ -12,6 +12,7 @@ export interface PressableRowProps {
   /** Hover text on web; no effect on native. */
   tooltip?: string;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   accessibilityState?: AccessibilityState;
   children: ReactNode;
   /** Right-edge icon; the caller picks chevron (in-app) or external-link (off-app). */
@@ -26,6 +27,7 @@ export function PressableRow({
   onPress,
   tooltip,
   accessibilityLabel,
+  accessibilityHint,
   accessibilityState,
   children,
   trailing,
@@ -40,6 +42,7 @@ export function PressableRow({
       disabled={!onPress}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ ...accessibilityState, disabled: !onPress }}
       style={({ pressed, hovered, focused }: { pressed: boolean; hovered?: boolean; focused?: boolean }) => [
         styles.row,

@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { ChevronDown, ChevronRight } from "lucide-react-native";
+import { ExternalLinkIcon } from "./FindLinkRow";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
@@ -54,9 +55,10 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       onPress={() => Linking.openURL(url)}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint="Opens in your browser"
     >
       <Text style={styles.findRowText}>{label}</Text>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>
+      <ExternalLinkIcon color={theme.colors.inkFaint} />
     </Pressable>
   );
 
