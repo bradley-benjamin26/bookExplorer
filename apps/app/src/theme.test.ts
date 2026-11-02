@@ -4,7 +4,7 @@ import { darkColors, lightColors } from "./themeColors";
 vi.mock("react-native", () => ({ useColorScheme: () => "light" }));
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
-const { typeScale } = await import("./theme");
+const { radii, typeScale } =await import("./theme");
 
 // WCAG 2.x relative luminance / contrast ratio for "#RRGGBB" colours.
 function luminance(hex: string): number {
@@ -56,6 +56,10 @@ describe.each([
 it("has no cool-hued tag chips", () => {
   expect("chipBackgroundAccent" in lightColors).toBe(false);
   expect("chipBackgroundAccent" in darkColors).toBe(false);
+});
+
+it("defines the four corner sizes", () => {
+  expect(radii).toEqual({ xs: 4, sm: 8, md: 14, pill: 16, full: 999 });
 });
 
 describe("typeScale", () => {

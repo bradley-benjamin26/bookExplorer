@@ -1,6 +1,6 @@
 import { BookOpen } from "lucide-react-native";
 import { View } from "react-native";
-import { useTheme } from "../theme";
+import { radii, useTheme } from "../theme";
 
 /** Stands in for a missing cover: an outlined box with a book icon, so it reads as "no cover" rather than a blank gap. */
 export function CoverPlaceholder({ width, height }: { width: number; height: number }) {
@@ -12,7 +12,7 @@ export function CoverPlaceholder({ width, height }: { width: number; height: num
       style={{
         width,
         height,
-        borderRadius: 4,
+        borderRadius: radii.xs,
         borderWidth: 1,
         borderColor: colors.pillBorder,
         backgroundColor: colors.chipBackground,

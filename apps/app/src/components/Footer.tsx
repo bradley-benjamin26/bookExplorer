@@ -1,5 +1,5 @@
 import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { spacing, useThemedStyles, type Theme } from "../theme";
+import { radii, spacing, useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
 
 const WIKIDATA_LOGO_URL =
@@ -36,7 +36,7 @@ function createStyles({ colors, fonts, typeScale }: Theme) {
     },
     logoBacking: {
       backgroundColor: "#ffffff",
-      borderRadius: 4,
+      borderRadius: radii.xs,
       paddingHorizontal: 8,
       paddingVertical: 4,
       marginBottom: 4,

@@ -301,7 +301,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
-    cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
+    cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.paper, ...cardStyle },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,

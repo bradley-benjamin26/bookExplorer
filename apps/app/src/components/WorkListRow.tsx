@@ -57,7 +57,7 @@ export function WorkListRow({
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     row: {
       flexDirection: "row",
@@ -68,7 +68,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
       borderBottomColor: colors.border,
     },
     pressed: { opacity: 0.6 },
-    cover: { width: 44, height: 64, borderRadius: 4 },
+    cover: { width: 44, height: 64, borderRadius: radii.xs },
     info: { flex: 1, justifyContent: "center" },
     title: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     authors: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },
