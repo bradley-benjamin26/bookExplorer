@@ -12,7 +12,7 @@ import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AboutSection } from "../../src/components/AboutSection";
-import { DetailTop } from "../../src/components/DetailTop";
+import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
@@ -78,7 +78,7 @@ export default function AuthorDetail() {
           <>
             <Button
               variant="primary"
-              style={{ flex: 1 }}
+              style={PRIMARY_ACTION_STYLE}
               onPress={() => router.push(routes.graph("author", data.openLibraryId))}
               tooltip="See this author's books, subjects and links as a graph"
             >
@@ -86,7 +86,7 @@ export default function AuthorDetail() {
             </Button>
             <Button
               variant="primary"
-              style={{ flex: 1 }}
+              style={PRIMARY_ACTION_STYLE}
               onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
               accessibilityLabel={`Find a connection from ${data.name}`}
               tooltip="Find how this author links to a book"

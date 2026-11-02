@@ -12,7 +12,7 @@ import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
 import { AboutSection } from "../../src/components/AboutSection";
-import { DetailTop } from "../../src/components/DetailTop";
+import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { HardcoverProgress } from "../../src/components/HardcoverProgress";
@@ -110,7 +110,7 @@ export default function WorkDetail() {
             <>
               <Button
                 variant="primary"
-                style={{ flex: 1 }}
+                style={PRIMARY_ACTION_STYLE}
                 onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
                 tooltip="See this book's authors, subjects and links as a graph"
               >
@@ -118,7 +118,7 @@ export default function WorkDetail() {
               </Button>
               <Button
                 variant="primary"
-                style={{ flex: 1 }}
+                style={PRIMARY_ACTION_STYLE}
                 onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
                 accessibilityLabel={`Find a connection from ${data.title}`}
                 accessibilityHint="Shows how this book links to another book you pick"

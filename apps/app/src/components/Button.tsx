@@ -83,7 +83,7 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
       paddingHorizontal: spacing.xl,
       alignItems: "center",
     },
-    primaryText: { color: colors.primaryText, fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
+    primaryText: { color: colors.primaryText, textAlign: "center", fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
     pill: {
       alignSelf: "flex-start",
       paddingVertical: 6,

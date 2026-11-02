@@ -10,7 +10,7 @@ import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { AboutSection } from "../../src/components/AboutSection";
-import { DetailTop } from "../../src/components/DetailTop";
+import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
@@ -72,6 +72,7 @@ export default function SubjectDetail() {
             primaryActions={
               <Button
                 variant="primary"
+                style={PRIMARY_ACTION_STYLE}
                 onPress={() => router.push(routes.graph("subject", data.slug))}
                 tooltip="See this subject's books and related subjects as a graph"
               >
