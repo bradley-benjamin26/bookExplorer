@@ -60,7 +60,7 @@ export default function Home() {
         {/* First visit only: a returning reader's own threaded recents take this place. */}
         {recent.length === 0 && (
           <View style={styles.intro}>
-            <ThreadMotif labelled />
+            <ThreadMotif labelled animated />
             <Text style={styles.introText}>
               Start with a book you love, then follow the thread to its author, subjects and genres.
             </Text>
