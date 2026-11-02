@@ -38,7 +38,8 @@ export async function hardcoverGraphql<T>(query: string, variables: object, auth
   let res: Response;
   try {
     // retry: false uses plain fetch, as hardcoverOAuth's token calls do: fetchWithTimeout retries 5xx and timeouts, which would repeat a mutation.
-    res = opts.retry === false ? await fetch(ENDPOINT, { ...init, signal: AbortSignal.timeout(10_000) }) : await fetchWithTimeout(ENDPOINT, init);
+    // A user's token has its own Hardcover limit; its 429 must not pause the host for everyone.
+    res = opts.retry === false || authorization !== authHeader() ? await fetch(ENDPOINT, { ...init, signal: AbortSignal.timeout(10_000) }) : await fetchWithTimeout(ENDPOINT, init);
   } catch (err) {
     // fetchWithTimeout turns 429/503 into this before we see the response.
     if (err instanceof UpstreamUnavailableError) throw new HardcoverRateLimitError(Math.max(1, Math.ceil(err.retryAfterMs / 1000)));

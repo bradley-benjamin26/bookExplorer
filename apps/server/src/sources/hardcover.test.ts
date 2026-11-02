@@ -14,7 +14,10 @@ beforeEach(() => {
   vi.stubEnv("HARDCOVER_API_KEY", "k");
   vi.mocked(fetchWithTimeout).mockReset();
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 it("stops after 5 ISBNs when none match", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValue(noMatch);
@@ -32,9 +35,22 @@ const sentQuery = () => JSON.parse(String(vi.mocked(fetchWithTimeout).mock.calls
 
 it("uses the caller's token over the server key", async () => {
   vi.stubEnv("HARDCOVER_API_KEY", "server");
-  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
+  const fetchMock = vi.fn().mockResolvedValue(match);
+  vi.stubGlobal("fetch", fetchMock);
   await lookupByIsbn("1", "Bearer user");
-  expect(sentAuth()).toBe("Bearer user");
+  expect((fetchMock.mock.calls[0][1].headers as Record<string, string>).Authorization).toBe("Bearer user");
+});
+
+it("a signed-in user's 429 throws HardcoverRateLimitError and never touches the shared host limiter", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429, headers: new Headers({ "Retry-After": "30" }) }));
+  await expect(hardcoverGraphql("q", {}, "Bearer user")).rejects.toMatchObject({ retryAfterSeconds: 30 });
+  expect(fetchWithTimeout).not.toHaveBeenCalled();
+});
+
+it("the server key still goes through the shared limiter", async () => {
+  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
+  await lookupByIsbn("1");
+  expect(fetchWithTimeout).toHaveBeenCalled();
 });
 
 it("falls back to the server key when signed out", async () => {
@@ -58,27 +74,29 @@ it("only asks for public reviews, since the result is cached for everyone", asyn
 
 it("maps a 429 response to HardcoverRateLimitError using Retry-After", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValue(new Response("", { status: 429, headers: { "Retry-After": "7" } }));
-  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ name: "HardcoverRateLimitError", retryAfterSeconds: 7 });
+  await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toMatchObject({ name: "HardcoverRateLimitError", retryAfterSeconds: 7 });
 });
 
 it("defaults a 429's retry to 60s without Retry-After", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValue(new Response("", { status: 429 }));
-  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toBeInstanceOf(HardcoverRateLimitError);
-  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ retryAfterSeconds: 60 });
+  await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toBeInstanceOf(HardcoverRateLimitError);
+  await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toMatchObject({ retryAfterSeconds: 60 });
 });
 
 it("maps fetchWithTimeout's UpstreamUnavailableError to HardcoverRateLimitError", async () => {
   const { UpstreamUnavailableError } = await vi.importActual<typeof import("../httpClient.js")>("../httpClient.js");
   vi.mocked(fetchWithTimeout).mockRejectedValue(new UpstreamUnavailableError("api.hardcover.app", 1200));
-  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toMatchObject({ retryAfterSeconds: 2 });
+  await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toMatchObject({ retryAfterSeconds: 2 });
 });
 
 it("maps 401 to HardcoverUnauthorizedError", async () => {
+  vi.stubEnv("HARDCOVER_API_KEY", "secret");
   vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ error: "invalid_token" }, { status: 401 }));
   await expect(hardcoverGraphql("q", {}, "Bearer secret")).rejects.toBeInstanceOf(HardcoverUnauthorizedError);
 });
 
 it("reports the missing scope on 403 without leaking the token", async () => {
+  vi.stubEnv("HARDCOVER_API_KEY", "secret");
   vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ error: "insufficient_scope", scope: "books:read" }, { status: 403 }));
   const err = await hardcoverGraphql("q", {}, "Bearer secret").catch((e: Error) => e);
   expect((err as Error).message).toContain("books:read");
@@ -87,7 +105,7 @@ it("reports the missing scope on 403 without leaking the token", async () => {
 
 it("throws on GraphQL errors", async () => {
   vi.mocked(fetchWithTimeout).mockResolvedValue(Response.json({ errors: [{ message: "boom" }] }));
-  await expect(hardcoverGraphql("q", {}, "Bearer x")).rejects.toThrow("boom");
+  await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toThrow("boom");
 });
 
 it("sends a no-retry call through plain fetch, so a timed-out mutation is never repeated", async () => {
