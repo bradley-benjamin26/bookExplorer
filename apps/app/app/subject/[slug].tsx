@@ -56,7 +56,9 @@ export default function SubjectDetail() {
   }
 
   const { books, fellBack } = booksForSort(!!sortParams, sorted, data.books);
-  const pageTitle = subjectLabel(subjectDisplayName(data.slug, data.name, label));
+  const displayName = subjectDisplayName(data.slug, data.name, label);
+  const pageTitle = subjectLabel(displayName);
+  const spokenTitle = subjectSpokenLabel(displayName);
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
   const narrower = data.relatedConcepts.filter((c) => c.relation === "narrower");
 
@@ -69,7 +71,7 @@ export default function SubjectDetail() {
       ListHeaderComponent={
         <View>
           <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-          <DetailTop title={pageTitle} actions={<ShareButton title={pageTitle} href={routes.subject(data.slug, label)} />}>
+          <DetailTop title={pageTitle} accessibilityLabel={spokenTitle} actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
             <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           </DetailTop>
           {data.description && <AboutSection text={data.description} />}
