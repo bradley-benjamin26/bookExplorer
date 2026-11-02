@@ -6,6 +6,7 @@ import { HardcoverLogo } from "../src/components/HardcoverLogo";
 import { LIBRARY_ROWS } from "../src/libraryRows";
 import { routes } from "../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { rowFeedback } from "../src/rowFeedback";
 import { titleRef } from "../src/webTitle";
 
 const ROUTES = {
@@ -27,7 +28,7 @@ export default function Saved() {
         <Pressable
           ref={titleRef(`Open ${label}`)}
           key={id}
-          style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.navRow, rowFeedback(theme.colors, { pressed, hovered })]}
           onPress={() => router.push(ROUTES[id]())}
           accessibilityRole="button"
           accessibilityLabel={label}
@@ -50,17 +51,19 @@ export default function Saved() {
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
-    pressed: { opacity: 0.6 },
     navRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,
       minHeight: 44,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },

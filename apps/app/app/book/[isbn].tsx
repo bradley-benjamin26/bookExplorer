@@ -29,6 +29,7 @@ import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { editLinkHost } from "../../src/termsEditHost";
+import { rowFeedback } from "../../src/rowFeedback";
 import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
@@ -249,7 +250,7 @@ export default function BookDetail() {
         )}
         <Pressable
           ref={titleRef("View this book on Open Library")}
-          style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
           onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
           accessibilityRole="button"
           accessibilityLabel="View on Open Library"
@@ -262,7 +263,7 @@ export default function BookDetail() {
         <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.isbn)} />
         <Pressable
           ref={titleRef("Search Bookshop.org for this book")}
-          style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
           onPress={() => Linking.openURL(`${BOOKSHOP_URL}${data.isbn}`)}
           accessibilityRole="button"
           accessibilityLabel="Search on Bookshop.org"
@@ -274,7 +275,7 @@ export default function BookDetail() {
         </Pressable>
         <Pressable
           ref={titleRef("Search WorldCat for this book")}
-          style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
           onPress={() => Linking.openURL(`${WORLDCAT_URL}${data.isbn}`)}
           accessibilityRole="button"
           accessibilityLabel="Search on WorldCat"
@@ -287,7 +288,7 @@ export default function BookDetail() {
         {data.loc && (
           <Pressable
             ref={titleRef("View this book in the LOC catalog")}
-            style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
             onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}
             accessibilityRole="button"
             accessibilityLabel="View in LOC catalog"
@@ -312,7 +313,7 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg, alignItems: "flex-start" },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
-    cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: 6, backgroundColor: colors.paper, ...cardStyle },
+    cover: { width: 180, height: 260, marginBottom: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.paper, ...cardStyle },
     author: {
       fontFamily: fonts.bodyMedium,
       fontSize: typeScale.sm,
@@ -343,6 +344,9 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       alignItems: "center",
       justifyContent: "space-between",
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },

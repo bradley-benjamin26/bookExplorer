@@ -10,6 +10,8 @@ import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
 import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { FeedbackBanner } from "../src/components/FeedbackBanner";
+import { rowFeedback } from "../src/rowFeedback";
 
 type RecentFilter = "all" | "books" | "authors" | "subjects";
 const FILTERS: { value: RecentFilter; label: string }[] = [
@@ -48,6 +50,21 @@ export default function Home() {
     <SafeAreaView style={styles.container}>
       {/* Padding lives on an inner View: react-native-web's SafeAreaView overwrites its own padding with the (zero on desktop) safe-area insets. */}
       <View style={styles.inner}>
+        <FeedbackBanner />
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.subtitle}>find your next read</Text>
+            <Pressable
+              ref={titleRef("Read about this project")}
+              onPress={() => router.push(routes.about())}
+              accessibilityRole="link"
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.aboutLink}>About Shelf Thread</Text>
+            </Pressable>
+          </View>
+        </View>
+
         <Pressable
           ref={titleRef("Scan a book's barcode")}
           onPress={() => router.push("/scan")}
@@ -105,7 +122,7 @@ export default function Home() {
               renderItem={({ item }) => (
                 <Pressable
                   ref={titleRef(`Open ${item.title ?? item.id}`)}
-                  style={({ pressed }) => [styles.recentItem, pressed && styles.pressed]}
+                  style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.recentItem, rowFeedback(theme.colors, { pressed, hovered })]}
                   onPress={() => router.push(recentHref(item))}
                   accessibilityRole="button"
                   accessibilityLabel={
@@ -142,6 +159,22 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     inner: { flex: 1, padding: spacing.lg },
+    header: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
+    aboutLink: {
+      fontFamily: fonts.body,
+      fontSize: typeScale.xs,
+      color: colors.cover,
+      textDecorationLine: "underline",
+      marginTop: spacing.sm,
+    },
     pressed: { opacity: 0.6 },
     focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
     scanButton: {
@@ -149,7 +182,6 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       alignItems: "center",
       justifyContent: "center",
       gap: spacing.md,
-      marginTop: spacing.md,
       backgroundColor: colors.primary,
       borderRadius: radii.sm,
       paddingVertical: spacing.lg,
@@ -178,6 +210,9 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       alignItems: "center",
       gap: spacing.md,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },

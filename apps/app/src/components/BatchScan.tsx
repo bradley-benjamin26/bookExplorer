@@ -203,7 +203,7 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     camera: { flex: 1, backgroundColor: "#000", justifyContent: "flex-end" },
     panel: { padding: spacing.lg, gap: spacing.sm, backgroundColor: "rgba(0,0,0,0.6)" },
@@ -214,7 +214,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,
-      borderRadius: 8,
+      borderRadius: radii.sm,
       padding: spacing.sm,
       backgroundColor: colors.paper,
       color: colors.ink,

@@ -838,7 +838,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     checkbox: {
       width: 22,
       height: 22,
-      borderRadius: 4,
+      borderRadius: radii.xs,
       borderWidth: 2,
       borderColor: colors.cover,
       alignItems: "center",

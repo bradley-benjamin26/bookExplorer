@@ -146,13 +146,13 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
     conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     conceptTag: {
-      backgroundColor: colors.chipBackgroundAccent,
+      backgroundColor: colors.chipBackgroundSubject,
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
       borderWidth: 1,
-      borderColor: colors.chipBorderAccent,
+      borderColor: colors.cardBorder,
     },
-    conceptTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextAccent },
+    conceptTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
   });
 }

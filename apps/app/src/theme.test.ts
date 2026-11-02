@@ -4,7 +4,7 @@ import { darkColors, lightColors } from "./themeColors";
 vi.mock("react-native", () => ({ useColorScheme: () => "light" }));
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
-const { typeScale } = await import("./theme");
+const { radii, typeScale } =await import("./theme");
 
 // WCAG 2.x relative luminance / contrast ratio for "#RRGGBB" colours.
 function luminance(hex: string): number {
@@ -45,9 +45,23 @@ describe.each([
     ["textFaint on background", c.textFaint, c.background, 4.5],
     ["warning on background", c.warning, c.background, 4.5],
     ["graphAward on paper", c.graphAward, c.paper, 4.5],
+    ["textMuted on paper", c.textMuted, c.paper, 4.5],
+    ["ink on pressedBackground", c.ink, c.pressedBackground, 4.5],
+    ["ink on hoverBackground", c.ink, c.hoverBackground, 4.5],
+    ["inkFaint on chipBackground", c.inkFaint, c.chipBackground, 4.5],
+    ["chipTextGenre on chipBackgroundGenre", c.chipTextGenre, c.chipBackgroundGenre, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });
+});
+
+it("has no cool-hued tag chips", () => {
+  expect("chipBackgroundAccent" in lightColors).toBe(false);
+  expect("chipBackgroundAccent" in darkColors).toBe(false);
+});
+
+it("defines the four corner sizes", () => {
+  expect(radii).toEqual({ xs: 4, sm: 8, md: 14, pill: 16, full: 999 });
 });
 
 describe("typeScale", () => {

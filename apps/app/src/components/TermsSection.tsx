@@ -222,14 +222,14 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.chipTextGenre,
     },
     genreTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextGenre },
-    // Matches how the graph explorer colors subject nodes.
+    // Neutral on purpose; only genres get a hue.
     subjectTag: {
       backgroundColor: colors.chipBackgroundSubject,
       borderRadius: radii.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: 7,
       borderWidth: 1,
-      borderColor: colors.chipTextSubject,
+      borderColor: colors.cardBorder,
     },
     subjectTagText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.chipTextSubject },
     input: {
