@@ -6,7 +6,7 @@ import { useThemedStyles, type Theme } from "../theme";
 const SIDE_BY_SIDE_MIN_WIDTH = 560;
 
 /** The left-aligned top every detail page shares: image, title, byline, then the actions in a row,
- * with the page's main destinations (`primaryActions`, e.g. View as Graph) under them. */
+ * with the page's main destinations (`primaryActions`, e.g. View as graph) under them. */
 export function DetailTop({
   image,
   title,

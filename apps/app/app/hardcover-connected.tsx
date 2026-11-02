@@ -27,7 +27,7 @@ export default function HardcoverConnected() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.text}>{error || "Hardcover wasn't connected."}</Text>
-      <Button variant="pill" onPress={() => router.replace(routes.hardcover())}>Back to My Hardcover Account</Button>
+      <Button variant="pill" onPress={() => router.replace(routes.hardcover())}>Back to My Hardcover account</Button>
     </ScrollView>
   );
 }

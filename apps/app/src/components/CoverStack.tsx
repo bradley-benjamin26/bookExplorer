@@ -21,7 +21,9 @@ export function CoverStack({ urls }: { urls: (string | null)[] }) {
       {items.map((url, i) => (
         <View key={i} style={[styles.cover, { left: i * STEP, zIndex: items.length - i }]}>
           <View style={styles.clip}>
-            {url ? <Image source={{ uri: url }} contentFit="cover" style={styles.image} /> : <CoverPlaceholder width={WIDTH} height={HEIGHT} />}
+            {/* Under the image: Open Library serves a transparent 1x1 for an ISBN with no cover. */}
+            <CoverPlaceholder width={WIDTH} height={HEIGHT} />
+            {url && <Image source={{ uri: url }} contentFit="cover" style={styles.image} />}
           </View>
         </View>
       ))}
@@ -47,6 +49,6 @@ function createStyles({ colors, radii, cardStyle }: Theme) {
       elevation: cardStyle.elevation,
     },
     clip: { flex: 1, borderRadius: radii.xs, overflow: "hidden" },
-    image: { width: "100%", height: "100%" },
+    image: StyleSheet.absoluteFill,
   });
 }

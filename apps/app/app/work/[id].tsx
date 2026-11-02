@@ -110,26 +110,27 @@ export default function WorkDetail() {
             <>
               <Button
                 variant="primary"
+                style={{ flex: 1 }}
                 onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
                 tooltip="See this book's authors, subjects and links as a graph"
               >
-                View as Graph
+                View as graph
               </Button>
               <Button
-                variant="pill"
+                variant="primary"
+                style={{ flex: 1 }}
                 onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
                 accessibilityLabel={`Find a connection from ${data.title}`}
                 accessibilityHint="Shows how this book links to another book you pick"
                 tooltip="Find how this book links to another"
               >
-                Find Connection
+                Find connection
               </Button>
             </>
           )
         }
         actions={
           <>
-            <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
             <WorkSaveButton
               ref={saveSheet}
               work={data}
@@ -141,6 +142,7 @@ export default function WorkDetail() {
                 else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
               }}
             />
+            <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
           </>
         }
       >
@@ -215,7 +217,7 @@ export default function WorkDetail() {
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
       <View style={styles.findSection}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find this book</Text>
         <FindLinkRow label="View on Open Library" url={openLibraryWorkUrl(data.openLibraryWorkId)} />
         <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.title)} />
       </View>

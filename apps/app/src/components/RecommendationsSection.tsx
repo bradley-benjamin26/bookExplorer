@@ -1,6 +1,7 @@
 import { type Book, type Graph, type Subject, type Work, type WorkRef } from "@book-explorer/shared";
 import { useIsRestoring, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { EmptyState } from "./EmptyState";
 import { ChevronDown, ChevronRight } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
@@ -103,7 +104,12 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
 
   const status = recommendationsStatus({ ready: snapshot !== null && !restoring, seedCount, fetching: isFetching, count: recommendations.length });
   if (status === "loading") return <ActivityIndicator color={theme.colors.cover} accessibilityLabel="Loading recommendations" />;
-  if (status === "empty") return <Text style={styles.emptyText}>Not enough books or authors to make recommendations</Text>;
+  if (status === "empty")
+    return (
+      <View style={styles.emptyState}>
+        <EmptyState message="Save a few books or authors and recommendations will appear here." actionLabel="Search for a book" onAction={() => router.push("/")} />
+      </View>
+    );
 
   const groups = groupRecommendations(recommendations);
 
@@ -145,7 +151,7 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
 
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
+    emptyState: { marginTop: spacing.lg },
     groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginTop: spacing.xxl, marginBottom: spacing.md },
     pressed: { opacity: 0.6 },
     sectionTitle: { flexShrink: 1, fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },

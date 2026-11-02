@@ -271,10 +271,10 @@ function PreferencesSections() {
         {cleared ? "History cleared" : "Clear history"}
       </Button>
 
-      <Text style={styles.sectionTitle} accessibilityRole="header">Import & Export</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Import & export</Text>
       <Text style={styles.helpText}>Back up your lists, notes and libraries, or move them to another device.</Text>
       <Button variant="pill" onPress={() => router.push(routes.backup())} style={styles.historyButton}>
-        Open Import & Export
+        Open Import & export
       </Button>
     </>
   );
@@ -317,7 +317,7 @@ export default function Settings() {
       ))}
 
       <Pressable
-        ref={titleRef("Add a library to Find This Book")}
+        ref={titleRef("Add a library to Find this book")}
         style={({ pressed }) => [styles.addLibraryRow, pressed && styles.pressed]}
         onPress={handleAddLibrary}
         accessibilityRole="button"

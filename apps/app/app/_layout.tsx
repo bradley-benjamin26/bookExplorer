@@ -10,7 +10,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
@@ -22,6 +22,7 @@ import { useSavedPrefetch } from "../src/useSavedPrefetch";
 import { loadSession, onSessionCleared } from "../src/hardcoverSession";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
+import { darkColors, lightColors } from "../src/themeColors";
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -42,6 +43,8 @@ export default function RootLayout() {
   // so the app renders with a retry notice instead.
   const [migrated, setMigrated] = useState(false);
   const [migrationFailed, setMigrationFailed] = useState(false);
+  // The system scheme, not the saved preference: preferences aren't read until migration finishes.
+  const scheme = useColorScheme();
   const migrate = useCallback(() => {
     Promise.all([migrateStorage(), loadSession().catch(() => {})])
       .then(() => setMigrationFailed(false), () => setMigrationFailed(true))
@@ -50,7 +53,10 @@ export default function RootLayout() {
   useEffect(migrate, [migrate]);
 
   // A failed font load falls back to system fonts rather than blanking the app.
-  if ((!fontsLoaded && !fontError) || !migrated) return null;
+  // Paper-filled rather than blank, so dark mode doesn't flash white; no text, as the fonts aren't loaded yet.
+  if ((!fontsLoaded && !fontError) || !migrated) {
+    return <View style={[styles.root, { backgroundColor: (scheme === "dark" ? darkColors : lightColors).paper }]} />;
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -108,7 +114,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<HeaderActions show={["about", "library"]} />) }} />
             <Stack.Screen
               name="scan"
-              options={{ title: "Scan Barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}
+              options={{ title: "Scan barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}
             />
             <Stack.Screen name="book/[isbn]" options={{ title: "Book", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="author/[id]" options={{ title: "Author", headerRight: inHeader(<HeaderActions />) }} />
@@ -120,14 +126,14 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="search" options={{ title: "Search", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen
               name="graph/[type]/[id]"
-              options={{ title: "Explore Graph", headerRight: inHeader(<HeaderActions />) }}
+              options={{ title: "Explore graph", headerRight: inHeader(<HeaderActions />) }}
             />
-            <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="connection" options={{ title: "Find connection", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<HeaderActions show={["about", "search"]} />) }} />
             <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="backup" options={{ title: "Import & export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="hardcover" options={{ title: "My Hardcover Account", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="hardcover" options={{ title: "My Hardcover account", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover-connected" options={{ title: "Hardcover", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions show={["library", "search"]} />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />

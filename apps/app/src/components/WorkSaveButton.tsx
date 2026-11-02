@@ -6,15 +6,18 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "rea
 import { fetchBookWithAlternate } from "../api/bookLookup";
 import { isbnEditions } from "../editionChoice";
 import { saveBook } from "../storage/savedBooks";
+import { getLists } from "../storage/savedLists";
 import { saveWork } from "../storage/savedWorks";
 import { useThemedStyles, type Theme } from "../theme";
+import { editionToOpen } from "../workSaveFollow";
 import { titleRef } from "../webTitle";
 import { AddToListButton, type SaveSheetHandle } from "./AddToListButton";
 import { Button } from "./Button";
 
 /**
  * "Save to list" on a work: asks which ISBN edition to save and saves that edition as a book.
- * A work with no ISBN edition is saved as a work. `onSaved` gets the saved edition's ISBN, or null for a work.
+ * A work with no ISBN edition is saved as a work. `onSaved` gets the saved edition's ISBN, or null for a work;
+ * for an edition it runs once the sheet closes, so a Hardcover message left in the sheet is read first.
  */
 export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: Work; saved: boolean; onSaved: (isbn: string | null) => void; ref?: Ref<SaveSheetHandle> }) {
   const styles = useThemedStyles(createStyles);
@@ -27,8 +30,10 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
   // Why the sheet was opened (the lock asking to save first); shown in the edition popup and passed on.
   const [notice, setNotice] = useState<string | undefined>();
   const isbn = target?.isbn ?? null;
-  // Done also runs with nothing ticked or only unticking, so follow the save only when onSave ran.
+  // Done also runs with nothing ticked or only unticking, so refresh the saved work only when onSave ran.
   const saved = useRef(false);
+  // An edition already on the ticked list saves nothing on Done, so follow it whenever Done ran and it is listed.
+  const doneRan = useRef(false);
 
   useEffect(() => {
     if (target) sheet.current?.open(notice);
@@ -36,6 +41,7 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
 
   const open = (why?: string) => {
     saved.current = false;
+    doneRan.current = false;
     setNotice(why);
     if (editions.length > 0) setChoosing(true);
     else sheet.current?.open(why);
@@ -44,6 +50,7 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
   const pick = (isbn: string | null) => {
     setChoosing(false);
     saved.current = false;
+    doneRan.current = false;
     setTarget({ isbn });
   };
 
@@ -69,7 +76,18 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
           saved.current = true;
           return record;
         }}
-        onChange={() => saved.current && onSaved(isbn)}
+        onChange={() => {
+          doneRan.current = true;
+          if (!isbn && saved.current) onSaved(null);
+        }}
+        onClose={async () => {
+          if (!doneRan.current || !isbn) return;
+          doneRan.current = false;
+          const lists = await getLists("book").catch(() => []);
+          const listed = lists.some((l) => l.members.some((m) => m.type === "book" && m.id === isbn));
+          const follow = editionToOpen(isbn, listed);
+          if (follow) onSaved(follow);
+        }}
       />
       <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
         <View style={styles.backdrop}>

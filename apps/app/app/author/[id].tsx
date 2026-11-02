@@ -78,28 +78,30 @@ export default function AuthorDetail() {
           <>
             <Button
               variant="primary"
+              style={{ flex: 1 }}
               onPress={() => router.push(routes.graph("author", data.openLibraryId))}
               tooltip="See this author's books, subjects and links as a graph"
             >
-              View as Graph
+              View as graph
             </Button>
             <Button
-              variant="pill"
+              variant="primary"
+              style={{ flex: 1 }}
               onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
               accessibilityLabel={`Find a connection from ${data.name}`}
               tooltip="Find how this author links to a book"
             >
-              Find Connection
+              Find connection
             </Button>
           </>
         }
         actions={
           <>
-            <ShareButton title={data.name} href={routes.author(data.openLibraryId)} />
             <AddToListButton
               member={{ type: "author", id: data.openLibraryId, title: data.name }}
               onSave={() => saveAuthor(data.openLibraryId, data.name)}
             />
+            <ShareButton title={data.name} href={routes.author(data.openLibraryId)} />
           </>
         }
       >

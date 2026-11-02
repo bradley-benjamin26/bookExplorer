@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react-native";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
@@ -9,7 +9,8 @@ export function AccordionSection({ title, children }: { title: string; children:
   const [open, setOpen] = useState(false);
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
-  const Chevron = open ? ChevronDown : ChevronRight;
+  // Down/up, not right: a right chevron means "go to another page" everywhere else in the app.
+  const Chevron = open ? ChevronUp : ChevronDown;
   return (
     <View>
       <Pressable

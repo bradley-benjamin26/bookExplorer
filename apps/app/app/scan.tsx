@@ -1,14 +1,59 @@
+import { isValidIsbn, normalizeIsbn } from "@book-explorer/shared";
 import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { isIsbnBarcode } from "../src/batchScan";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
 import { routes } from "../src/navigation";
 import { getPreferences, type Preferences } from "../src/storage/preferences";
-import { useThemedStyles, type Theme } from "../src/theme";
+import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+
+/** Typed fallback for when the camera is unavailable or the barcode won't read. */
+function IsbnEntry() {
+  const router = useRouter();
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const [value, setValue] = useState("");
+  const [invalid, setInvalid] = useState(false);
+
+  const submit = () => {
+    if (!isValidIsbn(value)) return setInvalid(true);
+    router.replace(routes.book(normalizeIsbn(value)));
+  };
+
+  return (
+    <View style={styles.entry}>
+      <Text style={styles.entryLabel} nativeID="isbn-entry-label">
+        Or type the ISBN
+      </Text>
+      <TextInput
+        style={styles.entryInput}
+        accessibilityLabelledBy="isbn-entry-label"
+        accessibilityLabel="Or type the ISBN"
+        placeholder="978-0-14-143951-8"
+        placeholderTextColor={theme.colors.inkFaint}
+        value={value}
+        onChangeText={(t) => {
+          setValue(t);
+          setInvalid(false);
+        }}
+        // iOS's number pad has no X, which ends some ISBN-10s.
+        keyboardType={Platform.OS === "ios" ? "numbers-and-punctuation" : "number-pad"}
+        autoCapitalize="characters"
+        returnKeyType="go"
+        onSubmitEditing={submit}
+      />
+      {invalid && (
+        <Text style={styles.entryError} accessibilityLiveRegion="polite">
+          That isn't a valid ISBN. Check the 10 or 13 digits on the back cover.
+        </Text>
+      )}
+    </View>
+  );
+}
 
 export default function Scan() {
   const router = useRouter();
@@ -43,8 +88,9 @@ export default function Scan() {
       <View style={styles.permissionScreen}>
         <Text style={styles.message}>Camera access is needed to scan book barcodes.</Text>
         <Button variant="primary" onPress={requestPermission}>
-          Grant Permission
+          Allow camera
         </Button>
+        <IsbnEntry />
       </View>
     );
   }
@@ -68,12 +114,13 @@ export default function Scan() {
         <Button variant="pill" onPress={() => setBatch(true)} accessibilityLabel="Scan multiple books">
           Scan multiple
         </Button>
+        <IsbnEntry />
       </View>
     </View>
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, spacing, fonts, typeScale, radii }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#000" },
     permissionScreen: {
@@ -94,5 +141,20 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
       borderRadius: 10,
     },
     hint: { color: "#fff", fontFamily: fonts.body, fontSize: 14 },
+    // A paper card, so the field reads the same over the dark camera feed as on the permission screen.
+    entry: { width: "80%", maxWidth: 360, gap: spacing.xs, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.paper },
+    entryLabel: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
+    entryInput: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.md,
+      fontFamily: fonts.body,
+      fontSize: typeScale.sm,
+      color: colors.ink,
+      backgroundColor: colors.background,
+    },
+    entryError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger },
   });
 }

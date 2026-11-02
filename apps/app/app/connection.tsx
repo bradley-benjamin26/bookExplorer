@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { fetchPath, searchAuthors, searchBooks } from "../src/api/client";
+import { AccordionSection } from "../src/components/AccordionSection";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
@@ -103,12 +104,11 @@ export default function Connection() {
             <Text style={styles.heading} accessibilityRole="header">
               {step === "pickStart" ? "Choose the first book or author" : `Connect ${label} to…`}
             </Text>
-            <Text style={styles.howTitle} accessibilityRole="header">
-              How it works
-            </Text>
-            <Text style={styles.explainer}>
+            <AccordionSection title="How it works">
+              <Text style={styles.explainer}>
               Pick two books or authors. Shelf Thread searches outward from the first: through its authors, subjects, series, and the writers who influenced them, up to 4 steps away, until it reaches the second. You'll see up to three connections, best first, and can open each one on the graph. A search can take up to 25 seconds.
-            </Text>
+              </Text>
+            </AccordionSection>
             <TextInput
               style={styles.input}
               placeholder="Search for a book or author"
@@ -263,7 +263,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
     explainer: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginBottom: spacing.md },
-    howTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.xs },
     sectionTitle: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.lg, marginBottom: spacing.xs },
     authorRow: { borderRadius: radii.sm, backgroundColor: colors.chipBackground, padding: spacing.md, marginBottom: spacing.sm },
     pressed: { opacity: 0.7 },

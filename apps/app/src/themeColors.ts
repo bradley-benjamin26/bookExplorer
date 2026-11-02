@@ -14,9 +14,10 @@ export interface ThemeColors {
   cardBorder: string;
   inputBorder: string;
   chipBackground: string;
+  // Genre and subject chips carry the graph's genre and subject hues (darkened for text contrast),
+  // so a tag on a detail page and its node on the graph read as the same kind of thing.
   chipBackgroundGenre: string;
   chipTextGenre: string;
-  // Warm neutral, deliberately not `graphSubject`: detail-page tags use two hues (green genre, neutral subject).
   chipBackgroundSubject: string;
   chipTextSubject: string;
   // The highlighted background of a toggled-on pill button (e.g. "★ Saved").
@@ -45,6 +46,7 @@ export interface ThemeColors {
   coverLight: string;
   marginalia: string;
   thread: string;
+  emptyBackground: string;
   // Tint behind a pressed / hovered list row.
   pressedBackground: string;
   hoverBackground: string;
@@ -61,10 +63,10 @@ export const lightColors: ThemeColors = {
   cardBorder: "#E6DFD0",
   inputBorder: "#857D6E",
   chipBackground: "#F1EBDD",
-  chipBackgroundGenre: "#E4ECE7",
-  chipTextGenre: "#2B5951",
-  chipBackgroundSubject: "#F1EBDD",
-  chipTextSubject: "#262320",
+  chipBackgroundGenre: "#F5E8F0",
+  chipTextGenre: "#8A3573",
+  chipBackgroundSubject: "#F6E8DF",
+  chipTextSubject: "#94492E",
   pillActiveBackground: "#fdf0d0",
   pillBorder: "#8C877B",
   primary: "#2B5951",
@@ -85,7 +87,8 @@ export const lightColors: ThemeColors = {
   cover: "#2B5951",
   coverLight: "#E4ECE7",
   marginalia: "#A85026",
-  thread: "#8A94A8",
+  thread: "#9A8F7E",
+  emptyBackground: "#F3EDE1",
   pressedBackground: "#EFE8D8",
   hoverBackground: "#F5F0E4",
 };
@@ -105,10 +108,10 @@ export const darkColors: ThemeColors = {
   cardBorder: "#34312B",
   inputBorder: "#7A766B",
   chipBackground: "#26241F",
-  chipBackgroundGenre: "#23332F",
-  chipTextGenre: "#6FA897",
-  chipBackgroundSubject: "#26241F",
-  chipTextSubject: "#EDEAE2",
+  chipBackgroundGenre: "#33232F",
+  chipTextGenre: "#e7a6da",
+  chipBackgroundSubject: "#36261E",
+  chipTextSubject: "#e8946e",
   pillActiveBackground: "#4a3a12",
   // The plan's #6B6B7B is 2.96:1 on chipBackground; nudged lighter to clear 3:1.
   pillBorder: "#77736A",
@@ -129,7 +132,8 @@ export const darkColors: ThemeColors = {
   cover: "#6FA897",
   coverLight: "#23332F",
   marginalia: "#E08662",
-  thread: "#8A94A8",
+  thread: "#7D7568",
+  emptyBackground: "#24221E",
   pressedBackground: "#2C2A25",
   hoverBackground: "#23211D",
 };

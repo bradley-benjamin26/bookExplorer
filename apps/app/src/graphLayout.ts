@@ -347,3 +347,14 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
     contentHeight,
   };
 }
+
+/** The furthest the graph zooms out. */
+export const MIN_SCALE = 0.25;
+/** Clearance kept around the graph at the initial fit: a 44pt zoom button plus its 12pt inset. */
+export const CONTROLS_GUTTER = 56;
+
+/** The scale that fits `content` inside `viewport` less `gutter` on every side: never magnified, never below MIN_SCALE. */
+export function fitScale(viewport: { width: number; height: number }, content: { width: number; height: number }, gutter: number): number {
+  const fit = Math.min(1, (viewport.width - 2 * gutter) / content.width, (viewport.height - 2 * gutter) / content.height);
+  return Math.max(MIN_SCALE, fit);
+}

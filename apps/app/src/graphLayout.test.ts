@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { CENTER_NODE_RADIUS, labelWidthOf, layoutGraph, NODE_RADIUS, wrapLabel } from "./graphLayout";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, fitScale, labelWidthOf, layoutGraph, MIN_SCALE, NODE_RADIUS, wrapLabel } from "./graphLayout";
 
 describe("wrapLabel", () => {
   it("keeps a short label on one line", () => {
@@ -68,5 +68,23 @@ describe("layoutGraph subject labels", () => {
 describe("labelWidthOf", () => {
   it("sizes the widest line for the 13px label font", () => {
     expect(labelWidthOf(["abcdefghij", "abc"])).toBeCloseTo(77, 5);
+  });
+});
+
+describe("fitScale", () => {
+  it("shrinks large content to fit inside the gutter", () => {
+    expect(fitScale({ width: 390, height: 600 }, { width: 800, height: 800 }, 56)).toBeCloseTo(0.348, 2);
+  });
+
+  it("gives 1 for content smaller than the viewport", () => {
+    expect(fitScale({ width: 390, height: 600 }, { width: 100, height: 100 }, 56)).toBe(1);
+  });
+
+  it("never magnifies a tiny graph", () => {
+    expect(fitScale({ width: 2000, height: 2000 }, { width: 60, height: 60 }, CONTROLS_GUTTER)).toBeLessThanOrEqual(1);
+  });
+
+  it("never goes below MIN_SCALE", () => {
+    expect(fitScale({ width: 390, height: 600 }, { width: 100000, height: 100000 }, 56)).toBe(MIN_SCALE);
   });
 });

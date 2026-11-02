@@ -25,7 +25,7 @@ import { ExportButton } from "./ExportButton";
 
 export const today = () => new Date().toISOString().slice(0, 10);
 
-/** Export/import of the saved library, on the Import & Export page. `onImported` reloads the screen's lists. */
+/** Export/import of the saved library, on the Import & export page. `onImported` reloads the screen's lists. */
 export function BackupSection({ onImported }: { onImported: () => void }) {
   const styles = useThemedStyles(createStyles);
   const [message, setMessage] = useState("");
@@ -111,9 +111,9 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
 
   return (
     <View>
-      <Text style={styles.sectionTitle} accessibilityRole="header">Export & Import</Text>
+      <Text style={styles.sectionTitle} accessibilityRole="header">Import and export your library</Text>
       <Text style={styles.helpText}>
-        A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
+        Importing adds the books and lists from a backup file. Choose whether to merge with or replace what's here. A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
       </Text>
       <View style={styles.buttons}>
         <ExportButton

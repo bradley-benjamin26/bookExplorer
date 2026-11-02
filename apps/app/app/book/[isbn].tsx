@@ -128,26 +128,27 @@ export default function BookDetail() {
             <>
               <Button
                 variant="primary"
+                style={{ flex: 1 }}
                 onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
                 tooltip="See this book's authors, subjects and links as a graph"
               >
-                View as Graph
+                View as graph
               </Button>
               <Button
-                variant="pill"
+                variant="primary"
+                style={{ flex: 1 }}
                 onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
                 accessibilityLabel={`Find a connection from ${data.title}`}
                 accessibilityHint="Shows how this book links to another book you pick"
                 tooltip="Find how this book links to another"
               >
-                Find Connection
+                Find connection
               </Button>
             </>
           ) : undefined
         }
         actions={
           <>
-            <ShareButton title={data.title} href={routes.book(data.isbn)} />
             <AddToListButton
               ref={saveSheet}
               member={{ type: "book", id: data.isbn, title: data.title }}
@@ -158,6 +159,7 @@ export default function BookDetail() {
               }}
               onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
             />
+            <ShareButton title={data.title} href={routes.book(data.isbn)} />
           </>
         }
       >
@@ -234,7 +236,7 @@ export default function BookDetail() {
       ) : null}
 
       <View style={styles.findSection}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find this book</Text>
         {data.loc && (data.loc.lcc || data.loc.ddc) && (
           <Text style={styles.callNumber}>
             {[data.loc.lcc && `LC call number ${data.loc.lcc}`, data.loc.ddc && `Dewey ${data.loc.ddc}`].filter(Boolean).join(" · ")}

@@ -4,7 +4,10 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CreateListForm } from "../../src/components/AddToListButton";
 import { Button } from "../../src/components/Button";
+import { EmptyState } from "../../src/components/EmptyState";
+import { CoverStack } from "../../src/components/CoverStack";
 import { Footer } from "../../src/components/Footer";
+import { listCoverUrls } from "../../src/listCovers";
 import { routes } from "../../src/navigation";
 import { getLists, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -12,8 +15,8 @@ import { rowFeedback } from "../../src/rowFeedback";
 import { titleRef } from "../../src/webTitle";
 
 const SECTIONS = [
-  { kind: "book", title: "Book lists", noun: "book", empty: "No book lists yet. Tap “Save to list” on a book page to start one." },
-  { kind: "author", title: "Author lists", noun: "author", empty: "No author lists yet. Tap “Save to list” on an author page to start one." },
+  { kind: "book", title: "Book lists", noun: "book", empty: "No book lists yet. Save a book from its page to start one." },
+  { kind: "author", title: "Author lists", noun: "author", empty: "No author lists yet. Save an author from their page to start one." },
 ] as const;
 
 export default function Lists() {
@@ -67,7 +70,10 @@ export default function Lists() {
               {section.title}
             </Text>
             {ofKind.length === 0 ? (
-              <Text style={styles.emptyText}>{section.empty}</Text>
+              <EmptyState
+                message={section.empty}
+                {...(section.kind === "book" && { actionLabel: "Search for a book", onAction: () => router.push("/") })}
+              />
             ) : (
               ofKind.map((list) => {
                 const count = `${list.members.length} ${section.noun}${list.members.length === 1 ? "" : "s"}`;
@@ -80,6 +86,7 @@ export default function Lists() {
                     accessibilityRole="button"
                     accessibilityLabel={`${list.name}, ${count}`}
                   >
+                    <CoverStack urls={listCoverUrls(list.members)} />
                     <View style={styles.rowMain}>
                       <Text style={styles.rowText} numberOfLines={2}>
                         {list.name}
@@ -115,7 +122,6 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
       marginTop: spacing.xxl,
       marginBottom: spacing.md,
     },
-    emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
     row: {
       flexDirection: "row",
       alignItems: "center",
