@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
@@ -13,6 +13,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
@@ -44,13 +45,7 @@ export default function AuthorDetail() {
     if (data) addRecent({ kind: "author", id: data.openLibraryId, title: data.name, subtitle: null });
   }, [data]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No author found for ${id}`} />;

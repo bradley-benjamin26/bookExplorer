@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { FindLinkRow } from "../../src/components/FindLinkRow";
@@ -13,6 +13,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { HardcoverProgress } from "../../src/components/HardcoverProgress";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
@@ -87,13 +88,7 @@ export default function WorkDetail() {
     if (data && savedRecord) seedSavedWorkFromApi(savedRecord.openLibraryWorkId, data).then((r) => r && setSavedRecord(r));
   }, [data, savedRecord]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No work found for ${id}`} />;

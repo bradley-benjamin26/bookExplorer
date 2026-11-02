@@ -11,6 +11,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
@@ -43,13 +44,7 @@ export default function SubjectDetail() {
     enabled: !!sortParams,
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;

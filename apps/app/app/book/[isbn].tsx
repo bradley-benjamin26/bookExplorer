@@ -3,7 +3,7 @@ import { normalizeIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
@@ -14,6 +14,7 @@ import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
@@ -87,13 +88,7 @@ export default function BookDetail() {
     startUnlocked: edit === "1",
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return (
