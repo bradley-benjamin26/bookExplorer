@@ -101,11 +101,16 @@ function parseRetryAfter(value: string | null | undefined): number | undefined {
   return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
 }
 
+const MAX_QUEUED_PER_HOST = 50;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Waits for a concurrency slot, then for this host's next rate slot; the caller must call release(). */
 async function acquire(host: string, st: HostState) {
   const limit = HOST_LIMITS[host] ?? DEFAULT_HOST_LIMIT;
+  // Fail fast rather than let one client's backlog starve everyone; no cooldown, the host is healthy.
+  if (st.active >= limit.concurrent && st.waiters.length >= MAX_QUEUED_PER_HOST)
+    throw new UpstreamUnavailableError(host, Math.ceil(st.waiters.length / limit.perSecond) * 1000);
   if (st.active >= limit.concurrent) await new Promise<void>((resolve) => st.waiters.push(resolve));
   else st.active++;
   // A waiter inherits the releasing call's slot (see release).

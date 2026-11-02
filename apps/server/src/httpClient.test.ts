@@ -188,3 +188,28 @@ describe("fetchWithTimeout per-host limits and cooldowns", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("fetchWithTimeout queue cap", () => {
+  beforeEach(() => {
+    resetUpstreamState();
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("rejects a call once 50 are queued for a host, without calling fetch", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    // 6 run at once (default limit), 50 wait; fetch is held so none finish.
+    const calls = Array.from({ length: 56 }, () => fetchWithTimeout("https://example.com").catch(() => {}));
+    await Promise.resolve();
+    await expect(fetchWithTimeout("https://example.com")).rejects.toBeInstanceOf(UpstreamUnavailableError);
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(6);
+    // Let every held call time out so none is left pending.
+    fetchMock.mockResolvedValue(mockResponse(200));
+    await vi.advanceTimersByTimeAsync(600_000);
+    await Promise.all(calls);
+  });
+});
