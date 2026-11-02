@@ -26,24 +26,20 @@ export function FeedbackBanner() {
 
   return (
     <View style={styles.banner} accessibilityRole="summary">
-      <View style={styles.body}>
-        <Text style={styles.text}>
-          Hello! Thank you for trying out Shelf Thread. This is a librarian's hobby project, and I'm curious to see if people would actually use something like this. Please fill out this feedback form to share your experience!
-        </Text>
-        <Pressable
-          ref={titleRef("Feedback form")}
-          accessibilityRole="link"
-          accessibilityLabel="Feedback form, opens Google Forms"
-          onPress={() => Linking.openURL(FEEDBACK_FORM_URL)}
-          style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
-            styles.link,
-            pressed && styles.pressed,
-            focused && { outlineWidth: 2, outlineColor: theme.colors.cover, outlineStyle: "solid" },
-          ]}
-        >
-          <Text style={styles.linkText}>Share your experience in the feedback form</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.text}>Help shape Shelf Thread.</Text>
+      <Pressable
+        ref={titleRef("Share feedback")}
+        accessibilityRole="link"
+        accessibilityLabel="Share feedback, opens Google Forms"
+        onPress={() => Linking.openURL(FEEDBACK_FORM_URL)}
+        style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
+          styles.link,
+          pressed && styles.pressed,
+          focused && { outlineWidth: 2, outlineColor: theme.colors.cover, outlineStyle: "solid" },
+        ]}
+      >
+        <Text style={styles.linkText}>Share feedback</Text>
+      </Pressable>
       <Pressable
         ref={titleRef("Dismiss")}
         accessibilityRole="button"
@@ -62,21 +58,17 @@ function createStyles({ colors, fonts, radii, typeScale }: Theme) {
   return StyleSheet.create({
     banner: {
       flexDirection: "row",
-      alignItems: "flex-start",
+      alignItems: "center",
       gap: 8,
       marginBottom: 12,
       paddingHorizontal: 12,
-      paddingVertical: 8,
       backgroundColor: colors.paper,
-      borderWidth: 1,
-      borderColor: colors.border,
       borderLeftWidth: 4,
       borderLeftColor: colors.cover,
       borderRadius: radii.sm,
     },
-    body: { flex: 1, gap: 4 },
-    text: { color: colors.ink, fontFamily: fonts.body, fontSize: typeScale.xs, lineHeight: 20 },
-    link: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingVertical: 4 },
+    text: { flexShrink: 1, color: colors.ink, fontFamily: fonts.body, fontSize: typeScale.xs, lineHeight: 20 },
+    link: { minHeight: 44, justifyContent: "center", marginRight: "auto" },
     linkText: { color: colors.cover, fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, lineHeight: 20, textDecorationLine: "underline" },
     pressed: { opacity: 0.6 },
   });
