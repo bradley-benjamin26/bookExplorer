@@ -53,6 +53,9 @@ describe.each([
     ["ink on card", c.ink, c.card, 4.5],
     ["textMuted on card", c.textMuted, c.card, 4.5],
     ["cover on card", c.cover, c.card, 4.5],
+    ["thread vs paper", c.thread, c.paper, 2],
+    ["ink on emptyBackground", c.ink, c.emptyBackground, 4.5],
+    ["inkFaint on emptyBackground", c.inkFaint, c.emptyBackground, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });

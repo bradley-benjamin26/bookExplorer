@@ -46,6 +46,7 @@ export interface ThemeColors {
   coverLight: string;
   marginalia: string;
   thread: string;
+  emptyBackground: string;
   // Tint behind a pressed / hovered list row.
   pressedBackground: string;
   hoverBackground: string;
@@ -86,7 +87,8 @@ export const lightColors: ThemeColors = {
   cover: "#2B5951",
   coverLight: "#E4ECE7",
   marginalia: "#A85026",
-  thread: "#8A94A8",
+  thread: "#9A8F7E",
+  emptyBackground: "#F3EDE1",
   pressedBackground: "#EFE8D8",
   hoverBackground: "#F5F0E4",
 };
@@ -130,7 +132,8 @@ export const darkColors: ThemeColors = {
   cover: "#6FA897",
   coverLight: "#23332F",
   marginalia: "#E08662",
-  thread: "#8A94A8",
+  thread: "#7D7568",
+  emptyBackground: "#24221E",
   pressedBackground: "#2C2A25",
   hoverBackground: "#23211D",
 };
