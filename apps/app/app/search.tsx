@@ -85,6 +85,8 @@ export default function Search() {
             placeholderTextColor={theme.colors.inkFaint}
             value={query}
             onChangeText={setQuery}
+            // Enter searches now rather than after the debounce.
+            onSubmitEditing={() => setDebouncedQuery(query)}
             autoFocus
             returnKeyType="search"
           />
@@ -114,34 +116,45 @@ export default function Search() {
                 ))}
               </View>
               <View style={styles.chipRow}>
-                <TextInput
-                  style={[styles.input, styles.smallInput]}
-                  placeholder="From year"
-                  placeholderTextColor={theme.colors.inkFaint}
-                  value={filters.yearFrom}
-                  onChangeText={(t) => updateFilters({ yearFrom: t.replace(/\D/g, "").slice(0, 4) })}
-                  keyboardType="number-pad"
-                  accessibilityLabel="First published from year"
-                />
-                <TextInput
-                  style={[styles.input, styles.smallInput]}
-                  placeholder="To year"
-                  placeholderTextColor={theme.colors.inkFaint}
-                  value={filters.yearTo}
-                  onChangeText={(t) => updateFilters({ yearTo: t.replace(/\D/g, "").slice(0, 4) })}
-                  keyboardType="number-pad"
-                  accessibilityLabel="First published to year"
-                />
-                <TextInput
-                  style={[styles.input, styles.smallInput]}
-                  placeholder="Language (eng)"
-                  placeholderTextColor={theme.colors.inkFaint}
-                  value={filters.language}
-                  onChangeText={(t) => updateFilters({ language: t.replace(/[^a-zA-Z]/g, "").slice(0, 3) })}
-                  autoCapitalize="none"
-                  accessibilityLabel="Language, three-letter code such as eng"
-                />
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>From year</Text>
+                  <TextInput
+                    style={[styles.input, styles.smallInput]}
+                    placeholder="1990"
+                    placeholderTextColor={theme.colors.inkFaint}
+                    value={filters.yearFrom}
+                    onChangeText={(t) => updateFilters({ yearFrom: t.replace(/\D/g, "").slice(0, 4) })}
+                    keyboardType="number-pad"
+                    accessibilityLabel="First published from year"
+                  />
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>To year</Text>
+                  <TextInput
+                    style={[styles.input, styles.smallInput]}
+                    placeholder="2020"
+                    placeholderTextColor={theme.colors.inkFaint}
+                    value={filters.yearTo}
+                    onChangeText={(t) => updateFilters({ yearTo: t.replace(/\D/g, "").slice(0, 4) })}
+                    keyboardType="number-pad"
+                    accessibilityLabel="First published to year"
+                  />
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Language</Text>
+                  <TextInput
+                    style={[styles.input, styles.smallInput]}
+                    placeholder="eng"
+                    placeholderTextColor={theme.colors.inkFaint}
+                    value={filters.language}
+                    onChangeText={(t) => updateFilters({ language: t.replace(/[^a-zA-Z]/g, "").slice(0, 3) })}
+                    autoCapitalize="none"
+                    accessibilityLabel="Language"
+                    accessibilityHint="Three-letter code, for example eng or fre"
+                  />
+                </View>
               </View>
+              <Text style={styles.fieldHint}>Language: three-letter code, for example eng or fre</Text>
             </View>
           )}
           {trimmedQuery.length === 0 && (
@@ -192,7 +205,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     filterToggleText: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
     chipRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
     chip: { alignSelf: "auto" },
-    smallInput: { flex: 1, minWidth: 0 },
+    smallInput: { minWidth: 0 },
+    field: { flex: 1, minWidth: 0, gap: spacing.xs },
+    fieldLabel: { fontSize: typeScale.xs, fontFamily: fonts.bodySemiBold, color: colors.ink },
+    fieldHint: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, marginBottom: spacing.sm },
     hint: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },
     loadingRow: { marginTop: spacing.xl, alignItems: "center" },
     errorText: { fontSize: typeScale.xs, fontFamily: fonts.body, color: colors.danger, marginTop: spacing.lg },
