@@ -14,7 +14,7 @@ export const routes = {
     params: options?.edit ? { isbn, edit: "1" } : { isbn },
   }),
   author: (id: string): Href => ({ pathname: "/author/[id]", params: { id } }),
-  subject: (slug: string): Href => ({ pathname: "/subject/[slug]", params: { slug } }),
+  subject: (slug: string, label?: string): Href => ({ pathname: "/subject/[slug]", params: label ? { slug, label } : { slug } }),
   work: (id: string, options?: { highlight?: string }): Href => ({
     pathname: "/work/[id]",
     params: options?.highlight ? { id, highlight: options.highlight } : { id },

@@ -1,12 +1,12 @@
 import { MAX_TAG_LENGTH, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
-import { Lock, LockOpen } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { suggestTerms } from "../api/client";
 import { routes } from "../navigation";
 import { addTerm, removeTerm, SUBJECTS_SHOWN, visibleSubjects, type Terms } from "../termsDraft";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { subjectLabel, subjectSpokenLabel } from "../subjectLabel";
 import { titleCase } from "../titleCase";
 import { titleRef } from "../webTitle";
 import { Button } from "./Button";
@@ -17,23 +17,32 @@ const MAX_SUGGESTIONS = 8;
 
 type Kind = keyof Terms;
 
-/** The page's one lock (see useEditLock), shown in the DetailTop actions. */
-export function LockButton({ unlocked, onPress }: { unlocked: boolean; onPress: () => void }) {
+export type EditLink = { label: "Edit" | "Save"; onPress: () => void };
+
+function EditLinkButton({ editLink }: { editLink: EditLink }) {
   const styles = useThemedStyles(createStyles);
-  const theme = useTheme();
-  const label = unlocked ? "Lock and save your edits" : "Edit genres, subjects and notes";
-  const LockIcon = unlocked ? LockOpen : Lock;
+  const label = editLink.label === "Save" ? "Save your edits" : "Edit genres, subjects and notes";
   return (
     <Pressable
       ref={titleRef(label)}
-      style={({ pressed }) => [styles.lockButton, pressed && styles.pressed]}
-      onPress={onPress}
-      hitSlop={8}
+      style={({ pressed }) => [styles.editLink, pressed && styles.pressed]}
+      onPress={editLink.onPress}
+      hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <LockIcon size={18} color={theme.colors.cover} />
+      <Text style={styles.editLinkText}>{editLink.label}</Text>
     </Pressable>
+  );
+}
+
+/** A right-aligned Edit/Save link for pages with neither genres nor subjects to host it. */
+export function EditLinkRow({ editLink }: { editLink: EditLink }) {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.editLinkRow}>
+      <EditLinkButton editLink={editLink} />
+    </View>
   );
 }
 
@@ -48,53 +57,61 @@ export function TermsSection({
   unlocked,
   onEdit,
   tagged,
+  editLink,
 }: {
   kind: Kind;
   labels: string[];
   unlocked: boolean;
   onEdit: (change: (list: string[]) => string[]) => void;
   tagged?: TaggedTerm[];
+  editLink?: EditLink;
 }) {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  if (!unlocked && labels.length === 0) return null;
+  if (!unlocked && labels.length === 0 && !editLink) return null;
 
   const collapsible = kind === "subjects" && !unlocked && labels.length > SUBJECTS_SHOWN;
   const shown = collapsible && !expanded ? visibleSubjects(labels, tagged ?? []) : labels;
   const chipStyle = kind === "genres" ? styles.genreTag : styles.subjectTag;
   const textStyle = kind === "genres" ? styles.genreTagText : styles.subjectTagText;
+  // Genres keep plain title-casing; only subjects get the -> form.
+  const shownLabel = kind === "subjects" ? subjectLabel : titleCase;
+  const spoken = kind === "subjects" ? subjectSpokenLabel : titleCase;
   const toggleLabel = expanded ? "Show fewer subjects" : `Show all ${labels.length} subjects`;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">{kind === "genres" ? "Genres" : "Subjects"}</Text>
+      <View style={styles.titleLine}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">{kind === "genres" ? "Genres" : "Subjects"}</Text>
+        {editLink && <EditLinkButton editLink={editLink} />}
+      </View>
       <View style={styles.row}>
         {shown.length > 0 && (
           <View style={styles.tags}>
             {shown.map((label) =>
               unlocked ? (
                 <Pressable
-                  ref={titleRef(`Remove ${titleCase(label)}`)}
+                  ref={titleRef(`Remove ${spoken(label)}`)}
                   key={label}
                   style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
                   onPress={() => onEdit((list) => removeTerm(list, label))}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${titleCase(label)}`}
+                  accessibilityLabel={`Remove ${spoken(label)}`}
                 >
-                  <Text style={textStyle}>{titleCase(label)} ×</Text>
+                  <Text style={textStyle}>{shownLabel(label)} ×</Text>
                 </Pressable>
               ) : (
                 <Pressable
-                  ref={titleRef(`View ${titleCase(label)}`)}
+                  ref={titleRef(`View ${spoken(label)}`)}
                   key={label}
                   style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
-                  onPress={() => router.push(routes.subject(tagged?.find((term) => term.label === label)?.slug ?? slugifySubject(label)))}
+                  onPress={() => router.push(routes.subject(tagged?.find((term) => term.label === label)?.slug ?? slugifySubject(label), label))}
                   accessibilityRole="button"
-                  accessibilityLabel={titleCase(label)}
+                  accessibilityLabel={spoken(label)}
                 >
-                  <Text style={textStyle}>{titleCase(label)}</Text>
+                  <Text style={textStyle}>{shownLabel(label)}</Text>
                 </Pressable>
               )
             )}
@@ -190,7 +207,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     section: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
-    lockButton: { padding: spacing.xs },
+    titleLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
+    editLinkRow: { marginTop: spacing.xxl, width: "100%", alignItems: "flex-end" },
+    editLink: { minHeight: 44, justifyContent: "center" },
+    editLinkText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover, textDecorationLine: "underline" },
     row: { gap: spacing.sm },
     tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     genreTag: {

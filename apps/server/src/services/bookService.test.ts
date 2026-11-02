@@ -174,4 +174,17 @@ describe("getBookDetail LOC summary", () => {
     expect(book?.description).toBeNull();
     expect(book?.descriptionSource).toBeNull();
   });
+
+  it("carries hardcoverSlug from the Hardcover data, null when Hardcover has none", async () => {
+    withLoc({ lccn: null, summary: null });
+    // Reset drops withLoc's queued null-Hardcover value so this one is the one used.
+    vi.mocked(startCommonEnrichment).mockReset().mockReturnValueOnce({
+      locMetadataPromise: Promise.resolve({ subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null }),
+      hardcoverPromise: Promise.resolve({ slug: "dune", coverUrl: null, rating: null, ratingsCount: 0 }),
+      olRatingsPromise: Promise.resolve(null),
+    } as unknown as ReturnType<typeof startCommonEnrichment>);
+    expect((await getBookDetail("9780000000021"))?.hardcoverSlug).toBe("dune");
+    withLoc({ lccn: null, summary: null });
+    expect((await getBookDetail("9780000000022"))?.hardcoverSlug).toBeNull();
+  });
 });

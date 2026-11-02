@@ -103,6 +103,14 @@ it("sends a no-retry call through plain fetch, so a timed-out mutation is never 
   }
 });
 
+it("lookupByIsbn returns the book's slug", async () => {
+  const withSlug = { ok: true, json: async () => ({ data: { editions: [{ book: { slug: "dune", rating: 4, ratings_count: 10, user_books: [] } }] } }) } as unknown as Response;
+  vi.mocked(fetchWithTimeout).mockResolvedValueOnce(withSlug);
+  expect((await lookupByIsbn("1"))?.slug).toBe("dune");
+  vi.mocked(fetchWithTimeout).mockResolvedValueOnce(match);
+  expect((await lookupByIsbn("1"))?.slug).toBeNull();
+});
+
 it("maps a no-retry 429 the same way", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 429, headers: { "Retry-After": "4" } })));
   try {

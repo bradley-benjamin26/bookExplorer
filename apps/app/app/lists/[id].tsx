@@ -2,8 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
+import { CenteredModal } from "../../src/components/CenteredModal";
 import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
 import { Footer } from "../../src/components/Footer";
@@ -16,13 +17,14 @@ import { getSessionToken } from "../../src/hardcoverSession";
 import { memberHref, routes } from "../../src/navigation";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
 import { getList, getLists, linkList, type ListMember, type SavedList } from "../../src/storage/savedLists";
-import { useThemedStyles, type Theme } from "../../src/theme";
+import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
 export default function ListDetail() {
   const { id, skipped } = useLocalSearchParams<{ id: string; skipped?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
+  const theme = useTheme();
   const [list, setList] = useState<SavedList | null | undefined>(undefined);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -31,6 +33,7 @@ export default function ListDetail() {
   // State lags a render, so a fast second tap would pass a `busy` check; the ref flips synchronously.
   const busyRef = useRef(false);
   const [progress, setProgress] = useState("");
+  const [copying, setCopying] = useState(false);
   const [summary, setSummary] = useState(() => {
     try {
       const t: string[] = skipped ? JSON.parse(skipped) : [];
@@ -90,7 +93,21 @@ export default function ListDetail() {
     setBusy(false);
     load();
   };
-  const copy = () => runHardcover((l) => copyToHardcover(l, (d, t) => setProgress(`Copying ${d} of ${t}…`)));
+  const copy = async () => {
+    setCopying(true);
+    try {
+      await runHardcover((l) =>
+        copyToHardcover(
+          l,
+          (d, t) => setProgress(`Copying ${d} of ${t}…`),
+          undefined,
+          (s) => setProgress(`Hardcover asked us to wait ${s} seconds, then we'll continue.`),
+        ),
+      );
+    } finally {
+      setCopying(false);
+    }
+  };
   const sync = () => runHardcover(syncWithHardcover);
   const unlink = async () => {
     if (busyRef.current) return;
@@ -151,6 +168,15 @@ export default function ListDetail() {
             </Text>
           ) : null}
           {summary ? <Text style={styles.description}>{summary}</Text> : null}
+          <CenteredModal visible={copying} label="Copying to Hardcover">
+            <View style={styles.copyCard}>
+              <ActivityIndicator color={theme.colors.cover} />
+              <Text style={styles.copyTitle}>Copying to Hardcover</Text>
+              <Text style={styles.copyProgress} accessibilityLiveRegion="polite">
+                {progress || "Starting…"}
+              </Text>
+            </View>
+          </CenteredModal>
           {list.kind === "book" && getSessionToken() !== null ? (
             <View style={styles.exportRow}>
               {list.hardcoverListId ? (
@@ -216,6 +242,9 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
+    copyCard: { padding: spacing.lg, alignItems: "center", gap: spacing.sm },
+    copyTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },
+    copyProgress: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, textAlign: "center" },
     name: { fontFamily: fonts.displayMedium, fontSize: typeScale.lg, color: colors.ink },
     description: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginTop: spacing.sm, lineHeight: 22 },
     emptyText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic", marginTop: spacing.lg },

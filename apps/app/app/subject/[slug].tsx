@@ -16,11 +16,12 @@ import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
-import { titleCase } from "../../src/titleCase";
+import { subjectDisplayName, subjectLabel, subjectSpokenLabel } from "../../src/subjectLabel";
 import { titleRef } from "../../src/webTitle";
 
 export default function SubjectDetail() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, label: rawLabel } = useLocalSearchParams<{ slug: string; label?: string | string[] }>();
+  const label = typeof rawLabel === "string" ? rawLabel : undefined;
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -31,8 +32,8 @@ export default function SubjectDetail() {
   });
 
   useEffect(() => {
-    if (data) addRecent({ kind: "subject", id: data.slug, title: titleCase(data.name), subtitle: null });
-  }, [data]);
+    if (data) addRecent({ kind: "subject", id: data.slug, title: subjectLabel(subjectDisplayName(data.slug, data.name, label)), subtitle: null });
+  }, [data, label]);
 
   const [sort, setSort] = useState(DEFAULT_SUBJECT_SORT);
   const sortParams = data ? subjectSortParams(data.name, sort) : null;
@@ -55,6 +56,7 @@ export default function SubjectDetail() {
   }
 
   const { books, fellBack } = booksForSort(!!sortParams, sorted, data.books);
+  const pageTitle = subjectLabel(subjectDisplayName(data.slug, data.name, label));
   const broader = data.relatedConcepts.filter((c) => c.relation === "broader");
   const narrower = data.relatedConcepts.filter((c) => c.relation === "narrower");
 
@@ -67,7 +69,7 @@ export default function SubjectDetail() {
       ListHeaderComponent={
         <View>
           <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-          <DetailTop title={titleCase(data.name)} actions={<ShareButton title={titleCase(data.name)} href={routes.subject(data.slug)} />}>
+          <DetailTop title={pageTitle} actions={<ShareButton title={pageTitle} href={routes.subject(data.slug, label)} />}>
             <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           </DetailTop>
           {data.description && <AboutSection text={data.description} />}
@@ -92,15 +94,15 @@ export default function SubjectDetail() {
                   <View style={styles.conceptTags}>
                     {items.map((concept) => (
                       <Pressable
-                        ref={titleRef(`View ${titleCase(concept.label)}`)}
+                        ref={titleRef(`View ${subjectSpokenLabel(concept.label)}`)}
                         key={concept.label}
                         style={({ pressed }) => [styles.conceptTag, pressed && styles.pressed]}
-                        onPress={() => router.push(routes.subject(slugifySubject(concept.label)))}
+                        onPress={() => router.push(routes.subject(slugifySubject(concept.label), concept.label))}
                         accessibilityRole="button"
-                        accessibilityLabel={titleCase(concept.label)}
+                        accessibilityLabel={subjectSpokenLabel(concept.label)}
                       >
                         <Text style={styles.conceptTagText}>
-                          {titleCase(concept.label)}
+                          {subjectLabel(concept.label)}
                         </Text>
                       </Pressable>
                     ))}

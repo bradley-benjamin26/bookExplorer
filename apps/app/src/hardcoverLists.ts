@@ -28,6 +28,13 @@ export async function importList(hardcoverListId: number): Promise<{ list: Saved
   return { list, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }
 
+/** Imports one at a time; the first failure rethrows and lists already imported stay. */
+export async function importChosenLists(hardcoverListIds: number[]): Promise<string[]> {
+  const ids: string[] = [];
+  for (const id of hardcoverListIds) ids.push((await importList(id)).list.id);
+  return ids;
+}
+
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const MAX_RATE_LIMIT_RETRIES = 5;
 
@@ -35,6 +42,7 @@ export async function copyToHardcover(
   list: SavedList,
   onProgress: (done: number, total: number) => void,
   sleep: (ms: number) => Promise<void> = wait,
+  onWait: (seconds: number) => void = () => {},
 ): Promise<{ missing: string[]; skippedAuthors: number }> {
   let linked = list;
   if (list.hardcoverListId === undefined) {
@@ -56,7 +64,9 @@ export async function copyToHardcover(
         break;
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 429) || tries >= MAX_RATE_LIMIT_RETRIES) throw e;
-        await sleep((e.retryAfterSeconds ?? 60) * 1000);
+        const seconds = e.retryAfterSeconds ?? 60;
+        onWait(seconds);
+        await sleep(seconds * 1000);
       }
     }
     onProgress(++done, todo.length);

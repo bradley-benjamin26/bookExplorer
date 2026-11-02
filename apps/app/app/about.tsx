@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccordionSection } from "../src/components/AccordionSection";
 import { Footer } from "../src/components/Footer";
 import { useThemedStyles, type Theme } from "../src/theme";
 
@@ -7,15 +8,6 @@ function Title({ children }: { children: ReactNode }) {
   const styles = useThemedStyles(createStyles);
   return (
     <Text style={styles.title} accessibilityRole="header">
-      {children}
-    </Text>
-  );
-}
-
-function Heading({ children }: { children: ReactNode }) {
-  const styles = useThemedStyles(createStyles);
-  return (
-    <Text style={styles.heading} accessibilityRole="header">
       {children}
     </Text>
   );
@@ -59,20 +51,25 @@ export default function About() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.article}>
         <Title>About Shelf Thread</Title>
-        <Heading>What is it?</Heading>
+        <AccordionSection title="What is it?">
         <P>
           Shelf Thread is designed for those times you're stuck looking at a shelf of books and don't know what to read next.
           Using the app you can scan the barcodes of books to create lists, explore related books, find connections, and get recommendations.
           To make recommendations, Shelf Thread uses data from sources like the Library of Congress, Wikidata, and Open Library to make connections
           rather than using cookies or and trackers.
         </P>
-        <Heading>The Homepage</Heading>
+        </AccordionSection>
+
+
+        <AccordionSection title="The Homepage">
         <P>
           The homepage provides an option to scan book barcodes using your phone as well as an option to search for books using title, author, or ISBN.
           It also is a place to find your browsing history so you can easily revist something you've been looking at previously.
         </P>
+        </AccordionSection>
 
-        <Heading>The Graph View</Heading>
+
+        <AccordionSection title="The Graph View">
         <P>
           The graph view is the core of Shelf Thread. These pages show all the different connections and allow you to explore them. If you
           scan an ISBN you can see the subjects, author, awards, and other information displayed as a visual. You can then tap the different nodes to see new
@@ -82,10 +79,12 @@ export default function About() {
           You can switch between a list and graph view. The list view provides a more accessible way to navigate the connections by organizing everything into
           a list.
         </P>
+        </AccordionSection>
 
-        <Heading>My Library</Heading>
+
+        <AccordionSection title="My Library">
         <P>
-          The shelf icon in the top right of the app directs you to the My Library section, with five
+          The shelf icon in the top right of the app directs you to the My Library section, with six
           sections:
         </P>
         <BulletList>
@@ -109,7 +108,10 @@ export default function About() {
             "It also allows you to add library links to try to find books in your local library. See below for more detailed instructions on what to do.",
           ]}>Settings</BulletItem>
         </BulletList>
-        <Heading>Works, Books, Authors, and Subject</Heading>
+        </AccordionSection>
+
+
+        <AccordionSection title="Works, Books, Authors, and Subject">
         <P>
           These are the 4 primary entities that you can explore using Shelf Thread.
           Each has a separate page type dedicated to exploring and managing that entity. They each have an option
@@ -129,8 +131,10 @@ export default function About() {
             "These pages contain lists of books that can be organized by categories like most read and newest. A short description may also display if one can be found.",
           ]}>Subject</BulletItem>
         </BulletList>
+        </AccordionSection>
 
-        <Heading>Setting up the library links</Heading>
+
+        <AccordionSection title="Setting up the library links">
         <P>
           Within the app's My Library section, there is a way to add local library links. To do this you just need to go to your library's website and
           catalog to find how that system searches for ISBNs and titles.
@@ -154,6 +158,7 @@ export default function About() {
           your library for help! You can repeat this process and instead do everything the same but for title, using{" "}
           {"{title}"}.
         </P>
+        </AccordionSection>
       </View>
       <Footer />
     </ScrollView>
@@ -172,13 +177,6 @@ function createStyles({ colors, fonts, typeScale, spacing }: Theme) {
       color: colors.ink,
       marginTop: spacing.lg,
       marginBottom: spacing.sm,
-    },
-    heading: {
-      fontFamily: fonts.displayMedium,
-      fontSize: typeScale.md,
-      color: colors.ink,
-      marginTop: spacing.lg,
-      marginBottom: spacing.xs,
     },
     bodyText: {
       fontFamily: fonts.body,

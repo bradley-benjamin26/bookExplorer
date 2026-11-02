@@ -5,6 +5,8 @@ import { Image } from "expo-image";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { FindLinkRow } from "../../src/components/FindLinkRow";
+import { hardcoverUrl, openLibraryWorkUrl } from "../../src/findLinks";
 import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
@@ -18,7 +20,7 @@ import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { WorkSaveButton } from "../../src/components/WorkSaveButton";
 import { ShareButton } from "../../src/components/ShareButton";
-import { AwardsSection, LockButton, TermsSection } from "../../src/components/TermsSection";
+import { AwardsSection, EditLinkRow, TermsSection } from "../../src/components/TermsSection";
 import type { SaveSheetHandle } from "../../src/components/AddToListButton";
 import { routes } from "../../src/navigation";
 import { savedEditionOf } from "../../src/editionChoice";
@@ -26,6 +28,7 @@ import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedB
 import { addRecent } from "../../src/storage/history";
 import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { editLinkHost } from "../../src/termsEditHost";
 import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
@@ -47,7 +50,7 @@ export default function WorkDetail() {
   // Saved exactly when it has a saved record, as on the book page.
   const [savedRecord, setSavedRecord] = useState<SavedWorkRecord | null>(null);
   const saveSheet = useRef<SaveSheetHandle>(null);
-  // Set when the lock asked for the save, so a saved edition opens ready to edit.
+  // Set when Edit asked for the save, so a saved edition opens ready to edit.
   const editAfterSave = useRef(false);
 
   // Re-read on every focus: this screen stays mounted under others, so an edit
@@ -96,6 +99,11 @@ export default function WorkDetail() {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No work found for ${id}`} />;
   }
 
+  const genreLabels = lock.unlocked ? lock.draft.genres : savedRecord?.genres ?? data.genres.map((t) => t.label);
+  const subjectLabels = lock.unlocked ? lock.draft.subjects : savedRecord?.subjects ?? data.subjects.map((t) => t.label);
+  const host = editLinkHost(genreLabels, subjectLabels, lock.unlocked);
+  const editLink = { label: lock.unlocked ? ("Save" as const) : ("Edit" as const), onPress: lock.toggle };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
@@ -116,7 +124,6 @@ export default function WorkDetail() {
                 else getSavedWork(data.openLibraryWorkId).then(setSavedRecord);
               }}
             />
-            <LockButton unlocked={lock.unlocked} onPress={lock.toggle} />
           </>
         }
       >
@@ -175,17 +182,20 @@ export default function WorkDetail() {
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
+      {host === "standalone" && <EditLinkRow editLink={editLink} />}
       <TermsSection
         kind="genres"
-        labels={lock.unlocked ? lock.draft.genres : savedRecord?.genres ?? data.genres.map((t) => t.label)}
+        labels={genreLabels}
         unlocked={lock.unlocked}
         onEdit={(change) => lock.edit("genres", change)}
+        editLink={host === "genres" ? editLink : undefined}
       />
       <TermsSection
         kind="subjects"
-        labels={lock.unlocked ? lock.draft.subjects : savedRecord?.subjects ?? data.subjects.map((t) => t.label)}
+        labels={subjectLabels}
         unlocked={lock.unlocked}
         onEdit={(change) => lock.edit("subjects", change)}
+        editLink={host === "subjects" ? editLink : undefined}
         tagged={data.subjects}
       />
       <AwardsSection awards={data.awards} />
@@ -205,6 +215,12 @@ export default function WorkDetail() {
 
       <SeriesSection seriesQid={data.series?.wikidataId} currentWorkId={data.openLibraryWorkId} />
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
+
+      <View style={styles.findSection}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <FindLinkRow label="View on Open Library" url={openLibraryWorkUrl(data.openLibraryWorkId)} />
+        <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.title)} />
+      </View>
 
       <ReviewsSection reviews={data.reviews} />
       <Footer />
@@ -232,6 +248,7 @@ function createStyles({ colors, radii, cardStyle, spacing, fonts, typeScale }: T
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     section: { marginTop: spacing.xxl, width: "100%" },
+    findSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     notes: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
   });

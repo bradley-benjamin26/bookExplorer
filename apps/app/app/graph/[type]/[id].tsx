@@ -23,7 +23,11 @@ import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel }
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
+import { subjectSpokenLabel } from "../../../src/subjectLabel";
 import { CENTER_NODE_RADIUS, LABEL_LINE_HEIGHT, layoutGraph, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
+
+/** Node labels show subjects with "->"; screen readers get commas. */
+const spoken = (n: GraphNode) => (n.type === "subject" ? subjectSpokenLabel(n.label.split("->").join(", ")) : n.label);
 
 function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
   return {
@@ -492,11 +496,11 @@ export default function GraphExplorer() {
             return (
               <View key={node.id} style={styles.listRow}>
                 <Pressable
-                  ref={titleRef(href ? (isCenter ? `Open ${node.label}` : `View ${node.label}`) : `${node.label} has no page yet`)}
+                  ref={titleRef(href ? (isCenter ? `Open ${spoken(node)}` : `View ${spoken(node)}`) : `${spoken(node)} has no page yet`)}
                   onPress={() => href && router.push(href)}
                   disabled={!href}
                   accessibilityRole="button"
-                  accessibilityLabel={[`${node.label}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
+                  accessibilityLabel={[`${spoken(node)}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
                     .filter(Boolean)
                     .join(". ")}
                   accessibilityHint={href ? "Opens this item's page" : undefined}
@@ -514,10 +518,10 @@ export default function GraphExplorer() {
                 </Pressable>
                 {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && (
                   <Pressable
-                    ref={titleRef(`Center graph on ${node.label}`)}
+                    ref={titleRef(`Center graph on ${spoken(node)}`)}
                     onPress={() => handleNodePress(node)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Center graph on ${node.label}`}
+                    accessibilityLabel={`Center graph on ${spoken(node)}`}
                     hitSlop={4}
                     style={({ pressed }) => [styles.zoomButton, pressed && styles.pressed]}
                   >
@@ -674,7 +678,7 @@ export default function GraphExplorer() {
           // A screen reader landing on one node in isolation can't see its edges, so spell them out.
           const relations = nodeRelations(visible, node.id).join(". ");
           const label = [
-            `${node.label}, ${NODE_LABELS[node.type]}`,
+            `${spoken(node)}, ${NODE_LABELS[node.type]}`,
             isCenter && "currently centered",
             relations,
             !node.navigable && "not yet linked",
@@ -685,7 +689,7 @@ export default function GraphExplorer() {
           return (
             <Pressable
               key={node.id}
-              ref={titleRef(!node.navigable ? `${node.label} has no page yet` : isCenter ? `Open ${node.label}` : `View ${node.label}`)}
+              ref={titleRef(!node.navigable ? `${spoken(node)} has no page yet` : isCenter ? `Open ${spoken(node)}` : `View ${spoken(node)}`)}
               onPress={() => handleNodePress(node)}
               disabled={!node.navigable}
               accessibilityRole="button"

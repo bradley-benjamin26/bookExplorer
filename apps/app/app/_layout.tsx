@@ -16,9 +16,7 @@ import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { HeaderTitle } from "../src/components/HeaderTitle";
-import { MyLibraryButton } from "../src/components/MyLibraryButton";
 import { WebTooltip } from "../src/components/WebTooltip";
-import { NewSearchButton } from "../src/components/NewSearchButton";
 import { persistOptions } from "../src/queryCache";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
 import { loadSession, onSessionCleared } from "../src/hardcoverSession";
@@ -107,7 +105,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               contentStyle: { backgroundColor: theme.colors.paper },
             }}
           >
-            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<MyLibraryButton />) }} />
+            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<HeaderActions show={["about", "library"]} />) }} />
             <Stack.Screen
               name="scan"
               options={{ title: "Scan Barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}
@@ -125,13 +123,13 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               options={{ title: "Explore Graph", headerRight: inHeader(<HeaderActions />) }}
             />
             <Stack.Screen name="connection" options={{ title: "Find Connection", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<NewSearchButton iconOnly />) }} />
+            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<HeaderActions show={["about", "search"]} />) }} />
             <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="backup" options={{ title: "Import & Export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover" options={{ title: "My Hardcover Account", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover-connected" options={{ title: "Hardcover", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions show={["library", "search"]} />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />
           </Stack>

@@ -72,6 +72,7 @@ export interface HardcoverBookData {
   ratingsCount: number;
   reviews: HardcoverReview[];
   coverUrl: string | null;
+  slug: string | null;
 }
 
 // Despite the field's name, `review_markdown` comes back as loose HTML
@@ -101,6 +102,7 @@ const QUERY = `
   query BookByIsbn($isbn: String!) {
     editions(where: { _or: [{ isbn_13: { _eq: $isbn } }, { isbn_10: { _eq: $isbn } }] }, limit: 1) {
       book {
+        slug
         rating
         ratings_count
         image {
@@ -122,6 +124,7 @@ const QUERY = `
 interface HardcoverData {
   editions?: {
     book?: {
+      slug?: string | null;
       rating: number | null;
       ratings_count: number | null;
       image?: { url?: string | null } | null;
@@ -164,6 +167,7 @@ export async function lookupByIsbn(isbn: string, authorization?: string | null):
     ratingsCount: book.ratings_count ?? 0,
     reviews,
     coverUrl: book.image?.url ?? null,
+    slug: book.slug ?? null,
   };
 }
 

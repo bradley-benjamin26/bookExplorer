@@ -1,9 +1,12 @@
+import type { HardcoverListSummary } from "@book-explorer/shared";
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
-import { createHardcoverList } from "../api/client";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { createHardcoverList, fetchHardcoverLists } from "../api/client";
 import { confirmLeave } from "../confirm";
+import { hardcoverChoices, keepOffered, linkedTo, listsNotHolding } from "../hardcoverChoices";
+import { importChosenLists } from "../hardcoverLists";
 import { getSessionToken } from "../hardcoverSession";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import { getPreferences } from "../storage/preferences";
@@ -14,8 +17,9 @@ import {
   type ListMember,
   type SavedList,
 } from "../storage/savedLists";
-import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { CenteredModal } from "./CenteredModal";
 import { titleRef } from "../webTitle";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -136,6 +140,8 @@ export function AddToListButton({
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [remoteLists, setRemoteLists] = useState<HardcoverListSummary[]>([]);
+  const [remoteChecked, setRemoteChecked] = useState<Set<number>>(new Set());
   const [onAnyList, setOnAnyList] = useState(false);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -159,9 +165,14 @@ export function AddToListButton({
   const load = (reset: boolean) => {
     setLoadError("");
     setLoading(true);
-    return Promise.all([getLists(kind), getPreferences()])
-      .then(([ls, prefs]) => {
+    // A Hardcover failure just leaves those rows out.
+    const remote = getSessionToken() && kind === "book" ? fetchHardcoverLists().catch(() => []) : Promise.resolve([]);
+    return Promise.all([getLists(kind), getPreferences(), remote])
+      .then(([ls, prefs, rem]) => {
         setLists(ls);
+        const choices = hardcoverChoices(rem, ls);
+        setRemoteLists(choices);
+        setRemoteChecked((prev) => keepOffered(reset ? new Set() : prev, choices));
         if (!reset) return;
         const held = ls.filter(holds);
         // On no list yet: start with the default list ticked, so saving there is just Done.
@@ -184,13 +195,25 @@ export function AddToListButton({
       if (!next.delete(list.id)) next.add(list.id);
       return next;
     });
+  const toggleRemote = (id: number) =>
+    setRemoteChecked((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
   const done = async () => {
     setError("");
     setBusy(true); // also blocks a second tap while the confirm is up
     try {
-      if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
+      if (remoteChecked.size === 0 && leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
       let issue = "";
-      await applyListChanges(member, listChanges(lists, member, checked), onSave, (m) => {
+      // Import first: the imported lists then get the book through the normal add path.
+      const created = await importChosenLists([...remoteChecked]);
+      setChecked((prev) => new Set([...prev, ...created]));
+      // An imported list may already hold the book; adding it again would re-push it to Hardcover.
+      const imported = created.length ? listsNotHolding(await getLists(kind), member, created) : [];
+      const changes = listChanges(lists, member, checked);
+      await applyListChanges(member, { ...changes, add: [...changes.add, ...imported] }, onSave, (m) => {
         issue = m;
         setError(m);
       });
@@ -200,6 +223,11 @@ export function AddToListButton({
       else setOpen(false);
     } catch (e) {
       setError(errorText(e));
+      // A failed import may have linked some lists; tick them (they're local rows now) so a retry still adds the book, then reload so it doesn't import them again.
+      const fresh = await getLists(kind).catch(() => [] as SavedList[]);
+      const now = linkedTo(remoteChecked, fresh);
+      setChecked((prev) => new Set([...prev, ...now]));
+      await load(false);
     } finally {
       setBusy(false);
       refreshStar();
@@ -217,9 +245,7 @@ export function AddToListButton({
       {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={() => show()} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>}
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={styles.backdrop}>
-          <View style={styles.sheet}>
+      <CenteredModal visible={open} label="Choose a list" onClose={() => setOpen(false)}>
             <ScrollView contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
@@ -260,6 +286,26 @@ export function AddToListButton({
                       </Pressable>
                     );
                   })}
+                  {remoteLists.map((r) => {
+                    const isChecked = remoteChecked.has(r.id);
+                    const Icon = isChecked ? SquareCheck : Square;
+                    return (
+                      <Pressable
+                        ref={titleRef(`Import ${r.name} from Hardcover and add this book`)}
+                        key={`h${r.id}`}
+                        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                        onPress={() => toggleRemote(r.id)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isChecked }}
+                        accessibilityLabel={`${r.name}, a Hardcover list; adds this book and imports the list`}
+                      >
+                        <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
+                        <Text style={styles.rowText} numberOfLines={2}>
+                          {r.name} · on Hardcover
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                   <Pressable
                     ref={titleRef("Create a new list")}
                     style={({ pressed }) => [styles.row, pressed && styles.pressed]}
@@ -280,7 +326,7 @@ export function AddToListButton({
                 </Text>
               ) : null}
               <View style={styles.footer}>
-                <Button variant="pill" onPress={() => setOpen(false)}>
+                <Button variant="primary" onPress={() => setOpen(false)} style={styles.doneButton}>
                   Cancel
                 </Button>
                 <Button variant="primary" onPress={done} disabled={busy || loading || !!loadError} style={styles.doneButton}>
@@ -288,25 +334,13 @@ export function AddToListButton({
                 </Button>
               </View>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </CenteredModal>
     </>
   );
 }
 
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    // No theme token for a scrim; a translucent black reads in both schemes.
-    backdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
-    sheet: {
-      width: "100%",
-      maxWidth: CONTENT_MAX_WIDTH,
-      maxHeight: "85%",
-      backgroundColor: colors.paper,
-      borderTopLeftRadius: radii.md,
-      borderTopRightRadius: radii.md,
-    },
     sheetContent: { padding: spacing.lg },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     notice: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.md },

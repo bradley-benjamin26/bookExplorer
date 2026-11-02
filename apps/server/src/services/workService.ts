@@ -103,6 +103,7 @@ export function getWorkDetail(workId: string, hardcoverAuth?: string | null): Pr
         { source: "lcsh", labels: locMetadata.genres },
         { source: "wikidata", labels: wikidataGenres },
       ]),
+      hardcoverSlug: hc?.slug ?? null,
       rating: blendHardcoverAndOpenLibraryRating(hc, olRatings),
       reviews: hc?.reviews ?? [],
       ...(series && { series }),

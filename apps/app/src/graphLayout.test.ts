@@ -13,6 +13,11 @@ describe("wrapLabel", () => {
     expect(lines).toHaveLength(3);
     expect(lines[2].endsWith("…")).toBe(true);
   });
+
+  it("breaks after -> without adding spaces", () => {
+    expect(wrapLabel("Fiction->Historical->Medieval")).toEqual(["Fiction->", "Historical->", "Medieval"]);
+    expect(wrapLabel("A->B")).toEqual(["A->B"]);
+  });
 });
 
 describe("layoutGraph", () => {
@@ -42,6 +47,21 @@ describe("layoutGraph", () => {
         expect(gap).toBeGreaterThan(radius(nodes[i].id) + radius(nodes[j].id));
       }
     }
+  });
+});
+
+describe("layoutGraph subject labels", () => {
+  it("joins subject parts with -> but only title-cases genres", () => {
+    const graph: Graph = {
+      centerId: "subject:a",
+      nodes: [
+        { id: "subject:a", type: "subject", label: "Fiction -- Historical", navigable: true },
+        { id: "genre:b", type: "genre", label: "science fiction", navigable: true },
+      ],
+      edges: [{ source: "subject:a", target: "genre:b", relation: "related" }],
+    };
+    const labels = layoutGraph(graph, 400, 600).nodes.map((n) => n.label);
+    expect(labels).toEqual(["Fiction->Historical", "Science Fiction"]);
   });
 });
 

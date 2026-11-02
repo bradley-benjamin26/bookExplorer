@@ -17,3 +17,8 @@ export function progressLabel(p: HardcoverProgress): string | null {
       return null;
   }
 }
+
+/** Screen-reader text for the progress row, whose visible "on Hardcover" is the logo. */
+export function progressSpokenLabel(label: string): string {
+  return `${label} on Hardcover`;
+}

@@ -19,7 +19,9 @@ import type { CsvBookRow } from "../csv";
 import { prefetchMissingSaved } from "../useSavedPrefetch";
 import type { Snapshot } from "../storage/snapshot";
 import { useThemedStyles, type Theme } from "../theme";
+import { exportFileInfo } from "../exportFormats";
 import { Button } from "./Button";
+import { ExportButton } from "./ExportButton";
 
 export const today = () => new Date().toISOString().slice(0, 10);
 
@@ -114,20 +116,14 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
         A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
       </Text>
       <View style={styles.buttons}>
-        <Button
-          variant="pill"
-          onPress={() => attempt(async () => shareFile(`book-explorer-${today()}.json`, await exportJson(), "application/json"))}
-          accessibilityLabel="Export backup as JSON"
-        >
-          Export backup
-        </Button>
-        <Button
-          variant="pill"
-          onPress={() => attempt(async () => shareFile(`book-explorer-books-${today()}.csv`, await exportCsv(workIsbn), "text/csv"))}
-          accessibilityLabel="Export books as CSV"
-        >
-          Export CSV
-        </Button>
+        <ExportButton
+          onChoose={(format) =>
+            attempt(async () => {
+              const { name, mime } = exportFileInfo(format, today());
+              await shareFile(name, format === "json" ? await exportJson() : await exportCsv(workIsbn), mime);
+            })
+          }
+        />
         {/* One import at a time: a backup merge/replace mid-CSV would race the CSV's saves. */}
         {!csv?.running && (
           <Button variant="pill" onPress={pickBackup} accessibilityLabel="Import backup from a JSON file">
