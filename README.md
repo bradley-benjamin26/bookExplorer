@@ -61,7 +61,7 @@ only the app name.
 
 The server limits its own calls to each upstream host (shared by all users, extra
 calls queue): openlibrary.org 3/s and 4 at a time, Hardcover 1/s and 2 at a time,
-Wikidata 5/s, other hosts 10/s. On a 429 or 503 (honouring `Retry-After`, else 30 s
+Wikidata 2/s, one at a time, other hosts 10/s. On a 429 or 503 (honouring `Retry-After`, else 30 s
 doubling to 10 min) or three connection failures in a row, the host is left alone
 and calls to it fail fast; book routes answer 503 with `Retry-After` meanwhile.
 It stores only public book/author data, never anything about a user's library

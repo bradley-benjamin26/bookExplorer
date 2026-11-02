@@ -48,7 +48,7 @@ if (appSharedSecret) {
   app.addHook("onRequest", async (request, reply) => {
     if (isPublicPath(request.url)) return;
     if (!isValidAppKey(request.headers["x-app-key"], appSharedSecret)) {
-      return reply.code(401).send({ error: "Missing or invalid X-App-Key header" });
+      return reply.code(403).send({ error: "Missing or invalid X-App-Key header" });
     }
   });
 }

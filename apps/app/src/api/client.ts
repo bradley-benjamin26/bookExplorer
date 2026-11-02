@@ -69,13 +69,6 @@ export class ApiError extends Error {
   }
 }
 
-// Parses every response against the shared zod schema instead of just type-
-// asserting it. The schemas already existed for the server's own use, but
-// nothing was actually running them against what came back over the wire —
-// a malformed or unexpectedly-shaped response would previously pass through
-// silently and surface later as a confusing render-time bug (or not at all,
-// if the missing field just happened to render as blank).
-// `signal` is React Query's, so leaving a screen cancels its in-flight request.
 function headers(extra?: Record<string, string>): Record<string, string> | undefined {
   const h: Record<string, string> = { ...extra };
   if (APP_SHARED_SECRET) h["X-App-Key"] = APP_SHARED_SECRET;

@@ -3,7 +3,7 @@
 // just to learn it can't match anything. (ISBN checking lives in
 // @book-explorer/shared, since the app's search bar needs it too.)
 
-import { slugifySubject } from "@book-explorer/shared";
+import { OPEN_LIBRARY_WORK_ID, slugifySubject } from "@book-explorer/shared";
 
 /** An Open Library author id, e.g. "OL21594A". */
 export function isOpenLibraryAuthorId(id: string): boolean {
@@ -12,7 +12,7 @@ export function isOpenLibraryAuthorId(id: string): boolean {
 
 /** An Open Library work id, e.g. "OL66554W". */
 export function isOpenLibraryWorkId(id: string): boolean {
-  return /^OL\d+W$/.test(id);
+  return OPEN_LIBRARY_WORK_ID.test(id);
 }
 
 /** A Wikidata item id, e.g. "Q42". */
