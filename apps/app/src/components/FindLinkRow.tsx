@@ -1,32 +1,36 @@
-import { ChevronRight } from "lucide-react-native";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ExternalLink } from "lucide-react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
-import { titleRef } from "../webTitle";
+import { PressableRow } from "./PressableRow";
 
-export function FindLinkRow({ label, url }: { label: string; url: string }) {
-  const theme = useTheme();
+/** An off-app link row: the external-link icon, not a chevron, says it leaves the app. */
+export function FindLinkRow({ label, url, tooltip }: { label: string; url: string; tooltip?: string }) {
+  const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   return (
-    <Pressable
-      ref={titleRef(label)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    <PressableRow
+      label={label}
+      tooltip={tooltip ?? label}
+      accessibilityHint="Opens in your browser"
       onPress={() => Linking.openURL(url)}
-      accessibilityRole="button"
-      accessibilityLabel={label}
+      trailing={<ExternalLinkIcon color={colors.inkFaint} />}
     >
       <Text style={styles.text}>{label}</Text>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <ChevronRight size={18} color={theme.colors.inkFaint} />
-      </View>
-    </Pressable>
+    </PressableRow>
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+/** Decorative; the row's label and hint carry the meaning. */
+export function ExternalLinkIcon({ color }: { color: string }) {
+  return (
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <ExternalLink size={18} color={color} strokeWidth={2} />
+    </View>
+  );
+}
+
+function createStyles({ fonts, colors, typeScale }: Theme) {
   return StyleSheet.create({
-    // minHeight keeps the 44pt target.
-    row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 44, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
     text: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
-    pressed: { opacity: 0.6 },
   });
 }

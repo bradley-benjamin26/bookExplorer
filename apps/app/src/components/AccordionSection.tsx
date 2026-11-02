@@ -44,7 +44,8 @@ function createStyles({ colors, fonts, typeScale, spacing }: Theme) {
       marginTop: spacing.md,
     },
     title: { flex: 1, fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink },
-    rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+    // The thread, quiet: a section divider is a strand of it.
+    rule: { height: 1, backgroundColor: colors.thread, opacity: 0.4 },
     body: { paddingTop: spacing.md },
   });
 }

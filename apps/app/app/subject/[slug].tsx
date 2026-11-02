@@ -11,6 +11,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { WorkListRow } from "../../src/components/WorkListRow";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
@@ -43,13 +44,7 @@ export default function SubjectDetail() {
     enabled: !!sortParams,
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No subject found for ${slug}`} />;
@@ -71,19 +66,22 @@ export default function SubjectDetail() {
       ListHeaderComponent={
         <View>
           <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-          <DetailTop title={pageTitle} accessibilityLabel={spokenTitle} actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
+          <DetailTop
+            title={pageTitle}
+            accessibilityLabel={spokenTitle}
+            primaryActions={
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("subject", data.slug))}
+                tooltip="See this subject's books and related subjects as a graph"
+              >
+                View as Graph
+              </Button>
+            }
+            actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
             <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           </DetailTop>
           {data.description && <AboutSection text={data.description} />}
-
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.graph("subject", data.slug))}
-            style={styles.graphButton}
-            tooltip="See this subject's books and related subjects as a graph"
-          >
-            View as Graph
-          </Button>
 
           {[
             { title: "Broader topics", items: broader },
@@ -141,7 +139,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     workCount: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
-    graphButton: { marginTop: spacing.lg },
     sortSpinner: { marginTop: spacing.md },
     pressed: { opacity: 0.6 },
     conceptSection: { marginTop: spacing.xl },

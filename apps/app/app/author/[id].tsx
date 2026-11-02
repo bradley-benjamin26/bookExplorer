@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import type { AuthorRelation } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAuthor } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
@@ -13,6 +13,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { MoreByAuthor } from "../../src/components/WorkListSections";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
@@ -44,13 +45,7 @@ export default function AuthorDetail() {
     if (data) addRecent({ kind: "author", id: data.openLibraryId, title: data.name, subtitle: null });
   }, [data]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No author found for ${id}`} />;
@@ -79,6 +74,25 @@ export default function AuthorDetail() {
           ) : undefined
         }
         title={data.name}
+        primaryActions={
+          <>
+            <Button
+              variant="primary"
+              onPress={() => router.push(routes.graph("author", data.openLibraryId))}
+              tooltip="See this author's books, subjects and links as a graph"
+            >
+              View as Graph
+            </Button>
+            <Button
+              variant="pill"
+              onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
+              accessibilityLabel={`Find a connection from ${data.name}`}
+              tooltip="Find how this author links to a book"
+            >
+              Find Connection
+            </Button>
+          </>
+        }
         actions={
           <>
             <ShareButton title={data.name} href={routes.author(data.openLibraryId)} />
@@ -113,24 +127,6 @@ export default function AuthorDetail() {
           }
         />
       )}
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.graph("author", data.openLibraryId))}
-        style={styles.graphButton}
-        tooltip="See this author's books, subjects and links as a graph"
-      >
-        View as Graph
-      </Button>
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.connection(`author:${data.openLibraryId}`, data.name))}
-        style={styles.graphButton}
-        accessibilityLabel={`Find a connection from ${data.name}`}
-        tooltip="Find how this author links to a book"
-      >
-        Find Connection
-      </Button>
-
       {data.pseudonyms.length > 0 && (
         <Text style={styles.pseudonyms}>Also published as {data.pseudonyms.join(", ")}</Text>
       )}
@@ -202,7 +198,6 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.lg, fontStyle: "italic" },
     openLibraryLink: { alignSelf: "flex-start", marginTop: spacing.lg },
     openLibraryLinkText: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.cover },
-    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     section: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },

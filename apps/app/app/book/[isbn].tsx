@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { normalizeIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
@@ -15,6 +14,7 @@ import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribution";
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
@@ -29,7 +29,6 @@ import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { editLinkHost } from "../../src/termsEditHost";
-import { rowFeedback } from "../../src/rowFeedback";
 import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
@@ -89,13 +88,7 @@ export default function BookDetail() {
     startUnlocked: edit === "1",
   });
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return (
@@ -130,6 +123,28 @@ export default function BookDetail() {
           </>
         }
         title={data.title}
+        primaryActions={
+          data.openLibraryWorkId ? (
+            <>
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
+                tooltip="See this book's authors, subjects and links as a graph"
+              >
+                View as Graph
+              </Button>
+              <Button
+                variant="pill"
+                onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+                accessibilityLabel={`Find a connection from ${data.title}`}
+                accessibilityHint="Shows how this book links to another book you pick"
+                tooltip="Find how this book links to another"
+              >
+                Find Connection
+              </Button>
+            </>
+          ) : undefined
+        }
         actions={
           <>
             <ShareButton title={data.title} href={routes.book(data.isbn)} />
@@ -182,29 +197,6 @@ export default function BookDetail() {
         />
       )}
 
-      {data.openLibraryWorkId && (
-        <>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
-            style={styles.graphButton}
-            tooltip="See this book's authors, subjects and links as a graph"
-          >
-            View as Graph
-          </Button>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
-            style={styles.graphButton}
-            accessibilityLabel={`Find a connection from ${data.title}`}
-            accessibilityHint="Shows how this book links to another book you pick"
-            tooltip="Find how this book links to another"
-          >
-            Find Connection
-          </Button>
-        </>
-      )}
-
       {data.format && (
         <View style={styles.subjectsSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">Format</Text>
@@ -248,56 +240,12 @@ export default function BookDetail() {
             {[data.loc.lcc && `LC call number ${data.loc.lcc}`, data.loc.ddc && `Dewey ${data.loc.ddc}`].filter(Boolean).join(" · ")}
           </Text>
         )}
-        <Pressable
-          ref={titleRef("View this book on Open Library")}
-          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
-          onPress={() => Linking.openURL(`${OPEN_LIBRARY_URL}${data.isbn}`)}
-          accessibilityRole="button"
-          accessibilityLabel="View on Open Library"
-        >
-          <Text style={styles.findRowText}>View on Open Library</Text>
-          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <ChevronRight size={18} color={theme.colors.inkFaint} />
-          </View>
-        </Pressable>
+        <FindLinkRow label="View on Open Library" tooltip="View this book on Open Library" url={`${OPEN_LIBRARY_URL}${data.isbn}`} />
         <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.isbn)} />
-        <Pressable
-          ref={titleRef("Search Bookshop.org for this book")}
-          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
-          onPress={() => Linking.openURL(`${BOOKSHOP_URL}${data.isbn}`)}
-          accessibilityRole="button"
-          accessibilityLabel="Search on Bookshop.org"
-        >
-          <Text style={styles.findRowText}>Search on Bookshop.org</Text>
-          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <ChevronRight size={18} color={theme.colors.inkFaint} />
-          </View>
-        </Pressable>
-        <Pressable
-          ref={titleRef("Search WorldCat for this book")}
-          style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
-          onPress={() => Linking.openURL(`${WORLDCAT_URL}${data.isbn}`)}
-          accessibilityRole="button"
-          accessibilityLabel="Search on WorldCat"
-        >
-          <Text style={styles.findRowText}>Search on WorldCat</Text>
-          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <ChevronRight size={18} color={theme.colors.inkFaint} />
-          </View>
-        </Pressable>
+        <FindLinkRow label="Search on Bookshop.org" tooltip="Search Bookshop.org for this book" url={`${BOOKSHOP_URL}${data.isbn}`} />
+        <FindLinkRow label="Search on WorldCat" tooltip="Search WorldCat for this book" url={`${WORLDCAT_URL}${data.isbn}`} />
         {data.loc && (
-          <Pressable
-            ref={titleRef("View this book in the LOC catalog")}
-            style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
-            onPress={() => Linking.openURL(`https://lccn.loc.gov/${data.loc!.lccn}`)}
-            accessibilityRole="button"
-            accessibilityLabel="View in LOC catalog"
-          >
-            <Text style={styles.findRowText}>View in LOC catalog</Text>
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <ChevronRight size={18} color={theme.colors.inkFaint} />
-            </View>
-          </Pressable>
+          <FindLinkRow label="View in LOC catalog" tooltip="View this book in the LOC catalog" url={`https://lccn.loc.gov/${data.loc.lccn}`} />
         )}
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
@@ -339,19 +287,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     callNumber: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginBottom: spacing.sm },
     findSection: { marginTop: spacing.xxl, width: "100%" },
-    findRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: spacing.md,
-      marginHorizontal: -spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.sm,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
-    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },

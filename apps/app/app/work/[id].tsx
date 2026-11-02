@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { FindLinkRow } from "../../src/components/FindLinkRow";
@@ -13,6 +13,7 @@ import { OfflineBanner } from "../../src/components/OfflineBanner";
 import { EditionsSection } from "../../src/components/EditionsSection";
 import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop } from "../../src/components/DetailTop";
+import { DetailSkeleton } from "../../src/components/Skeleton";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { HardcoverProgress } from "../../src/components/HardcoverProgress";
 import { ReviewsSection } from "../../src/components/ReviewsSection";
@@ -87,13 +88,7 @@ export default function WorkDetail() {
     if (data && savedRecord) seedSavedWorkFromApi(savedRecord.openLibraryWorkId, data).then((r) => r && setSavedRecord(r));
   }, [data, savedRecord]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.colors.cover} />
-      </View>
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!data) {
     return <ErrorState error={error} message={error instanceof Error ? error.message : `No work found for ${id}`} />;
@@ -110,6 +105,28 @@ export default function WorkDetail() {
       <DetailTop
         image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" /> : undefined}
         title={data.title}
+        primaryActions={
+          (
+            <>
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
+                tooltip="See this book's authors, subjects and links as a graph"
+              >
+                View as Graph
+              </Button>
+              <Button
+                variant="pill"
+                onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+                accessibilityLabel={`Find a connection from ${data.title}`}
+                accessibilityHint="Shows how this book links to another book you pick"
+                tooltip="Find how this book links to another"
+              >
+                Find Connection
+              </Button>
+            </>
+          )
+        }
         actions={
           <>
             <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
@@ -160,25 +177,6 @@ export default function WorkDetail() {
           }
         />
       )}
-
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
-        style={styles.graphButton}
-        tooltip="See this book's authors, subjects and links as a graph"
-      >
-        View as Graph
-      </Button>
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
-        style={styles.graphButton}
-        accessibilityLabel={`Find a connection from ${data.title}`}
-        accessibilityHint="Shows how this book links to another book you pick"
-        tooltip="Find how this book links to another"
-      >
-        Find Connection
-      </Button>
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
@@ -244,7 +242,6 @@ function createStyles({ colors, radii, cardStyle, spacing, fonts, typeScale }: T
     savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
     savedEditionLink: { marginTop: spacing.sm, alignSelf: "center" },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
-    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     section: { marginTop: spacing.xxl, width: "100%" },
