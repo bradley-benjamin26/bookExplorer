@@ -1,4 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
+import { EmptyState } from "../src/components/EmptyState";
 import { ArrowDownUp, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -74,7 +75,7 @@ export default function Saved() {
           </Button>
         </>
       ) : lists.length === 0 ? (
-        <Text style={styles.empty}>Save a book from its page to start a list.</Text>
+        <EmptyState message="Save a book from its page to start a list." actionLabel="Search for a book" onAction={() => router.push("/")} />
       ) : (
         lists.map((list) => {
           const noun = list.kind === "author" ? "author" : "book";
@@ -130,7 +131,6 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
     listText: { flex: 1 },
     count: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },
-    empty: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic", marginBottom: spacing.sm },
     error: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger },
     retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
   });

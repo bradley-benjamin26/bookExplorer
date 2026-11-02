@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { EmptyState } from "../../src/components/EmptyState";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
@@ -190,9 +191,11 @@ export default function ListDetail() {
             </View>
           ) : null}
           {list.members.length === 0 ? (
-            <Text style={styles.emptyText}>
-              Nothing here yet. Tap “Save to list” on {list.kind === "author" ? "an author" : "a book"} page to add one.
-            </Text>
+            list.kind === "author" ? (
+              <EmptyState message="This list is empty. Save an author from their page to add them here." />
+            ) : (
+              <EmptyState message="This list is empty. Save a book from its page to add it here." actionLabel="Search for a book" onAction={() => router.push("/")} />
+            )
           ) : (
             list.members.map((member) => (
               <View key={`${member.type}:${member.id}`} style={styles.row}>

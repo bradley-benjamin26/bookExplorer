@@ -13,6 +13,7 @@ import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/sto
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 import { CoverPlaceholder } from "../src/components/CoverPlaceholder";
 import { FeedbackBanner } from "../src/components/FeedbackBanner";
+import { ThreadMotif } from "../src/components/ThreadMotif";
 import { recentCoverUrl } from "../src/listCovers";
 import { rowFeedback } from "../src/rowFeedback";
 
@@ -26,12 +27,6 @@ const FILTERS: { value: RecentFilter; label: string }[] = [
 const typeLabel = (item: RecentItem) => NODE_LABELS[item.kind === "book" ? "work" : item.kind];
 // The graph's node colors, so Home previews the same legend the graph uses.
 const KIND_COLOR = { book: "graphWork", work: "graphWork", author: "graphAuthor", subject: "graphSubject" } as const;
-const INTRO_NODES = [
-  ["Book", "graphWork"],
-  ["Author", "graphAuthor"],
-  ["Subject", "graphSubject"],
-  ["Genre", "graphGenre"],
-] as const;
 
 export default function Home() {
   const router = useRouter();
@@ -65,15 +60,7 @@ export default function Home() {
         {/* First visit only: a returning reader's own threaded recents take this place. */}
         {recent.length === 0 && (
           <View style={styles.intro}>
-            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.introThread}>
-              <View style={styles.introLine} />
-              {INTRO_NODES.map(([label, color]) => (
-                <View key={label} style={styles.introStop}>
-                  <View style={[styles.introNode, { backgroundColor: theme.colors[color] }]} />
-                  <Text style={styles.introLabel}>{label}</Text>
-                </View>
-              ))}
-            </View>
+            <ThreadMotif labelled />
             <Text style={styles.introText}>
               Start with a book you love, then follow the thread to its author, subjects and genres.
             </Text>
@@ -188,12 +175,6 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     inner: { flex: 1, padding: spacing.lg },
     intro: { marginTop: spacing.md, gap: spacing.lg },
-    introThread: { flexDirection: "row" },
-    // Runs between the first and last node centres: four equal cells put those at 1/8 and 7/8.
-    introLine: { position: "absolute", top: 6, left: "12.5%", right: "12.5%", height: 1, backgroundColor: colors.thread },
-    introStop: { flex: 1, alignItems: "center", gap: spacing.xs },
-    introNode: { width: 12, height: 12, borderRadius: 6 },
-    introLabel: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint },
     introText: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, lineHeight: 28, color: colors.ink },
     pressed: { opacity: 0.6 },
     focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
