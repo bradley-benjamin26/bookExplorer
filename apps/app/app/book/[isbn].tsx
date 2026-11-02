@@ -8,6 +8,8 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
 import { Button } from "../../src/components/Button";
+import { FindLinkRow } from "../../src/components/FindLinkRow";
+import { hardcoverUrl } from "../../src/findLinks";
 import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
@@ -257,6 +259,7 @@ export default function BookDetail() {
             <ChevronRight size={18} color={theme.colors.inkFaint} />
           </View>
         </Pressable>
+        <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.isbn)} />
         <Pressable
           ref={titleRef("Search Bookshop.org for this book")}
           style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}

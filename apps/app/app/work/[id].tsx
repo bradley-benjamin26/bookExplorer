@@ -5,6 +5,8 @@ import { Image } from "expo-image";
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
+import { FindLinkRow } from "../../src/components/FindLinkRow";
+import { hardcoverUrl, openLibraryWorkUrl } from "../../src/findLinks";
 import { Footer } from "../../src/components/Footer";
 import { ErrorState } from "../../src/components/ErrorState";
 import { OfflineBanner } from "../../src/components/OfflineBanner";
@@ -214,6 +216,12 @@ export default function WorkDetail() {
       <SeriesSection seriesQid={data.series?.wikidataId} currentWorkId={data.openLibraryWorkId} />
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
+      <View style={styles.findSection}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <FindLinkRow label="View on Open Library" url={openLibraryWorkUrl(data.openLibraryWorkId)} />
+        <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.title)} />
+      </View>
+
       <ReviewsSection reviews={data.reviews} />
       <Footer />
     </ScrollView>
@@ -240,6 +248,7 @@ function createStyles({ colors, cardStyle, spacing, fonts, typeScale }: Theme) {
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     section: { marginTop: spacing.xxl, width: "100%" },
+    findSection: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     notes: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, lineHeight: 24 },
   });

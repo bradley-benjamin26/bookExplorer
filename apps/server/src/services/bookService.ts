@@ -125,6 +125,7 @@ export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): P
       descriptionSourceUrl: wikipedia?.url ?? null,
       coverUrl,
       coverSource,
+      hardcoverSlug: hc?.slug ?? null,
       openLibraryWorkId: ol.workId,
       openLibraryEditionId: ol.editionId,
       wikidataId: workQid,

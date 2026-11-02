@@ -99,6 +99,8 @@ export const BookSchema = z.object({
   // too) whenever the cover is Google Books' own. Hardcover and Open
   // Library covers need no such credit.
   coverSource: z.enum(["googleBooks", "openLibrary", "hardcover"]).nullable(),
+  // Optional so pages cached before this field existed still parse.
+  hardcoverSlug: z.string().nullable().optional(),
   openLibraryWorkId: z.string().nullable(),
   // This edition's own Open Library key (distinct from openLibraryWorkId,
   // which identifies the work all editions share) — lets a client pin a
@@ -189,6 +191,7 @@ export const WorkSchema = WorkRefSchema.extend({
   isbn: z.string().nullable(),
   editions: z.array(EditionSchema),
   rating: RatingSchema.nullable(),
+  hardcoverSlug: z.string().nullable().optional(),
   reviews: z.array(ReviewSchema),
   // Optional enrichments (Wikidata P179/P1545, Open Library author works);
   // absent when the work has none or that lookup failed. `position` is text
