@@ -30,12 +30,11 @@ export function CenteredModal({
 function createStyles({ colors, spacing, radii }: Theme) {
   return StyleSheet.create({
     // No theme token for a scrim; a translucent black reads in both schemes.
-    backdrop: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
+    backdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     card: {
       width: "100%",
       maxWidth: 480,
       maxHeight: "85%",
-      margin: spacing.lg,
       backgroundColor: colors.paper,
       borderRadius: radii.md,
     },

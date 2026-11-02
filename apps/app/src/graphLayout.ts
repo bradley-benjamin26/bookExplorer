@@ -17,12 +17,13 @@ export const LABEL_LINE_HEIGHT = 15;
 // pathologically long label still can't grow the label taller than the
 // space between nodes — the last line gets an ellipsis instead of overflowing.
 export function wrapLabel(label: string): string[] {
-  const words = label.split(/\s+/).filter(Boolean);
+  // A subject's "->" is also a break point; its pieces rejoin without a space.
+  const words = label.split(/\s+/).filter(Boolean).flatMap((w) => w.match(/.+?->|.+$/g) ?? []);
   const lines: string[] = [];
   let current = "";
 
   for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
+    const candidate = current ? `${current}${current.endsWith("->") ? "" : " "}${word}` : word;
     if (candidate.length > LABEL_MAX_CHARS_PER_LINE && current) {
       lines.push(current);
       current = word;

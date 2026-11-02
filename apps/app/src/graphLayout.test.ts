@@ -13,6 +13,11 @@ describe("wrapLabel", () => {
     expect(lines).toHaveLength(3);
     expect(lines[2].endsWith("…")).toBe(true);
   });
+
+  it("breaks after -> without adding spaces", () => {
+    expect(wrapLabel("Fiction->Historical->Medieval")).toEqual(["Fiction->", "Historical->", "Medieval"]);
+    expect(wrapLabel("A->B")).toEqual(["A->B"]);
+  });
 });
 
 describe("layoutGraph", () => {

@@ -38,6 +38,9 @@ export function ExportButton({ onChoose }: { onChoose: (format: ExportFormat) =>
             <Text style={styles.help}>{c.help}</Text>
           </Pressable>
         ))}
+        <Button variant="primary" onPress={() => setOpen(false)} style={styles.cancel}>
+          Cancel
+        </Button>
       </CenteredModal>
     </>
   );
@@ -48,6 +51,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     title: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, padding: spacing.lg },
     choice: { minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
     choiceLabel: { fontFamily: fonts.bodyMedium, fontSize: typeScale.sm, color: colors.ink },
+    cancel: { margin: spacing.lg },
     help: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, lineHeight: 20 },
   });
 }

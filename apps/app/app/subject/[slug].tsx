@@ -20,7 +20,8 @@ import { subjectDisplayName, subjectLabel, subjectSpokenLabel } from "../../src/
 import { titleRef } from "../../src/webTitle";
 
 export default function SubjectDetail() {
-  const { slug, label } = useLocalSearchParams<{ slug: string; label?: string }>();
+  const { slug, label: rawLabel } = useLocalSearchParams<{ slug: string; label?: string | string[] }>();
+  const label = typeof rawLabel === "string" ? rawLabel : undefined;
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);

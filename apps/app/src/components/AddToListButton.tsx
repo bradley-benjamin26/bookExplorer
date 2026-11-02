@@ -5,7 +5,7 @@ import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { createHardcoverList, fetchHardcoverLists } from "../api/client";
 import { confirmLeave } from "../confirm";
-import { hardcoverChoices, keepOffered } from "../hardcoverChoices";
+import { hardcoverChoices, keepOffered, linkedTo, listsNotHolding } from "../hardcoverChoices";
 import { importChosenLists } from "../hardcoverLists";
 import { getSessionToken } from "../hardcoverSession";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
@@ -208,7 +208,9 @@ export function AddToListButton({
       if (remoteChecked.size === 0 && leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
       let issue = "";
       // Import first: the imported lists then get the book through the normal add path.
-      const imported = await importChosenLists([...remoteChecked]);
+      const created = await importChosenLists([...remoteChecked]);
+      // An imported list may already hold the book; adding it again would re-push it to Hardcover.
+      const imported = created.length ? listsNotHolding(await getLists(kind), member, created) : [];
       const changes = listChanges(lists, member, checked);
       await applyListChanges(member, { ...changes, add: [...changes.add, ...imported] }, onSave, (m) => {
         issue = m;
@@ -220,7 +222,10 @@ export function AddToListButton({
       else setOpen(false);
     } catch (e) {
       setError(errorText(e));
-      // A failed import may have linked some lists; reload so a retry doesn't import them again.
+      // A failed import may have linked some lists; tick them (they're local rows now) so a retry still adds the book, then reload so it doesn't import them again.
+      const fresh = await getLists(kind).catch(() => [] as SavedList[]);
+      const now = listsNotHolding(fresh, member, linkedTo(remoteChecked, fresh));
+      setChecked((prev) => new Set([...prev, ...now]));
       await load(false);
     } finally {
       setBusy(false);
