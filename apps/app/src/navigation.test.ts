@@ -13,6 +13,11 @@ describe("routes", () => {
   it("has an About page", () => {
     expect(routes.about()).toBe("/about");
   });
+
+  it("carries a subject's label only when given", () => {
+    expect(routes.subject("a_b", "A, B")).toEqual({ pathname: "/subject/[slug]", params: { slug: "a_b", label: "A, B" } });
+    expect(routes.subject("a_b")).toEqual({ pathname: "/subject/[slug]", params: { slug: "a_b" } });
+  });
 });
 
 describe("nodeHref", () => {

@@ -45,6 +45,21 @@ describe("layoutGraph", () => {
   });
 });
 
+describe("layoutGraph subject labels", () => {
+  it("joins subject parts with -> but only title-cases genres", () => {
+    const graph: Graph = {
+      centerId: "subject:a",
+      nodes: [
+        { id: "subject:a", type: "subject", label: "Fiction -- Historical", navigable: true },
+        { id: "genre:b", type: "genre", label: "science fiction", navigable: true },
+      ],
+      edges: [{ source: "subject:a", target: "genre:b", relation: "related" }],
+    };
+    const labels = layoutGraph(graph, 400, 600).nodes.map((n) => n.label);
+    expect(labels).toEqual(["Fiction->Historical", "Science Fiction"]);
+  });
+});
+
 describe("labelWidthOf", () => {
   it("sizes the widest line for the 13px label font", () => {
     expect(labelWidthOf(["abcdefghij", "abc"])).toBeCloseTo(77, 5);

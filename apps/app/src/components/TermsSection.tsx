@@ -6,6 +6,7 @@ import { suggestTerms } from "../api/client";
 import { routes } from "../navigation";
 import { addTerm, removeTerm, SUBJECTS_SHOWN, visibleSubjects, type Terms } from "../termsDraft";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { subjectLabel, subjectSpokenLabel } from "../subjectLabel";
 import { titleCase } from "../titleCase";
 import { titleRef } from "../webTitle";
 import { Button } from "./Button";
@@ -74,6 +75,9 @@ export function TermsSection({
   const shown = collapsible && !expanded ? visibleSubjects(labels, tagged ?? []) : labels;
   const chipStyle = kind === "genres" ? styles.genreTag : styles.subjectTag;
   const textStyle = kind === "genres" ? styles.genreTagText : styles.subjectTagText;
+  // Genres keep plain title-casing; only subjects get the -> form.
+  const shownLabel = kind === "subjects" ? subjectLabel : titleCase;
+  const spoken = kind === "subjects" ? subjectSpokenLabel : titleCase;
   const toggleLabel = expanded ? "Show fewer subjects" : `Show all ${labels.length} subjects`;
 
   return (
@@ -88,26 +92,26 @@ export function TermsSection({
             {shown.map((label) =>
               unlocked ? (
                 <Pressable
-                  ref={titleRef(`Remove ${titleCase(label)}`)}
+                  ref={titleRef(`Remove ${spoken(label)}`)}
                   key={label}
                   style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
                   onPress={() => onEdit((list) => removeTerm(list, label))}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${titleCase(label)}`}
+                  accessibilityLabel={`Remove ${spoken(label)}`}
                 >
-                  <Text style={textStyle}>{titleCase(label)} ×</Text>
+                  <Text style={textStyle}>{shownLabel(label)} ×</Text>
                 </Pressable>
               ) : (
                 <Pressable
-                  ref={titleRef(`View ${titleCase(label)}`)}
+                  ref={titleRef(`View ${spoken(label)}`)}
                   key={label}
                   style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
-                  onPress={() => router.push(routes.subject(tagged?.find((term) => term.label === label)?.slug ?? slugifySubject(label)))}
+                  onPress={() => router.push(routes.subject(tagged?.find((term) => term.label === label)?.slug ?? slugifySubject(label), label))}
                   accessibilityRole="button"
-                  accessibilityLabel={titleCase(label)}
+                  accessibilityLabel={spoken(label)}
                 >
-                  <Text style={textStyle}>{titleCase(label)}</Text>
+                  <Text style={textStyle}>{shownLabel(label)}</Text>
                 </Pressable>
               )
             )}

@@ -1,6 +1,7 @@
 import type { Graph, GraphNode } from "@book-explorer/shared";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
 import { RELATION_LABELS } from "./graphLabels";
+import { subjectLabel } from "./subjectLabel";
 import { titleCase } from "./titleCase";
 
 export const NODE_RADIUS = 26;
@@ -244,7 +245,7 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
   // Subject/genre terms come in mixed case from their sources; person and work names are left as written.
   const nodes = graph.nodes.map((n) => ({
     ...n,
-    label: n.type === "subject" || n.type === "genre" ? titleCase(n.label) : n.label,
+    label: n.type === "subject" ? subjectLabel(n.label) : n.type === "genre" ? titleCase(n.label) : n.label,
   })) as (GraphNode & { x: number; y: number })[];
   // The server can report the same author→work link under more than one
   // relation name (e.g. "wrote" and "notableWork") — drawn as-is that's two
