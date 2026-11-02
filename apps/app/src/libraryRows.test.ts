@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { LIBRARY_ROWS } from "./libraryRows";
+import { LIBRARY_PRIMARY, LIBRARY_TOOLS } from "./libraryRows";
 
-describe("LIBRARY_ROWS", () => {
-  it("puts Hardcover first", () => expect(LIBRARY_ROWS[0].id).toBe("hardcover"));
-  it("has unique ids", () => expect(new Set(LIBRARY_ROWS.map((r) => r.id)).size).toBe(LIBRARY_ROWS.length));
-  it("keeps the label order", () =>
-    expect(LIBRARY_ROWS.map((r) => r.label)).toEqual(["Hardcover", "Lists", "Recommendations", "Find Connection", "Import & Export", "Settings"]));
+const ALL = [...LIBRARY_PRIMARY, ...LIBRARY_TOOLS];
+
+describe("library rows", () => {
+  it("puts Hardcover first", () => expect(ALL[0].id).toBe("hardcover"));
+  it("has unique ids across both groups", () => expect(new Set(ALL.map((r) => r.id)).size).toBe(ALL.length));
+  it("keeps the primary label order", () =>
+    expect(LIBRARY_PRIMARY.map((r) => r.label)).toEqual(["Hardcover", "Recommendations", "Find Connection"]));
+  it("keeps the tools label order", () => expect(LIBRARY_TOOLS.map((r) => r.label)).toEqual(["Import & Export", "Settings"]));
 });
