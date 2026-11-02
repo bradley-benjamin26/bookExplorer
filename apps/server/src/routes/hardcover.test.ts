@@ -26,7 +26,7 @@ vi.mock("../sources/hardcoverUser.js", () => ({
   removeListBook: vi.fn(),
   readingProgress: vi.fn(),
 }));
-vi.mock("../services/workService.js", () => ({ getWorkDetail: vi.fn() }));
+vi.mock("../sources/openLibrary.js", () => ({ getWork: vi.fn() }));
 vi.mock("../sources/hardcover.js", () => {
   class HardcoverRateLimitError extends Error {
     constructor(readonly retryAfterSeconds: number) {
@@ -36,7 +36,7 @@ vi.mock("../sources/hardcover.js", () => {
   class HardcoverUnauthorizedError extends Error {}
   return { HardcoverRateLimitError, HardcoverUnauthorizedError };
 });
-import { getWorkDetail } from "../services/workService.js";
+import { getWork } from "../sources/openLibrary.js";
 import { HardcoverRateLimitError, HardcoverUnauthorizedError } from "../sources/hardcover.js";
 import * as user from "../sources/hardcoverUser.js";
 import * as svc from "../services/hardcoverAccount.js";
@@ -192,17 +192,18 @@ describe("hardcover routes", () => {
     });
 
     it("adding a work with no ISBNs on Hardcover → 404 with the copy", async () => {
-      vi.mocked(getWorkDetail).mockResolvedValue({ isbn: "9780306406157", editions: [{ isbn: null }, { isbn: "9780306406157" }] } as never);
+      vi.mocked(getWork).mockResolvedValue({ isbnCandidates: ["9780306406157"] } as never);
       u.findBookId.mockResolvedValue(null);
       const res = await call({ method: "POST", url: "/api/hardcover/lists/3/books", headers, payload: { type: "work", id: "OL1W" } });
       expect(res.statusCode).toBe(404);
       expect(res.json()).toEqual({ error: "Hardcover doesn't have this book yet." });
+      expect(getWork).toHaveBeenCalledWith("OL1W");
       expect(u.findBookId).toHaveBeenCalledWith(["9780306406157"], "Bearer T");
       expect(u.addListBook).not.toHaveBeenCalled();
     });
 
     it("an unknown work is 404", async () => {
-      vi.mocked(getWorkDetail).mockResolvedValue(null);
+      vi.mocked(getWork).mockResolvedValue(null);
       u.findBookId.mockResolvedValue(null);
       const res = await call({ method: "POST", url: "/api/hardcover/lists/3/books", headers, payload: { type: "work", id: "OL1W" } });
       expect(res.statusCode).toBe(404);

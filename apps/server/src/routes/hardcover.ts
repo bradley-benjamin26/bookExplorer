@@ -12,9 +12,9 @@ import {
   startConnect,
   userAuthorization,
 } from "../services/hardcoverAccount.js";
-import { getWorkDetail } from "../services/workService.js";
 import { HardcoverRateLimitError, HardcoverUnauthorizedError } from "../sources/hardcover.js";
 import { addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "../sources/hardcoverUser.js";
+import { getWork } from "../sources/openLibrary.js";
 import { upstreamErrorHandler } from "../upstreamErrorHandler.js";
 import { isOpenLibraryWorkId } from "../validation.js";
 
@@ -36,12 +36,10 @@ const NOT_ON_HARDCOVER = "Hardcover doesn't have this book yet.";
 const isPositiveInt = (v: string) => /^[1-9]\d{0,9}$/.test(v);
 
 /** ISBNs to look a member up by, or null when the id is malformed. A work Open Library doesn't know gives []. */
-async function memberIsbns(type: string, id: string, auth: string): Promise<string[] | null> {
+async function memberIsbns(type: string, id: string): Promise<string[] | null> {
   if (type === "book") return isValidIsbn(id) ? [normalizeIsbn(id)] : null;
   if (!isOpenLibraryWorkId(id)) return null;
-  const work = await getWorkDetail(id, auth);
-  if (!work) return [];
-  return [...new Set([work.isbn, ...work.editions.map((e) => e.isbn)].filter((i): i is string => !!i))];
+  return (await getWork(id))?.isbnCandidates ?? [];
 }
 
 export async function hardcoverRoutes(app: FastifyInstance) {
@@ -129,7 +127,7 @@ export async function hardcoverRoutes(app: FastifyInstance) {
     }
     const auth = await requireUser(req, reply);
     if (!auth) return;
-    const isbns = await memberIsbns(type, id, auth);
+    const isbns = await memberIsbns(type, id);
     if (!isbns) return reply.code(400).send({ error: "Invalid book id" });
     const hardcoverBookId = await findBookId(isbns, auth);
     if (hardcoverBookId === null) return reply.code(404).send({ error: NOT_ON_HARDCOVER });
@@ -150,7 +148,7 @@ export async function hardcoverRoutes(app: FastifyInstance) {
     if (type !== "book" && type !== "work") return reply.code(400).send({ error: "Invalid type" });
     const auth = await requireUser(req, reply);
     if (!auth) return;
-    const isbns = await memberIsbns(type, id, auth);
+    const isbns = await memberIsbns(type, id);
     if (!isbns) return reply.code(400).send({ error: "Invalid book id" });
     const bookId = await findBookId(isbns, auth);
     return bookId === null ? { status: null, percent: null } : readingProgress(bookId, auth);
