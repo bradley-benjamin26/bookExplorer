@@ -1,7 +1,8 @@
 import { ApiError, addHardcoverListBook, createHardcoverList, fetchHardcoverList, removeHardcoverListBook } from "./api/client";
 import { reconcile } from "./storage/hardcoverReconcile";
-import { saveListedBook } from "./storage/savedBooks";
-import { createList, getList, linkList, replaceMembers, setMemberHardcoverId, type ListMember, type SavedList } from "./storage/savedLists";
+import { getSavedBook, saveListedBook } from "./storage/savedBooks";
+import { getSavedWork } from "./storage/savedWorks";
+import { createList, ensureOnAList, getList, isOnAnyList, linkList, replaceMembers, setMemberHardcoverId, type ListMember, type SavedList } from "./storage/savedLists";
 import { unsaveIfUnlisted } from "./storage/unlisted";
 
 export async function pushAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
@@ -89,9 +90,14 @@ export async function syncWithHardcover(list: SavedList): Promise<{ missing: str
   const next = reconcile(latest.members, remote.books, Date.now());
   await replaceMembers(list.id, next);
   const key = (m: Pick<ListMember, "type" | "id">) => `${m.type}:${m.id}`;
-  const before = new Set(latest.members.map(key));
   const after = new Set(next.map(key));
-  for (const m of next) if (m.type === "book" && !before.has(key(m))) await saveListedBook(m.id, m.title);
-  for (const m of latest.members) if (!after.has(key(m))) await unsaveIfUnlisted(m);
+  for (const m of next) if (m.type === "book") await saveListedBook(m.id, m.title); // idempotent; repairs books that never got saved
+  for (const m of latest.members) {
+    if (after.has(key(m))) continue;
+    // Hardcover dropping a member must not silently delete the user's notes.
+    const saved = m.type === "book" ? await getSavedBook(m.id) : m.type === "work" ? await getSavedWork(m.id) : null;
+    if (saved?.notes && !(await isOnAnyList(m.type, m.id))) await ensureOnAList({ type: m.type, id: m.id, title: m.title });
+    else await unsaveIfUnlisted(m);
+  }
   return { missing, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }

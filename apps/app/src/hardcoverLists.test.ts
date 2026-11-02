@@ -4,7 +4,7 @@ import { ApiError } from "./api/client";
 import { copyToHardcover, importChosenLists, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
 import { getSavedBook, saveListedBook, unsaveBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems } from "./storage/savedItems";
-import { createList, addToList, getList, linkList, replaceMembers } from "./storage/savedLists";
+import { createList, addToList, getList, isOnAnyList, linkList, replaceMembers } from "./storage/savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 const { add, remove, fetchList, create } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetchList: vi.fn(), create: vi.fn() }));
@@ -267,6 +267,38 @@ describe("hardcoverLists", () => {
       await syncWithHardcover((await getList(l.id))!);
       expect(await getSavedBook(dune.isbn)).toMatchObject({ title: "Dune" });
       expect(await getSavedBook("A")).toBeNull();
+    });
+
+    it("syncWithHardcover keeps a dropped book that has notes, moving it to the default list", async () => {
+      const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+      await addToList(l.id, { type: "book", id: "A", title: "A" });
+      await saveListedBook("A", "A");
+      await updateSavedBook("A", { notes: "mine" });
+      await replaceMembers(l.id, (await getList(l.id))!.members.map((m) => ({ ...m, hardcoverBookId: 2 })));
+      fetchList.mockResolvedValue(remoteList);
+      await syncWithHardcover((await getList(l.id))!);
+      expect(await getSavedBook("A")).toMatchObject({ notes: "mine" });
+      expect(await isOnAnyList("book", "A")).toBe(true);
+    });
+
+    it("syncWithHardcover keeps a dropped book that is still on another list", async () => {
+      const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+      const other = await createList({ name: "B", kind: "book" });
+      for (const id of [l.id, other.id]) await addToList(id, { type: "book", id: "A", title: "A" });
+      await saveListedBook("A", "A");
+      await replaceMembers(l.id, (await getList(l.id))!.members.map((m) => ({ ...m, hardcoverBookId: 2 })));
+      fetchList.mockResolvedValue(remoteList);
+      await syncWithHardcover((await getList(l.id))!);
+      expect(await getSavedBook("A")).not.toBeNull();
+      expect((await getList(other.id))!.members.map((m) => m.id)).toEqual(["A"]);
+    });
+
+    it("syncWithHardcover saves books already on the list that were never saved", async () => {
+      const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+      await replaceMembers(l.id, [{ type: "book", id: dune.isbn, title: "Dune", addedAt: 1, hardcoverBookId: 1 }]);
+      fetchList.mockResolvedValue(remoteList);
+      await syncWithHardcover((await getList(l.id))!);
+      expect(await getSavedBook(dune.isbn)).not.toBeNull();
     });
   });
 });
