@@ -108,11 +108,33 @@ it("throws on GraphQL errors", async () => {
   await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toThrow("boom");
 });
 
+it("a user's token: 401 maps to HardcoverUnauthorizedError", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error: "invalid_token" }, { status: 401 })));
+  await expect(hardcoverGraphql("q", {}, "Bearer user")).rejects.toBeInstanceOf(HardcoverUnauthorizedError);
+});
+
+it("a user's token: 403 reports the missing scope without leaking the token", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ error: "insufficient_scope", scope: "books:read" }, { status: 403 })));
+  const err = await hardcoverGraphql("q", {}, "Bearer usersecret").catch((e: Error) => e);
+  expect((err as Error).message).toContain("books:read");
+  expect((err as Error).message).not.toContain("usersecret");
+});
+
+it("a user's token: a 429 without Retry-After defaults to 60s", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 429 })));
+  await expect(hardcoverGraphql("q", {}, "Bearer user")).rejects.toMatchObject({ retryAfterSeconds: 60 });
+});
+
+it("a user's token: throws on GraphQL errors", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ errors: [{ message: "boom" }] })));
+  await expect(hardcoverGraphql("q", {}, "Bearer user")).rejects.toThrow("boom");
+});
+
 it("sends a no-retry call through plain fetch, so a timed-out mutation is never repeated", async () => {
   const fetchMock = vi.fn(async () => Response.json({ data: { ok: 1 } }));
   vi.stubGlobal("fetch", fetchMock);
   try {
-    expect(await hardcoverGraphql("mutation", {}, "Bearer x", { retry: false })).toEqual({ ok: 1 });
+    expect(await hardcoverGraphql("mutation", {}, "Bearer k", { retry: false })).toEqual({ ok: 1 });
     expect(fetchWithTimeout).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].signal).toBeInstanceOf(AbortSignal);
@@ -132,7 +154,7 @@ it("lookupByIsbn returns the book's slug", async () => {
 it("maps a no-retry 429 the same way", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 429, headers: { "Retry-After": "4" } })));
   try {
-    await expect(hardcoverGraphql("mutation", {}, "Bearer x", { retry: false })).rejects.toMatchObject({ retryAfterSeconds: 4 });
+    await expect(hardcoverGraphql("mutation", {}, "Bearer k", { retry: false })).rejects.toMatchObject({ retryAfterSeconds: 4 });
   } finally {
     vi.unstubAllGlobals();
   }
