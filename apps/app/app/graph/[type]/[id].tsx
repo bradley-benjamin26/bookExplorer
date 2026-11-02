@@ -24,7 +24,7 @@ import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldA
 import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { subjectSpokenLabel } from "../../../src/subjectLabel";
-import { CENTER_NODE_RADIUS, LABEL_LINE_HEIGHT, layoutGraph, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, fitScale, LABEL_LINE_HEIGHT, layoutGraph, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
 
 /** Node labels show subjects with "->"; screen readers get commas. */
 const spoken = (n: GraphNode) => (n.type === "subject" ? subjectSpokenLabel(n.label.split("->").join(", ")) : n.label);
@@ -50,7 +50,6 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
 // labels fade in — below MIN they're fully transparent (too crowded to read,
 // and the loosened layout below hasn't given them room yet), fully opaque by
 // LABEL_FADE_IN_SCALE so a quick pinch past that point doesn't feel laggy.
-const MIN_SCALE = 0.25;
 const MAX_SCALE = 3;
 const LABEL_FADE_OUT_SCALE = 1.0;
 const LABEL_FADE_IN_SCALE = 1.3;
@@ -197,12 +196,11 @@ export default function GraphExplorer() {
   }, [data?.centerId, layout?.contentWidth, layout?.contentHeight]);
 
   // Starts (and, for the reset button, returns to) zoomed out just far enough
-  // to show the whole graph — never past MIN_SCALE, never magnified — centered,
-  // instead of cropping outer nodes.
+  // to show the whole graph clear of the zoom controls — never past MIN_SCALE,
+  // never magnified — centered, instead of cropping outer nodes.
   function resetView() {
     if (!layout) return;
-    const fit = Math.min(1, width / layout.contentWidth, canvasHeight / layout.contentHeight);
-    const initial = Math.max(MIN_SCALE, fit);
+    const initial = fitScale({ width, height: canvasHeight }, { width: layout.contentWidth, height: layout.contentHeight }, CONTROLS_GUTTER);
     scale.value = initial;
     translateX.value = (width - layout.contentWidth * initial) / 2;
     translateY.value = (canvasHeight - layout.contentHeight * initial) / 2;
@@ -414,19 +412,23 @@ export default function GraphExplorer() {
         )}
       </View>
       <View style={styles.toolbar}>
+        {(["Graph", "List"] as const).map((mode) => (
+          <Button
+            key={mode}
+            variant="pill"
+            active={showList === (mode === "List")}
+            onPress={() => {
+              setListChosen(true);
+              setShowList(mode === "List");
+            }}
+            accessibilityLabel={mode === "List" ? "Show nodes as a list" : "Show graph"}
+            tooltip={mode === "List" ? "Show as a list" : "Show as a graph"}
+          >
+            {mode}
+          </Button>
+        ))}
         <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
-        </Button>
-        <Button
-          variant="pill"
-          onPress={() => {
-            setListChosen(true);
-            setShowList((v) => !v);
-          }}
-          accessibilityLabel={showList ? "Show graph" : "Show nodes as a list"}
-          tooltip={showList ? "Show as a graph" : "Show as a list"}
-        >
-          {showList ? "Graph" : "List"}
         </Button>
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
@@ -777,7 +779,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
     emptyGraphText: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, textAlign: "center", lineHeight: 28 },
     hint: {
-      textAlign: "center",
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
       color: colors.inkFaint,
@@ -787,8 +788,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     legend: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "center",
-      gap: spacing.lg,
+      columnGap: spacing.md,
+      rowGap: spacing.xs,
       paddingBottom: spacing.md,
       paddingHorizontal: spacing.lg,
     },
