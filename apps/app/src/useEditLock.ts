@@ -5,9 +5,9 @@ import { draftChanged, type Terms } from "./termsDraft";
 export const SAVE_FIRST_NOTICE = "Save this book to a list before editing its genres, subjects and notes.";
 
 /**
- * The one lock on a book or work page. Unlocking edits a local draft of genres and subjects that is
- * saved when locked again, or when the screen loses focus or unmounts, so leaving without relocking
- * doesn't lose edits. An unsaved record (`record` null) asks to be saved first and unlocks once it is.
+ * The one Edit/Save toggle on a book or work page. Edit opens a local draft of genres and subjects that
+ * is saved on Save, or when the screen loses focus or unmounts, so leaving without saving doesn't lose
+ * edits. An unsaved record (`record` null) asks to be saved first and opens the editor once it is.
  */
 export function useEditLock({
   record,

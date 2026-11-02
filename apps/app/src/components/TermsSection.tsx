@@ -1,6 +1,5 @@
 import { MAX_TAG_LENGTH, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
-import { Lock, LockOpen } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { suggestTerms } from "../api/client";
@@ -17,23 +16,32 @@ const MAX_SUGGESTIONS = 8;
 
 type Kind = keyof Terms;
 
-/** The page's one lock (see useEditLock), shown in the DetailTop actions. */
-export function LockButton({ unlocked, onPress }: { unlocked: boolean; onPress: () => void }) {
+export type EditLink = { label: "Edit" | "Save"; onPress: () => void };
+
+function EditLinkButton({ editLink }: { editLink: EditLink }) {
   const styles = useThemedStyles(createStyles);
-  const theme = useTheme();
-  const label = unlocked ? "Lock and save your edits" : "Edit genres, subjects and notes";
-  const LockIcon = unlocked ? LockOpen : Lock;
+  const label = editLink.label === "Save" ? "Save your edits" : "Edit genres, subjects and notes";
   return (
     <Pressable
       ref={titleRef(label)}
-      style={({ pressed }) => [styles.lockButton, pressed && styles.pressed]}
-      onPress={onPress}
-      hitSlop={8}
+      style={({ pressed }) => [styles.editLink, pressed && styles.pressed]}
+      onPress={editLink.onPress}
+      hitSlop={12}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <LockIcon size={18} color={theme.colors.cover} />
+      <Text style={styles.editLinkText}>{editLink.label}</Text>
     </Pressable>
+  );
+}
+
+/** A right-aligned Edit/Save link for pages with neither genres nor subjects to host it. */
+export function EditLinkRow({ editLink }: { editLink: EditLink }) {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.editLinkRow}>
+      <EditLinkButton editLink={editLink} />
+    </View>
   );
 }
 
@@ -48,17 +56,19 @@ export function TermsSection({
   unlocked,
   onEdit,
   tagged,
+  editLink,
 }: {
   kind: Kind;
   labels: string[];
   unlocked: boolean;
   onEdit: (change: (list: string[]) => string[]) => void;
   tagged?: TaggedTerm[];
+  editLink?: EditLink;
 }) {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  if (!unlocked && labels.length === 0) return null;
+  if (!unlocked && labels.length === 0 && !editLink) return null;
 
   const collapsible = kind === "subjects" && !unlocked && labels.length > SUBJECTS_SHOWN;
   const shown = collapsible && !expanded ? visibleSubjects(labels, tagged ?? []) : labels;
@@ -68,7 +78,10 @@ export function TermsSection({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">{kind === "genres" ? "Genres" : "Subjects"}</Text>
+      <View style={styles.titleLine}>
+        <Text style={styles.sectionTitle} accessibilityRole="header">{kind === "genres" ? "Genres" : "Subjects"}</Text>
+        {editLink && <EditLinkButton editLink={editLink} />}
+      </View>
       <View style={styles.row}>
         {shown.length > 0 && (
           <View style={styles.tags}>
@@ -190,7 +203,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     section: { marginTop: spacing.xxl, width: "100%" },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
-    lockButton: { padding: spacing.xs },
+    titleLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
+    editLinkRow: { marginTop: spacing.xxl, width: "100%", alignItems: "flex-end" },
+    editLink: { minHeight: 44, justifyContent: "center" },
+    editLinkText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover, textDecorationLine: "underline" },
     row: { gap: spacing.sm },
     tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     genreTag: {

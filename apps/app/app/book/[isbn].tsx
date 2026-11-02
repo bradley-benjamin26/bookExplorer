@@ -21,11 +21,12 @@ import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton, type SaveSheetHandle } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
-import { AwardsSection, LockButton, TermsSection } from "../../src/components/TermsSection";
+import { AwardsSection, EditLinkRow, TermsSection } from "../../src/components/TermsSection";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
+import { editLinkHost } from "../../src/termsEditHost";
 import { useEditLock } from "../../src/useEditLock";
 import { titleRef } from "../../src/webTitle";
 
@@ -107,6 +108,11 @@ export default function BookDetail() {
     );
   }
 
+  const genreLabels = lock.unlocked ? lock.draft.genres : displayGenres;
+  const subjectLabels = lock.unlocked ? lock.draft.subjects : displaySubjects;
+  const host = editLinkHost(genreLabels, subjectLabels, lock.unlocked);
+  const editLink = { label: lock.unlocked ? ("Save" as const) : ("Edit" as const), onPress: lock.toggle };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
@@ -134,7 +140,6 @@ export default function BookDetail() {
               }}
               onChange={() => getSavedBook(data.isbn).then(setSavedRecord)}
             />
-            <LockButton unlocked={lock.unlocked} onPress={lock.toggle} />
           </>
         }
       >
@@ -206,17 +211,20 @@ export default function BookDetail() {
         </View>
       )}
 
+      {host === "standalone" && <EditLinkRow editLink={editLink} />}
       <TermsSection
         kind="genres"
-        labels={lock.unlocked ? lock.draft.genres : displayGenres}
+        labels={genreLabels}
         unlocked={lock.unlocked}
         onEdit={(change) => lock.edit("genres", change)}
+        editLink={host === "genres" ? editLink : undefined}
       />
       <TermsSection
         kind="subjects"
-        labels={lock.unlocked ? lock.draft.subjects : displaySubjects}
+        labels={subjectLabels}
         unlocked={lock.unlocked}
         onEdit={(change) => lock.edit("subjects", change)}
+        editLink={host === "subjects" ? editLink : undefined}
         tagged={data.subjects}
       />
       <AwardsSection awards={data.awards} />
