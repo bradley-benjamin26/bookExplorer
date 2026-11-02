@@ -110,6 +110,28 @@ export default function WorkDetail() {
       <DetailTop
         image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" /> : undefined}
         title={data.title}
+        primaryActions={
+          (
+            <>
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
+                tooltip="See this book's authors, subjects and links as a graph"
+              >
+                View as Graph
+              </Button>
+              <Button
+                variant="pill"
+                onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+                accessibilityLabel={`Find a connection from ${data.title}`}
+                accessibilityHint="Shows how this book links to another book you pick"
+                tooltip="Find how this book links to another"
+              >
+                Find Connection
+              </Button>
+            </>
+          )
+        }
         actions={
           <>
             <ShareButton title={data.title} href={routes.work(data.openLibraryWorkId)} />
@@ -160,25 +182,6 @@ export default function WorkDetail() {
           }
         />
       )}
-
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.graph("work", data.openLibraryWorkId))}
-        style={styles.graphButton}
-        tooltip="See this book's authors, subjects and links as a graph"
-      >
-        View as Graph
-      </Button>
-      <Button
-        variant="primary"
-        onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
-        style={styles.graphButton}
-        accessibilityLabel={`Find a connection from ${data.title}`}
-        accessibilityHint="Shows how this book links to another book you pick"
-        tooltip="Find how this book links to another"
-      >
-        Find Connection
-      </Button>
 
       <EditionsSection editions={data.editions} highlighted={highlight === "editions"} />
 
@@ -244,7 +247,6 @@ function createStyles({ colors, radii, cardStyle, spacing, fonts, typeScale }: T
     savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
     savedEditionLink: { marginTop: spacing.sm, alignSelf: "center" },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
-    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     section: { marginTop: spacing.xxl, width: "100%" },

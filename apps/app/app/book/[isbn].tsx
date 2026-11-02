@@ -130,6 +130,28 @@ export default function BookDetail() {
           </>
         }
         title={data.title}
+        primaryActions={
+          data.openLibraryWorkId ? (
+            <>
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
+                tooltip="See this book's authors, subjects and links as a graph"
+              >
+                View as Graph
+              </Button>
+              <Button
+                variant="pill"
+                onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
+                accessibilityLabel={`Find a connection from ${data.title}`}
+                accessibilityHint="Shows how this book links to another book you pick"
+                tooltip="Find how this book links to another"
+              >
+                Find Connection
+              </Button>
+            </>
+          ) : undefined
+        }
         actions={
           <>
             <ShareButton title={data.title} href={routes.book(data.isbn)} />
@@ -180,29 +202,6 @@ export default function BookDetail() {
             ) : undefined
           }
         />
-      )}
-
-      {data.openLibraryWorkId && (
-        <>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.graph("work", data.openLibraryWorkId!))}
-            style={styles.graphButton}
-            tooltip="See this book's authors, subjects and links as a graph"
-          >
-            View as Graph
-          </Button>
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
-            style={styles.graphButton}
-            accessibilityLabel={`Find a connection from ${data.title}`}
-            accessibilityHint="Shows how this book links to another book you pick"
-            tooltip="Find how this book links to another"
-          >
-            Find Connection
-          </Button>
-        </>
       )}
 
       {data.format && (
@@ -351,7 +350,6 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
       borderBottomColor: colors.border,
     },
     findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
-    graphButton: { width: "100%", marginTop: spacing.lg },
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },
     subjectsSection: { marginTop: spacing.xxl, width: "100%" },

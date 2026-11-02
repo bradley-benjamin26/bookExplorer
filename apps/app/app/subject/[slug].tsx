@@ -71,19 +71,22 @@ export default function SubjectDetail() {
       ListHeaderComponent={
         <View>
           <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-          <DetailTop title={pageTitle} accessibilityLabel={spokenTitle} actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
+          <DetailTop
+            title={pageTitle}
+            accessibilityLabel={spokenTitle}
+            primaryActions={
+              <Button
+                variant="primary"
+                onPress={() => router.push(routes.graph("subject", data.slug))}
+                tooltip="See this subject's books and related subjects as a graph"
+              >
+                View as Graph
+              </Button>
+            }
+            actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
             <Text style={styles.workCount}>{data.workCount.toLocaleString()} works</Text>
           </DetailTop>
           {data.description && <AboutSection text={data.description} />}
-
-          <Button
-            variant="primary"
-            onPress={() => router.push(routes.graph("subject", data.slug))}
-            style={styles.graphButton}
-            tooltip="See this subject's books and related subjects as a graph"
-          >
-            View as Graph
-          </Button>
 
           {[
             { title: "Broader topics", items: broader },
@@ -141,7 +144,6 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     workCount: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
     noMatch: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.warning, marginTop: spacing.md, fontStyle: "italic" },
-    graphButton: { marginTop: spacing.lg },
     sortSpinner: { marginTop: spacing.md },
     pressed: { opacity: 0.6 },
     conceptSection: { marginTop: spacing.xl },

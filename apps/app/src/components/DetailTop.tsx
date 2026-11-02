@@ -1,24 +1,49 @@
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useThemedStyles, type Theme } from "../theme";
 
-/** The centred top every detail page shares: image, title, byline, then the actions side by side. */
-export function DetailTop({ image, title, accessibilityLabel, children, actions }: { image?: ReactNode; title: string; accessibilityLabel?: string; children?: ReactNode; actions: ReactNode }) {
+// Below this width the image stacks over the text; at or above it, the image sits beside it.
+const SIDE_BY_SIDE_MIN_WIDTH = 560;
+
+/** The left-aligned top every detail page shares: image, title, byline, then the actions in a row,
+ * with the page's main destinations (`primaryActions`, e.g. View as Graph) under them. */
+export function DetailTop({
+  image,
+  title,
+  accessibilityLabel,
+  children,
+  actions,
+  primaryActions,
+}: {
+  image?: ReactNode;
+  title: string;
+  accessibilityLabel?: string;
+  children?: ReactNode;
+  actions: ReactNode;
+  primaryActions?: ReactNode;
+}) {
   const styles = useThemedStyles(createStyles);
+  const sideBySide = useWindowDimensions().width >= SIDE_BY_SIDE_MIN_WIDTH;
   return (
-    <View style={styles.header}>
-      {image}
-      <Text style={styles.title} accessibilityRole="header" accessibilityLabel={accessibilityLabel}>{title}</Text>
-      {children}
-      <View style={styles.actions}>{actions}</View>
+    <View style={[styles.header, sideBySide && styles.headerWide]}>
+      {image ? <View style={styles.image}>{image}</View> : null}
+      <View style={styles.text}>
+        <Text style={styles.title} accessibilityRole="header" accessibilityLabel={accessibilityLabel}>{title}</Text>
+        {children}
+        <View style={styles.actions}>{actions}</View>
+        {primaryActions ? <View style={styles.actions}>{primaryActions}</View> : null}
+      </View>
     </View>
   );
 }
 
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    header: { alignItems: "center", width: "100%" },
-    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "center", letterSpacing: -0.3, color: colors.ink },
-    actions: { flexDirection: "row", flexWrap: "nowrap", justifyContent: "center", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
+    header: { alignItems: "flex-start", width: "100%", gap: spacing.md },
+    headerWide: { flexDirection: "row", gap: spacing.xl },
+    image: { alignItems: "flex-start" },
+    text: { flexShrink: 1, flexGrow: 1, alignItems: "flex-start" },
+    title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
+    actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
   });
 }
