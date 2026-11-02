@@ -5,9 +5,7 @@ authors, those authors' influences and relationships, related subjects, and othe
 books that share those subjects. One codebase, via Expo/React Native, runs on iOS,
 Android, and web.
 
-See [docs/CODEBASE.md](docs/CODEBASE.md) for a file-by-file guide and
-[docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) for a review of the code with bugs found
-and fixed.
+See [docs/CODEBASE.md](docs/CODEBASE.md) for a file-by-file guide.
 
 ## Requirements
 

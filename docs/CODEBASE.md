@@ -13,8 +13,6 @@ bookExplorer/
     shared/       TypeScript types shared between app and server
 ```
 
-See also [docs/CODE_REVIEW.md](CODE_REVIEW.md) for a walkthrough of bugs found and fixed in a review pass after Phase 4 — several of the design notes below (the in-flight request de-dupe in `cache.ts`, the QID validation in `wikidata.ts`, the graph self-loop/dangling-edge cleanup, the timeout handling in `httpClient.ts`) exist because of findings documented there.
-
 The client never calls Open Library, Google Books, or (later) Wikidata directly — it only talks to `apps/server`, which does the aggregation and caching. This keeps API keys and rate-limit-sensitive calls off the client and avoids CORS issues on web.
 
 ---
