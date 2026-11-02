@@ -12,6 +12,7 @@ import {
   startConnect,
   userAuthorization,
 } from "../services/hardcoverAccount.js";
+import { peekWork } from "../services/workService.js";
 import { HardcoverRateLimitError, HardcoverUnauthorizedError } from "../sources/hardcover.js";
 import { addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "../sources/hardcoverUser.js";
 import { getWork } from "../sources/openLibrary.js";
@@ -39,6 +40,9 @@ const isPositiveInt = (v: string) => /^[1-9]\d{0,9}$/.test(v);
 async function memberIsbns(type: string, id: string): Promise<string[] | null> {
   if (type === "book") return isValidIsbn(id) ? [normalizeIsbn(id)] : null;
   if (!isOpenLibraryWorkId(id)) return null;
+  const cached = peekWork(id); // the work page keeps this warm; avoid a fresh Open Library call per progress poll
+  if (cached === null) return [];
+  if (cached) return [...new Set([cached.isbn, ...cached.editions.map((e) => e.isbn)].filter((i): i is string => !!i))];
   return (await getWork(id))?.isbnCandidates ?? [];
 }
 

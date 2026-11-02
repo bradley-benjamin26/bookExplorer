@@ -9,6 +9,9 @@ import { canonicalizeSubjects } from "./subjectCanon.js";
 
 const workCache = new TtlCache<Work | null>(1000 * 60 * 60, 1000, "work");
 
+/** The cached work without fetching: null when the work is cached as unknown, undefined on a miss. */
+export const peekWork = (workId: string): Work | null | undefined => workCache.get(workId);
+
 /** The parts of a work that path search links through. */
 export type WorkLinks = Pick<Work, "openLibraryWorkId" | "title" | "authors" | "subjects" | "genres" | "awards" | "editions">;
 
