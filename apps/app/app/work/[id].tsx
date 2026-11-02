@@ -217,7 +217,7 @@ export default function WorkDetail() {
       <MoreByAuthor title="More by this author" works={data.moreByAuthor} />
 
       <View style={styles.findSection}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find this book</Text>
         <FindLinkRow label="View on Open Library" url={openLibraryWorkUrl(data.openLibraryWorkId)} />
         <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.title)} />
       </View>

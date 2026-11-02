@@ -102,11 +102,11 @@ export default function GraphExplorer() {
   // continuous map rather than drilling through a stack of pages — with
   // `history` as a small in-screen back-stack so a "Back" affordance can
   // still step outward one ring at a time. Only entering the graph fresh
-  // (e.g. the "View as Graph" button elsewhere) is a real navigation.
+  // (e.g. the "View as graph" button elsewhere) is a real navigation.
   const [center, setCenter] = useState<Center | null>(type && id ? { type: type as GraphNode["type"], id } : null);
   const [history, setHistory] = useState<Center[]>([]);
 
-  // Opened from Find Connection: the starting view is just the path, read from
+  // Opened from Find connection: the starting view is just the path, read from
   // the same cached query that screen ran (a search is costly and rate-limited).
   // Tapping a node re-centres to a normal graph; stepping back returns here.
   const showPath = !!pathTo && history.length === 0 && center?.type === type && center?.id === id;

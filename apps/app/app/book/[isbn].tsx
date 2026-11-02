@@ -236,7 +236,7 @@ export default function BookDetail() {
       ) : null}
 
       <View style={styles.findSection}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">Find This Book</Text>
+        <Text style={styles.sectionTitle} accessibilityRole="header">Find this book</Text>
         {data.loc && (data.loc.lcc || data.loc.ddc) && (
           <Text style={styles.callNumber}>
             {[data.loc.lcc && `LC call number ${data.loc.lcc}`, data.loc.ddc && `Dewey ${data.loc.ddc}`].filter(Boolean).join(" · ")}

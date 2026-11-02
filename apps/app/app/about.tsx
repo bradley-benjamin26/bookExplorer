@@ -61,7 +61,7 @@ export default function About() {
         </AccordionSection>
 
 
-        <AccordionSection title="The Homepage">
+        <AccordionSection title="The home page">
         <P>
           The homepage provides an option to scan book barcodes using your phone as well as an option to search for books using title, author, or ISBN.
           It also is a place to find your browsing history so you can easily revist something you've been looking at previously.
@@ -69,7 +69,7 @@ export default function About() {
         </AccordionSection>
 
 
-        <AccordionSection title="The Graph View">
+        <AccordionSection title="The graph view">
         <P>
           The graph view is the core of Shelf Thread. These pages show all the different connections and allow you to explore them. If you
           scan an ISBN you can see the subjects, author, awards, and other information displayed as a visual. You can then tap the different nodes to see new
@@ -99,7 +99,7 @@ export default function About() {
           ]}>Recommendations</BulletItem>
           <BulletItem details={[
             "This allows you to enter in books or authors to find connections between them. The system reviews relevant data and tries to find the shortest connection between the two.",
-          ]}>Find Connection</BulletItem>
+          ]}>Find connection</BulletItem>
           <BulletItem details={[
             "Here you can export your lists and import lists. If you use multiple devices, exporting and importing lists enables you to keep your lists synchronized across devices.",
           ]}>Import &amp; Export</BulletItem>
@@ -111,7 +111,7 @@ export default function About() {
         </AccordionSection>
 
 
-        <AccordionSection title="Works, Books, Authors, and Subjects">
+        <AccordionSection title="Works, books, authors and subjects">
         <P>
           These are the 4 primary entities that you can explore using Shelf Thread.
           Each has a separate page type dedicated to exploring and managing that entity. They each have an option
