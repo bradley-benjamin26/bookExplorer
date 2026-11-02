@@ -8,5 +8,10 @@ export const isbnCoverUrl = (isbn: string): string => `https://covers.openlibrar
 export const listCoverUrls = (members: ListMember[], max = 3): (string | null)[] =>
   members.slice(0, max).map((m) => (m.type === "book" ? isbnCoverUrl(m.id) : null));
 
-/** A recently viewed book's cover (its id is the ISBN); other kinds have none. */
-export const recentCoverUrl = (item: RecentItem): string | null => (item.kind === "book" ? isbnCoverUrl(item.id) : null);
+/** A recently viewed book's cover: the one its page showed, else by ISBN (its id); other kinds have none.
+ * Open Library's -M/-L covers are swapped for -S, the size the home list needs. */
+export const recentCoverUrl = (item: RecentItem): string | null => {
+  if (item.kind !== "book") return null;
+  if (!item.coverUrl) return isbnCoverUrl(item.id);
+  return item.coverUrl.startsWith("https://covers.openlibrary.org/") ? item.coverUrl.replace(/-[ML]\.jpg$/, "-S.jpg") : item.coverUrl;
+};

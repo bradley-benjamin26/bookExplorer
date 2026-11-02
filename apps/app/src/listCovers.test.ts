@@ -33,6 +33,17 @@ describe("recentCoverUrl", () => {
     expect(recentCoverUrl(recent("book", "9780141439518"))).toBe("https://covers.openlibrary.org/b/isbn/9780141439518-S.jpg");
   });
 
+  it("uses the cover the book page showed, shrinking Open Library's to -S", () => {
+    const withCover = (coverUrl: string): RecentItem => ({ ...recent("book", "111"), coverUrl });
+    expect(recentCoverUrl(withCover("https://covers.openlibrary.org/b/id/42-L.jpg"))).toBe("https://covers.openlibrary.org/b/id/42-S.jpg");
+    expect(recentCoverUrl(withCover("https://covers.openlibrary.org/b/id/42-M.jpg"))).toBe("https://covers.openlibrary.org/b/id/42-S.jpg");
+    expect(recentCoverUrl(withCover("https://assets.hardcover.app/x.jpg"))).toBe("https://assets.hardcover.app/x.jpg");
+  });
+
+  it("falls back to the ISBN cover when none was saved", () => {
+    expect(recentCoverUrl({ ...recent("book", "111"), coverUrl: null })).toBe(cover("111"));
+  });
+
   it("gives null for works, authors and subjects", () => {
     for (const kind of ["work", "author", "subject"] as const) expect(recentCoverUrl(recent(kind, "x"))).toBeNull();
   });

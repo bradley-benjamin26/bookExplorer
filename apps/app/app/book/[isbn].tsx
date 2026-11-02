@@ -60,7 +60,7 @@ export default function BookDetail() {
   const saveSheet = useRef<SaveSheetHandle>(null);
 
   useEffect(() => {
-    if (data) addRecent({ kind: "book", id: data.isbn, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
+    if (data) addRecent({ kind: "book", id: data.isbn, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null, coverUrl: data.coverUrl });
   }, [data]);
 
   // Re-read on every focus, not just on first load — this screen stays
