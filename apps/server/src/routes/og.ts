@@ -2,6 +2,9 @@ import { readFile } from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import { DEFAULT_WEB_ORIGIN, injectSocialTags, pageMeta, renderSocialTags } from "../socialMeta.js";
 
+// Each card does a page lookup upstream, so this stays well under the global 100/minute.
+const OG_RATE_LIMIT = { max: 20, timeWindow: "1 minute" };
+
 /**
  * Serves the web app's index.html with link-preview tags for the page at
  * /og/<web path>. A reverse proxy sends only crawlers here (see
@@ -9,7 +12,7 @@ import { DEFAULT_WEB_ORIGIN, injectSocialTags, pageMeta, renderSocialTags } from
  */
 export async function ogRoutes(app: FastifyInstance, opts: { indexHtml: string; origin?: string }) {
   const origin = (opts.origin || DEFAULT_WEB_ORIGIN).replace(/\/+$/, "");
-  app.get("/og/*", async (req, reply) => {
+  app.get("/og/*", { config: { rateLimit: OG_RATE_LIMIT } }, async (req, reply) => {
     const path = req.url.split("?")[0].slice("/og".length);
     let html: string;
     try {

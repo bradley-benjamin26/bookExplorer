@@ -2,6 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Fastify from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type PageMeta, pageMeta } from "../socialMeta.js";
 import { ogRoutes } from "./og.js";
@@ -68,5 +69,16 @@ describe("GET /og/*", () => {
 
   it("returns 500 when the index file is missing", async () => {
     expect((await get("/og/work/OL1W", join(dir, "missing.html"))).statusCode).toBe(500);
+  });
+
+  it("is limited more tightly than the global 100 a minute", async () => {
+    const app = Fastify();
+    await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+    await app.register(ogRoutes, { indexHtml, origin: "https://site.test" });
+    const codes: number[] = [];
+    for (let i = 0; i < 21; i++) codes.push((await app.inject({ method: "GET", url: "/og/book/9780141439518" })).statusCode);
+    await app.close();
+    expect(codes.slice(0, 20).every((c) => c === 200)).toBe(true);
+    expect(codes[20]).toBe(429);
   });
 });
