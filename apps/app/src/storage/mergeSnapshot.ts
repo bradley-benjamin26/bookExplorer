@@ -35,12 +35,20 @@ function mergeList(a: SavedList, b: SavedList): SavedList {
   const winner = newer(a, b);
   if (winner.deletedAt || a.deletedAt || b.deletedAt) return winner;
   const other = winner === a ? b : a;
-  const key = (m: SavedList["members"][number]) => `${m.type}:${m.id}`;
+  const key = (m: { type: string; id: string }) => `${m.type}:${m.id}`;
   const have = new Set(winner.members.map(key));
   const links = new Map(other.members.filter((m) => m.hardcoverBookId).map((m) => [key(m), m.hardcoverBookId]));
   // Members fall back to the loser's Hardcover link (a push may have set it there); hardcoverListId deliberately does not, since a missing one can be a deliberate Unlink.
   const members = winner.members.map((m) => (m.hardcoverBookId || !links.has(key(m)) ? m : { ...m, hardcoverBookId: links.get(key(m)) }));
-  return { ...winner, members: [...members, ...other.members.filter((m) => !have.has(key(m)))] };
+  const removedAt = new Map<string, number>();
+  for (const r of [...(winner.removedMembers ?? []), ...(other.removedMembers ?? [])]) removedAt.set(key(r), Math.max(removedAt.get(key(r)) ?? 0, r.removedAt));
+  const removedMembers = [...removedAt].map(([k, at]) => ({ type: k.split(":")[0] as SavedList["members"][number]["type"], id: k.slice(k.indexOf(":") + 1), removedAt: at }));
+  const { removedMembers: _, ...rest } = winner;
+  return {
+    ...rest,
+    members: [...members, ...other.members.filter((m) => !have.has(key(m)))].filter((m) => !((removedAt.get(key(m)) ?? -1) >= m.addedAt)),
+    ...(removedMembers.length ? { removedMembers } : {}),
+  };
 }
 
 function mergeBy<T extends Versioned>(a: T[], b: T[], key: (r: T) => string, pick: (x: T, y: T) => T): Map<string, T> {

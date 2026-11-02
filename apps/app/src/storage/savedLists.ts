@@ -29,6 +29,7 @@ export interface SavedList extends Versioned {
   description: string;
   kind: "book" | "author"; // a book list holds books and works
   members: ListMember[];
+  removedMembers?: { type: ListMember["type"]; id: string; removedAt: number }[]; // so a merge doesn't re-add them from an older copy
   createdAt: number;
   hardcoverListId?: number;
   deletedAt?: number; // tombstone, see SavedItem
@@ -55,7 +56,15 @@ function updateList(id: string, change: (list: SavedList) => SavedList): Promise
     if (index === -1) throw new Error("That list no longer exists.");
     const next = change(lists[index]);
     if (next === lists[index]) return;
-    lists[index] = { ...next, updatedAt: Date.now() };
+    const now = Date.now();
+    const prev = lists[index];
+    const has = (l: SavedList, m: { type: string; id: string }) => l.members.some((x) => x.type === m.type && x.id === m.id);
+    const removedMembers = [
+      ...(next.removedMembers ?? []).filter((r) => !has(next, r)),
+      ...prev.members.filter((m) => !has(next, m)).map((m) => ({ type: m.type, id: m.id, removedAt: now })),
+    ];
+    const { removedMembers: _, ...rest } = next;
+    lists[index] = { ...rest, ...(removedMembers.length ? { removedMembers } : {}), updatedAt: now };
     await write(lists);
   });
 }
@@ -166,7 +175,13 @@ export function deleteList(id: string): Promise<void> {
     const lists = await read();
     const now = Date.now();
     if (!lists.some((l) => l.id === id && !l.deletedAt)) return;
-    await write(lists.map((l) => (l.id === id ? { ...l, description: "", members: [], updatedAt: now, deletedAt: now } : l)));
+    await write(
+      lists.map((l) => {
+        if (l.id !== id) return l;
+        const { removedMembers: _, ...rest } = l;
+        return { ...rest, description: "", members: [], updatedAt: now, deletedAt: now };
+      })
+    );
   });
 }
 

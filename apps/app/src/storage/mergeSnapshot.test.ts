@@ -188,6 +188,26 @@ describe("mergeSnapshots", () => {
     expect(mergeSnapshots(snap({ lists: [removed] }), b).lists).toEqual([removed]);
   });
 
+  it("a member removed on the newer copy doesn't come back from the older one", () => {
+    const one = { type: "book" as const, id: "1", title: "One", addedAt: 5 };
+    const removedMembers = [{ type: "book" as const, id: "1", removedAt: 25 }];
+    const a = snap({ lists: [list("x", 10, { members: [one] })] });
+    const b = snap({ lists: [list("x", 30, { removedMembers })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0]).toMatchObject({ members: [], removedMembers });
+    }
+  });
+
+  it("a member re-added after another copy's removal stays", () => {
+    const readded = { type: "book" as const, id: "1", title: "One", addedAt: 28 };
+    const removedMembers = [{ type: "book" as const, id: "1", removedAt: 25 }];
+    const a = snap({ lists: [list("x", 28, { members: [readded] })] });
+    const b = snap({ lists: [list("x", 25, { removedMembers })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0].members).toEqual([readded]);
+    }
+  });
+
   it("unions a live list's members added on each side, keeping the newer copy's name and order", () => {
     const one = { type: "book" as const, id: "1", title: "One", addedAt: 5 };
     const two = { type: "book" as const, id: "2", title: "Two", addedAt: 6 };

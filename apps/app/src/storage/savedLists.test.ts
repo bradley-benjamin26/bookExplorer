@@ -137,4 +137,30 @@ describe("savedLists", () => {
     await replaceMembers(list.id, [{ ...emma, addedAt: 3, hardcoverBookId: 2 }]);
     expect((await getList(list.id))?.members).toEqual([{ ...emma, addedAt: 3, hardcoverBookId: 2 }]);
   });
+
+  it("removeFromList records the removal and addToList clears it", async () => {
+    const list = await createList({ name: "Books", kind: "book" });
+    await addToList(list.id, dune);
+    expect((await getList(list.id))?.removedMembers).toBeUndefined();
+    await removeFromList(list.id, "book", dune.id);
+    expect((await getList(list.id))?.removedMembers).toMatchObject([{ type: "book", id: dune.id }]);
+    await addToList(list.id, dune);
+    expect((await getList(list.id))?.removedMembers).toBeUndefined();
+  });
+
+  it("replaceMembers records members it drops", async () => {
+    const list = await createList({ name: "Books", kind: "book" });
+    await addToList(list.id, dune);
+    await addToList(list.id, emma);
+    await replaceMembers(list.id, [{ ...emma, addedAt: 1 }]);
+    expect((await getList(list.id))?.removedMembers).toMatchObject([{ type: "book", id: dune.id }]);
+  });
+
+  it("deleteList clears removedMembers", async () => {
+    const list = await createList({ name: "Books", kind: "book" });
+    await addToList(list.id, dune);
+    await removeFromList(list.id, "book", dune.id);
+    await deleteList(list.id);
+    expect((await getAllLists()).find((l) => l.id === list.id)?.removedMembers).toBeUndefined();
+  });
 });

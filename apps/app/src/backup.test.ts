@@ -6,7 +6,7 @@ import AsyncStorage from "./test/asyncStorageMock";
 import { upsertLibrary } from "./storage/librarySettings";
 import { getSavedBook, updateSavedBook } from "./storage/savedBooks";
 import { ensureSaved, getSavedItems } from "./storage/savedItems";
-import { addToList, createList, getLists } from "./storage/savedLists";
+import { addToList, createList, getLists, removeFromList } from "./storage/savedLists";
 import { getSavedWork, updateSavedWork } from "./storage/savedWorks";
 import { parseCsv } from "./csv";
 import { getSnapshot, migrateStorage } from "./storage/snapshot";
@@ -123,6 +123,14 @@ describe("JSON backup", () => {
     const v3 = JSON.parse(await exportJson());
     expect(v3.schemaVersion).toBe(4);
     expect(v3.lists.find((l: { name: string }) => l.name === "Favourites")).toMatchObject({ kind: "book", members: [{ type: "book", id: "9780441013593", title: "Dune" }] });
+  });
+
+  it("exports and re-imports a list's removedMembers", async () => {
+    const l = await createList({ name: "Gone", kind: "book" });
+    await addToList(l.id, { type: "book", id: "9780000000009", title: "Nine" });
+    await removeFromList(l.id, "book", "9780000000009");
+    const back = parseSnapshotJson(await exportJson()).lists.find((x) => x.id === l.id);
+    expect(back?.removedMembers).toMatchObject([{ type: "book", id: "9780000000009" }]);
   });
 
   it("a schemaVersion 2 backup with no lists imports with lists: []", async () => {

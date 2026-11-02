@@ -395,6 +395,10 @@ export const SavedListExportSchema = z.object({
       })
     )
     .max(MAX_IMPORT_RECORDS),
+  removedMembers: z
+    .array(z.object({ type: z.enum(["book", "work", "author"]), id: z.string().min(1).max(200), removedAt: z.number().int().nonnegative() }))
+    .max(MAX_IMPORT_RECORDS)
+    .optional(),
   hardcoverListId: z.number().int().positive().optional(),
   createdAt: z.number().int().nonnegative(),
 });
