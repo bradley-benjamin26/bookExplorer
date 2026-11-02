@@ -10,6 +10,7 @@ import {
   type Library,
 } from "../storage/librarySettings";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { rowFeedback } from "../rowFeedback";
 import { titleRef } from "../webTitle";
 
 /**
@@ -35,7 +36,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
     return (
       <Pressable
         ref={titleRef("Add your library in Settings")}
-        style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+        style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
         onPress={() => router.push(routes.settings())}
         accessibilityRole="button"
         accessibilityLabel="Add your library in My Library, then Settings, to see it here."
@@ -49,7 +50,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
     <Pressable
       ref={titleRef(label)}
       key={key}
-      style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
       onPress={() => Linking.openURL(url)}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -86,7 +87,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
           <View key={library.id}>
             <Pressable
               ref={titleRef(`Find at ${library.name}`)}
-              style={({ pressed }) => [styles.findRow, pressed && styles.pressed]}
+              style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
               onPress={() => toggleExpanded(library.id)}
               accessibilityRole="button"
               accessibilityLabel={`Find at ${library.name}`}
@@ -115,19 +116,21 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
   );
 }
 
-function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
+function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     findRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     subRows: { paddingLeft: spacing.lg },
     findRowText: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.cover },
     findRowHint: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, fontStyle: "italic" },
-    pressed: { opacity: 0.6 },
   });
 }

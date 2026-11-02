@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { seriesRowLabel } from "../seriesLabel";
 import { CoverPlaceholder } from "./CoverPlaceholder";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
+import { rowFeedback } from "../rowFeedback";
 import { titleRef } from "../webTitle";
 
 /** A tappable cover/title/author row for a work — shared by any screen that
@@ -27,7 +28,7 @@ export function WorkListRow({
   return (
     <Pressable
       ref={titleRef(`Open ${work.title}`)}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.row, onPress ? rowFeedback(theme.colors, { pressed, hovered }) : undefined]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={[seriesRowLabel(work.title, series) ?? `${work.title}, ${authorNames}`, note].filter(Boolean).join(". ")}
@@ -64,10 +65,12 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
       alignItems: "center",
       gap: spacing.md,
       paddingVertical: spacing.md,
+      marginHorizontal: -spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    pressed: { opacity: 0.6 },
     cover: { width: 44, height: 64, borderRadius: radii.xs },
     info: { flex: 1, justifyContent: "center" },
     title: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
