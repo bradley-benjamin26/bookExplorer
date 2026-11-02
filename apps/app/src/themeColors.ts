@@ -14,22 +14,15 @@ export interface ThemeColors {
   cardBorder: string;
   inputBorder: string;
   chipBackground: string;
-  chipBackgroundAccent: string;
-  chipBorderAccent: string;
-  chipTextAccent: string;
   chipBackgroundGenre: string;
   chipTextGenre: string;
-  // Matches `graphSubject` below — a subject tag on a book/work page and a
-  // subject node in the graph explorer are the same concept, so they share
-  // one color instead of the graph using one palette and detail pages
-  // another.
+  // Warm neutral, deliberately not `graphSubject`: detail-page tags use two hues (green genre, neutral subject).
   chipBackgroundSubject: string;
   chipTextSubject: string;
   // The highlighted background of a toggled-on pill button (e.g. "★ Saved").
   pillActiveBackground: string;
   // The 1px outline that makes a secondary pill read as a button (3:1 against paper and chip).
   pillBorder: string;
-  link: string;
   // Primary buttons and the toggled-on pill.
   primary: string;
   primaryText: string;
@@ -66,17 +59,12 @@ export const lightColors: ThemeColors = {
   cardBorder: "#E6DFD0",
   inputBorder: "#857D6E",
   chipBackground: "#F1EBDD",
-  chipBackgroundAccent: "#eef2ff",
-  chipBorderAccent: "#e0e6fb",
-  chipTextAccent: "#3346a8",
-  chipBackgroundGenre: "#fbeef7",
-  chipTextGenre: "#9c3d82",
-  // Lightened from #fbeee5 so chipTextSubject (kept equal to graphSubject) clears 4.5:1.
-  chipBackgroundSubject: "#fcf1ea",
-  chipTextSubject: "#a8593c",
+  chipBackgroundGenre: "#E4ECE7",
+  chipTextGenre: "#2B5951",
+  chipBackgroundSubject: "#F1EBDD",
+  chipTextSubject: "#262320",
   pillActiveBackground: "#fdf0d0",
   pillBorder: "#8C877B",
-  link: "#1a4fba",
   primary: "#2B5951",
   primaryText: "#FFFFFF",
   danger: "#aa3333",
@@ -114,17 +102,13 @@ export const darkColors: ThemeColors = {
   cardBorder: "#34312B",
   inputBorder: "#7A766B",
   chipBackground: "#26241F",
-  chipBackgroundAccent: "#212a4d",
-  chipBorderAccent: "#2d3a66",
-  chipTextAccent: "#a4b6f7",
-  chipBackgroundGenre: "#3a2438",
-  chipTextGenre: "#e7a6da",
-  chipBackgroundSubject: "#3a2a20",
-  chipTextSubject: "#e8946e",
+  chipBackgroundGenre: "#23332F",
+  chipTextGenre: "#6FA897",
+  chipBackgroundSubject: "#26241F",
+  chipTextSubject: "#EDEAE2",
   pillActiveBackground: "#4a3a12",
   // The plan's #6B6B7B is 2.96:1 on chipBackground; nudged lighter to clear 3:1.
   pillBorder: "#77736A",
-  link: "#8ab0ff",
   primary: "#3A7F70",
   primaryText: "#FFFFFF",
   danger: "#ff8a8a",

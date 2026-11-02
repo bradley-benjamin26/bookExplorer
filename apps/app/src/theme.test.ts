@@ -47,9 +47,15 @@ describe.each([
     ["ink on pressedBackground", c.ink, c.pressedBackground, 4.5],
     ["ink on hoverBackground", c.ink, c.hoverBackground, 4.5],
     ["inkFaint on chipBackground", c.inkFaint, c.chipBackground, 4.5],
+    ["chipTextGenre on chipBackgroundGenre", c.chipTextGenre, c.chipBackgroundGenre, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });
+});
+
+it("has no cool-hued tag chips", () => {
+  expect("chipBackgroundAccent" in lightColors).toBe(false);
+  expect("chipBackgroundAccent" in darkColors).toBe(false);
 });
 
 describe("typeScale", () => {
