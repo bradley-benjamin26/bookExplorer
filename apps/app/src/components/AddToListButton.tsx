@@ -122,6 +122,7 @@ export function AddToListButton({
   member,
   onSave,
   onChange,
+  onClose,
   style,
   hidden,
   ref,
@@ -129,6 +130,8 @@ export function AddToListButton({
   member: Omit<ListMember, "addedAt">;
   onSave: () => Promise<unknown>;
   onChange?: () => void;
+  /** Whenever the sheet closes, by Done or by dismissing. */
+  onClose?: () => void;
   style?: StyleProp<ViewStyle>;
   /** Shows no pill, for a parent that opens the sheet through `ref`. */
   hidden?: boolean;
@@ -151,6 +154,10 @@ export function AddToListButton({
   // Why the sheet was opened for the user, e.g. the lock asking to save first. The pill clears it.
   const [notice, setNotice] = useState("");
 
+  const close = () => {
+    setOpen(false);
+    onClose?.();
+  };
   const holds = (list: SavedList) => list.members.some((m) => m.type === member.type && m.id === member.id);
 
   // The star reflects real membership, so re-read it whenever the screen regains focus.
@@ -220,7 +227,7 @@ export function AddToListButton({
       onChange?.();
       // Keep the sheet up so the Hardcover message is seen; reload so a second Done doesn't re-apply the same changes.
       if (issue) await load(false);
-      else setOpen(false);
+      else close();
     } catch (e) {
       setError(errorText(e));
       // A failed import may have linked some lists; tick them (they're local rows now) so a retry still adds the book, then reload so it doesn't import them again.
@@ -245,7 +252,7 @@ export function AddToListButton({
       {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={() => show()} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>}
-      <CenteredModal visible={open} label="Choose a list" onClose={() => setOpen(false)}>
+      <CenteredModal visible={open} label="Choose a list" onClose={close}>
             <ScrollView contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
@@ -326,7 +333,7 @@ export function AddToListButton({
                 </Text>
               ) : null}
               <View style={styles.footer}>
-                <Button variant="primary" onPress={() => setOpen(false)} style={styles.doneButton}>
+                <Button variant="primary" onPress={close} style={styles.doneButton}>
                   Cancel
                 </Button>
                 <Button variant="primary" onPress={done} disabled={busy || loading || !!loadError} style={styles.doneButton}>
