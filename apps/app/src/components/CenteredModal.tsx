@@ -35,7 +35,7 @@ function createStyles({ colors, spacing, radii }: Theme) {
       width: "100%",
       maxWidth: 480,
       maxHeight: "85%",
-      backgroundColor: colors.paper,
+      backgroundColor: colors.card,
       borderRadius: radii.md,
     },
   });

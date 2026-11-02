@@ -37,6 +37,8 @@ export interface ThemeColors {
   // Design-plan tokens (docs/DESIGN_PLAN.md). `cover` carries primary action;
   // `marginalia` is reserved for "this is yours" (saved) and graph highlights.
   paper: string;
+  // Raised surface (list rows, modal) one step lighter than paper.
+  card: string;
   ink: string;
   inkFaint: string;
   cover: string;
@@ -76,6 +78,7 @@ export const lightColors: ThemeColors = {
   graphGenre: "#9c3d82",
   graphAward: "#8a6d1f",
   paper: "#FAF7F0",
+  card: "#FFFDF8",
   ink: "#262320",
   // The plan's #8B8A94 / #C0572E are 3.2:1 / 4.2:1 on paper; nudged darker to pass AA as text.
   inkFaint: "#5F594F",
@@ -120,6 +123,7 @@ export const darkColors: ThemeColors = {
   graphGenre: "#e7a6da",
   graphAward: "#e0c27a",
   paper: "#1C1B18",
+  card: "#24221E",
   ink: "#EDEAE2",
   inkFaint: "#A29D90",
   cover: "#6FA897",

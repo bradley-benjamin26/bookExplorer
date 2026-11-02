@@ -50,6 +50,9 @@ describe.each([
     ["ink on hoverBackground", c.ink, c.hoverBackground, 4.5],
     ["inkFaint on chipBackground", c.inkFaint, c.chipBackground, 4.5],
     ["chipTextGenre on chipBackgroundGenre", c.chipTextGenre, c.chipBackgroundGenre, 4.5],
+    ["ink on card", c.ink, c.card, 4.5],
+    ["textMuted on card", c.textMuted, c.card, 4.5],
+    ["cover on card", c.cover, c.card, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });
