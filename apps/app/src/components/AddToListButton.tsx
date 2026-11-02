@@ -209,6 +209,7 @@ export function AddToListButton({
       let issue = "";
       // Import first: the imported lists then get the book through the normal add path.
       const created = await importChosenLists([...remoteChecked]);
+      setChecked((prev) => new Set([...prev, ...created]));
       // An imported list may already hold the book; adding it again would re-push it to Hardcover.
       const imported = created.length ? listsNotHolding(await getLists(kind), member, created) : [];
       const changes = listChanges(lists, member, checked);
