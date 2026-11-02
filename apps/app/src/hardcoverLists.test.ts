@@ -91,6 +91,20 @@ describe("hardcoverLists", () => {
     expect(sentIds()).toEqual(["a", "b", "b", "c"]);
   });
 
+  it("calls onWait with the retry delay before sleeping on a 429", async () => {
+    add
+      .mockResolvedValueOnce({ hardcoverBookId: 1 })
+      .mockRejectedValueOnce(new ApiError("slow", 429, 30))
+      .mockResolvedValue({ hardcoverBookId: 2 });
+    create.mockResolvedValue({ id: 9 });
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const onWait = vi.fn();
+    await copyToHardcover(await seed(["a", "b"]), () => {}, sleep, onWait);
+    expect(onWait).toHaveBeenCalledTimes(1);
+    expect(onWait).toHaveBeenCalledWith(30);
+    expect(sleep).toHaveBeenCalledWith(30_000);
+  });
+
   it("copyToHardcover gives up on a member after 5 rate-limit retries", async () => {
     add.mockRejectedValue(new ApiError("slow", 429, 1));
     const sleep = vi.fn().mockResolvedValue(undefined);

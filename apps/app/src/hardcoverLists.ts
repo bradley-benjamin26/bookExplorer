@@ -35,6 +35,7 @@ export async function copyToHardcover(
   list: SavedList,
   onProgress: (done: number, total: number) => void,
   sleep: (ms: number) => Promise<void> = wait,
+  onWait: (seconds: number) => void = () => {},
 ): Promise<{ missing: string[]; skippedAuthors: number }> {
   let linked = list;
   if (list.hardcoverListId === undefined) {
@@ -56,7 +57,9 @@ export async function copyToHardcover(
         break;
       } catch (e) {
         if (!(e instanceof ApiError && e.status === 429) || tries >= MAX_RATE_LIMIT_RETRIES) throw e;
-        await sleep((e.retryAfterSeconds ?? 60) * 1000);
+        const seconds = e.retryAfterSeconds ?? 60;
+        onWait(seconds);
+        await sleep(seconds * 1000);
       }
     }
     onProgress(++done, todo.length);
