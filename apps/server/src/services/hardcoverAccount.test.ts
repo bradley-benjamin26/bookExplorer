@@ -60,6 +60,14 @@ describe("hardcoverAccount", () => {
     expect(() => startConnect(RETURN)).toThrow(InvalidReturnUrlError);
   });
 
+  it("ignores return prefixes that could match someone else's address", () => {
+    vi.stubEnv("HARDCOVER_RETURN_URLS", "exp://,https://app.test,https://ok.test/,myapp://");
+    expect(() => startConnect("exp://evil.test/--/x")).toThrow(InvalidReturnUrlError);
+    expect(() => startConnect("https://app.test.evil.com/")).toThrow(InvalidReturnUrlError);
+    expect(startConnect("https://ok.test/hc")).toBeTruthy();
+    expect(startConnect("myapp://cb")).toBeTruthy();
+  });
+
   it("completeConnect with an unknown state throws ExpiredCallbackError", async () =>
     expect(completeConnect({ code: "c", state: "nope", iss: oauth.HARDCOVER_ISSUER })).rejects.toThrow(ExpiredCallbackError));
 

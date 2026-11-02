@@ -17,7 +17,8 @@ export const accountEnabled = (): boolean => REQUIRED_ENV.every((k) => process.e
 
 function allowedPrefixes(): string[] {
   const custom = process.env.HARDCOVER_RETURN_URLS;
-  if (custom) return custom.split(",").map((s) => s.trim()).filter(Boolean);
+  // A prefix without a trailing "/" or "://" (or bare exp://) would also match other hosts/projects.
+  if (custom) return custom.split(",").map((s) => s.trim()).filter((p) => (p.endsWith("/") || p.endsWith("://")) && p !== "exp://");
   const web = (process.env.PUBLIC_WEB_URL || DEFAULT_WEB_ORIGIN).replace(/\/$/, "");
   return ["bookexplorer://", `${web}/`];
 }
