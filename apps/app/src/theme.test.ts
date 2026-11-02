@@ -37,6 +37,8 @@ describe.each([
     ["pillBorder vs paper", c.pillBorder, c.paper, 3],
     ["pillBorder vs chipBackground", c.pillBorder, c.chipBackground, 3],
     ["inkFaint on paper", c.inkFaint, c.paper, 5.5],
+    ["ink on paper", c.ink, c.paper, 4.5],
+    ["cover on paper", c.cover, c.paper, 4.5],
     ["danger on paper", c.danger, c.paper, 4.5],
     ["chipTextSubject on chipBackgroundSubject", c.chipTextSubject, c.chipBackgroundSubject, 4.5],
     ["inputBorder vs background", c.inputBorder, c.background, 3],

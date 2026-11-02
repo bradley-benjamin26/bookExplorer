@@ -1,7 +1,7 @@
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { createHardcoverList } from "../api/client";
 import { confirmLeave } from "../confirm";
 import { getSessionToken } from "../hardcoverSession";
@@ -14,8 +14,9 @@ import {
   type ListMember,
   type SavedList,
 } from "../storage/savedLists";
-import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme } from "../theme";
+import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { CenteredModal } from "./CenteredModal";
 import { titleRef } from "../webTitle";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -217,9 +218,7 @@ export function AddToListButton({
       {!hidden && <Button variant="pill" starIcon active={onAnyList} onPress={() => show()} style={style} accessibilityLabel={onAnyList ? "Save to list, saved" : "Save to list"} tooltip="Save to one of your lists">
         Save to list
       </Button>}
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={styles.backdrop}>
-          <View style={styles.sheet}>
+      <CenteredModal visible={open} label="Choose a list" onClose={() => setOpen(false)}>
             <ScrollView contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
               <Text style={styles.heading} accessibilityRole="header">
                 Choose a list
@@ -280,7 +279,7 @@ export function AddToListButton({
                 </Text>
               ) : null}
               <View style={styles.footer}>
-                <Button variant="pill" onPress={() => setOpen(false)}>
+                <Button variant="primary" onPress={() => setOpen(false)} style={styles.doneButton}>
                   Cancel
                 </Button>
                 <Button variant="primary" onPress={done} disabled={busy || loading || !!loadError} style={styles.doneButton}>
@@ -288,25 +287,13 @@ export function AddToListButton({
                 </Button>
               </View>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </CenteredModal>
     </>
   );
 }
 
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    // No theme token for a scrim; a translucent black reads in both schemes.
-    backdrop: { flex: 1, justifyContent: "flex-end", alignItems: "center", backgroundColor: "rgba(0,0,0,0.4)" },
-    sheet: {
-      width: "100%",
-      maxWidth: CONTENT_MAX_WIDTH,
-      maxHeight: "85%",
-      backgroundColor: colors.paper,
-      borderTopLeftRadius: radii.md,
-      borderTopRightRadius: radii.md,
-    },
     sheetContent: { padding: spacing.lg },
     heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.md },
     notice: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.md },
