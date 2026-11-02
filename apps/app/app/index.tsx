@@ -2,7 +2,7 @@ import { isValidIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { NODE_LABELS } from "../src/graphLabels";
@@ -53,7 +53,6 @@ export default function Home() {
         <FeedbackBanner />
         <View style={styles.header}>
           <View>
-            <Text style={styles.subtitle}>find your next read</Text>
             <Pressable
               ref={titleRef("Read about this project")}
               onPress={() => router.push(routes.about())}
@@ -65,20 +64,22 @@ export default function Home() {
           </View>
         </View>
 
-        <Pressable
-          ref={titleRef("Scan a book's barcode")}
-          onPress={() => router.push("/scan")}
-          accessibilityRole="button"
-          accessibilityLabel="Scan a book"
-          style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
-            styles.scanButton,
-            pressed && styles.pressed,
-            focused && styles.focused,
-          ]}
-        >
-          <ScanBarcode size={22} color={theme.colors.primaryText} />
-          <Text style={styles.scanText}>Scan a book</Text>
-        </Pressable>
+        {Platform.OS !== "web" && (
+          <Pressable
+            ref={titleRef("Scan a book's barcode")}
+            onPress={() => router.push("/scan")}
+            accessibilityRole="button"
+            accessibilityLabel="Scan a book"
+            style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
+              styles.scanButton,
+              pressed && styles.pressed,
+              focused && styles.focused,
+            ]}
+          >
+            <ScanBarcode size={22} color={theme.colors.primaryText} />
+            <Text style={styles.scanText}>Scan a book</Text>
+          </Pressable>
+        )}
 
         <View style={styles.searchRow}>
           <TextInput
@@ -119,7 +120,7 @@ export default function Home() {
               data={shown}
               contentContainerStyle={{ flexGrow: 1 }}
               keyExtractor={(item) => `${item.kind}:${item.id}`}
-              renderItem={({ item }) => (
+              renderItem={({ item, index }) => (
                 <Pressable
                   ref={titleRef(`Open ${item.title ?? item.id}`)}
                   style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.recentItem, rowFeedback(theme.colors, { pressed, hovered })]}
@@ -129,7 +130,11 @@ export default function Home() {
                     item.title ? `${item.title}, ${item.subtitle ? `${item.subtitle}, ` : ""}${typeLabel(item)}` : item.id
                   }
                 >
-                  <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.nodeColumn}>
+                    {/* The thread joins this node to its neighbours, but starts and ends at the first and last. */}
+                    {shown.length > 1 && (
+                      <View style={[styles.threadLine, index === 0 && styles.threadFirst, index === shown.length - 1 && styles.threadLast]} />
+                    )}
                     <View style={styles.node} />
                   </View>
                   <View style={styles.recentText}>
@@ -167,7 +172,6 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       marginTop: spacing.md,
       marginBottom: spacing.lg,
     },
-    subtitle: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.inkFaint, marginTop: spacing.xs },
     aboutLink: {
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
@@ -216,6 +220,11 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
+    nodeColumn: { width: 6, alignSelf: "stretch", alignItems: "center", justifyContent: "center" },
+    // The row's own padding sits inside the column, so the line meets the next row's line edge to edge.
+    threadLine: { position: "absolute", top: -spacing.md, bottom: -spacing.md, width: 1, backgroundColor: colors.thread },
+    threadFirst: { top: "50%" },
+    threadLast: { bottom: "50%" },
     node: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.thread },
     recentText: { flex: 1 },
     recentItemText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
