@@ -104,7 +104,7 @@ export function CreateListForm({
         </Text>
       ) : null}
       <Button variant="primary" onPress={submit} disabled={busy} style={styles.submit}>
-        {submitLabel}
+        {busy ? "Creating..." : submitLabel}
       </Button>
     </View>
   );
@@ -341,7 +341,7 @@ export function AddToListButton({
                   Cancel
                 </Button>
                 <Button variant="primary" onPress={done} disabled={busy || loading || !!loadError} style={styles.doneButton}>
-                  Done
+                  {busy ? "Saving..." : "Done"}
                 </Button>
               </View>
             </ScrollView>

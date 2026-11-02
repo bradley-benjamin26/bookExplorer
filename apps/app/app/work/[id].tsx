@@ -45,7 +45,7 @@ export default function WorkDetail() {
   });
 
   useEffect(() => {
-    if (data) addRecent({ kind: "work", id: data.openLibraryWorkId, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null });
+    if (data) addRecent({ kind: "work", id: data.openLibraryWorkId, title: data.title, subtitle: data.authors.map((a) => a.name).join(", ") || null, coverUrl: data.coverUrl });
   }, [data]);
 
   // Saved exactly when it has a saved record, as on the book page.

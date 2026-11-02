@@ -1,4 +1,5 @@
 import { isValidIsbn } from "@book-explorer/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
@@ -33,6 +34,7 @@ export default function Home() {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState("");
+  const queryClient = useQueryClient();
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const [filter, setFilter] = useState<RecentFilter>("all");
 
@@ -140,11 +142,13 @@ export default function Home() {
                     )}
                     <View style={[styles.node, { backgroundColor: theme.colors[KIND_COLOR[item.kind]] }]} />
                   </View>
-                  {item.kind === "book" && (
+                  {(item.kind === "book" || item.kind === "work") && (
                     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.recentCover}>
                       {/* Under the image: Open Library serves a transparent 1x1 for an ISBN with no cover. */}
                       <CoverPlaceholder width={32} height={48} />
-                      <Image source={{ uri: recentCoverUrl(item) ?? undefined }} contentFit="cover" style={StyleSheet.absoluteFill} />
+                      <Image
+                        // Entries saved before covers were stored borrow one from the cached page data.
+                        source={{ uri: recentCoverUrl(item.coverUrl ? item : { ...item, coverUrl: queryClient.getQueryData<{ coverUrl: string | null }>([item.kind, item.id])?.coverUrl }) ?? undefined }} contentFit="cover" style={StyleSheet.absoluteFill} />
                     </View>
                   )}
                   <View style={styles.recentText}>

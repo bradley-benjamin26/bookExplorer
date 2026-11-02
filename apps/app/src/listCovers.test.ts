@@ -44,7 +44,11 @@ describe("recentCoverUrl", () => {
     expect(recentCoverUrl({ ...recent("book", "111"), coverUrl: null })).toBe(cover("111"));
   });
 
-  it("gives null for works, authors and subjects", () => {
+  it("uses a work's saved cover, shrunk to -S", () => {
+    expect(recentCoverUrl({ ...recent("work", "OL82563W"), coverUrl: "https://covers.openlibrary.org/b/id/42-L.jpg" })).toBe("https://covers.openlibrary.org/b/id/42-S.jpg");
+  });
+
+  it("gives null for works without a saved cover, authors and subjects", () => {
     for (const kind of ["work", "author", "subject"] as const) expect(recentCoverUrl(recent(kind, "x"))).toBeNull();
   });
 });

@@ -17,7 +17,7 @@ export interface RecentItem {
   /** The authors, for books and works. */
   subtitle: string | null;
   subjectLabel?: string;
-  /** The cover the book page showed; older entries lack it and fall back to the ISBN cover. */
+  /** The cover a book or work page showed; older book entries lack it and fall back to the ISBN cover. */
   coverUrl?: string | null;
 }
 
