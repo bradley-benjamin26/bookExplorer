@@ -75,7 +75,7 @@ export default function SubjectDetail() {
                 onPress={() => router.push(routes.graph("subject", data.slug))}
                 tooltip="See this subject's books and related subjects as a graph"
               >
-                View as Graph
+                View as graph
               </Button>
             }
             actions={<ShareButton title={spokenTitle} href={routes.subject(data.slug, label)} />}>
@@ -113,6 +113,7 @@ export default function SubjectDetail() {
 
           <Text style={styles.sectionTitle} accessibilityRole="header">Books</Text>
           <View style={styles.conceptTags}>
+            <Text style={styles.sortLabel}>Sort by</Text>
             {SUBJECT_SORTS.map((s) => (
               <Button key={s.value} variant="pill" active={sort === s.value} onPress={() => setSort(s.value)} accessibilityLabel={`Sort by ${s.label.toLowerCase()}`}>
                 {s.label}
@@ -134,6 +135,7 @@ export default function SubjectDetail() {
 
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
+    sortLabel: { alignSelf: "center", fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
