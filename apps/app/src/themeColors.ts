@@ -50,19 +50,22 @@ export interface ThemeColors {
   coverLight: string;
   marginalia: string;
   thread: string;
+  // Tint behind a pressed / hovered list row.
+  pressedBackground: string;
+  hoverBackground: string;
 }
 
 export const lightColors: ThemeColors = {
   background: "#FAF7F0",
-  shellBackground: "#EFEBE2",
-  text: "#1F2430",
+  shellBackground: "#EFEAE0",
+  text: "#262320",
   // Darkened from #75758c/#767687 so muted text still clears WCAG AA 4.5:1 on the warmer paper background.
-  textMuted: "#6b6b80",
-  textFaint: "#6c6c7d",
-  border: "#eef0f2",
-  cardBorder: "#e6e6ea",
-  inputBorder: "#85859a",
-  chipBackground: "#f2f2f5",
+  textMuted: "#6B655A",
+  textFaint: "#665F55",
+  border: "#EEE8DA",
+  cardBorder: "#E6DFD0",
+  inputBorder: "#857D6E",
+  chipBackground: "#F1EBDD",
   chipBackgroundAccent: "#eef2ff",
   chipBorderAccent: "#e0e6fb",
   chipTextAccent: "#3346a8",
@@ -85,13 +88,15 @@ export const lightColors: ThemeColors = {
   graphGenre: "#9c3d82",
   graphAward: "#8a6d1f",
   paper: "#FAF7F0",
-  ink: "#1F2430",
+  ink: "#262320",
   // The plan's #8B8A94 / #C0572E are 3.2:1 / 4.2:1 on paper; nudged darker to pass AA as text.
-  inkFaint: "#5C5B66",
+  inkFaint: "#5F594F",
   cover: "#2B5951",
   coverLight: "#E4ECE7",
   marginalia: "#A85026",
   thread: "#8A94A8",
+  pressedBackground: "#EFE8D8",
+  hoverBackground: "#F5F0E4",
 };
 
 // Not just an inverted light palette — brand colors tuned for dark
@@ -100,15 +105,15 @@ export const lightColors: ThemeColors = {
 // are lightened/desaturated to hold the same contrast ratio instead of the
 // same hex value).
 export const darkColors: ThemeColors = {
-  background: "#191B20",
-  shellBackground: "#0a0a0f",
+  background: "#1C1B18",
+  shellBackground: "#121110",
   text: "#EDEAE2",
-  textMuted: "#9797a8",
-  textFaint: "#8c8ca0",
-  border: "#2a2a35",
-  cardBorder: "#2e2e3a",
-  inputBorder: "#707082",
-  chipBackground: "#232330",
+  textMuted: "#A39E92",
+  textFaint: "#9A9588",
+  border: "#2B2924",
+  cardBorder: "#34312B",
+  inputBorder: "#7A766B",
+  chipBackground: "#26241F",
   chipBackgroundAccent: "#212a4d",
   chipBorderAccent: "#2d3a66",
   chipTextAccent: "#a4b6f7",
@@ -118,7 +123,7 @@ export const darkColors: ThemeColors = {
   chipTextSubject: "#e8946e",
   pillActiveBackground: "#4a3a12",
   // The plan's #6B6B7B is 2.96:1 on chipBackground; nudged lighter to clear 3:1.
-  pillBorder: "#6E6E7E",
+  pillBorder: "#77736A",
   link: "#8ab0ff",
   primary: "#3A7F70",
   primaryText: "#FFFFFF",
@@ -130,11 +135,13 @@ export const darkColors: ThemeColors = {
   graphSubject: "#e8946e",
   graphGenre: "#e7a6da",
   graphAward: "#e0c27a",
-  paper: "#191B20",
+  paper: "#1C1B18",
   ink: "#EDEAE2",
-  inkFaint: "#9C9AA6",
+  inkFaint: "#A29D90",
   cover: "#6FA897",
   coverLight: "#23332F",
   marginalia: "#E08662",
   thread: "#8A94A8",
+  pressedBackground: "#2C2A25",
+  hoverBackground: "#23211D",
 };
