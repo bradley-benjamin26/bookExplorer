@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, fitScale, labelWidthOf, layoutGraph, MIN_SCALE, NODE_RADIUS, wrapLabel } from "./graphLayout";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, labelOpacity, labelWidthOf, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, wrapLabel, zoomAt } from "./graphLayout";
 
 describe("wrapLabel", () => {
   it("keeps a short label on one line", () => {
@@ -110,5 +110,37 @@ describe("fitScale", () => {
 
   it("never goes below MIN_SCALE", () => {
     expect(fitScale({ width: 390, height: 600 }, { width: 100000, height: 100000 }, 56)).toBe(MIN_SCALE);
+  });
+});
+
+describe("clampOffset", () => {
+  it("keeps content smaller than the viewport inside it", () => {
+    expect(clampOffset(-50, 400, 300, 1)).toBe(0);
+    expect(clampOffset(150, 400, 300, 1)).toBe(100);
+    expect(clampOffset(40, 400, 300, 1)).toBe(40);
+  });
+
+  it("keeps content larger than the viewport covering it", () => {
+    expect(clampOffset(20, 300, 400, 1)).toBe(0);
+    expect(clampOffset(-150, 300, 400, 1)).toBe(-100);
+  });
+});
+
+describe("zoomAt", () => {
+  it("keeps the focal point fixed", () => {
+    expect(zoomAt({ scale: 1, x: 0, y: 0 }, 2, 100, 50)).toEqual({ scale: 2, x: -100, y: -50 });
+  });
+
+  it("clamps the scale to [MIN_SCALE, MAX_SCALE]", () => {
+    expect(zoomAt({ scale: 1, x: 0, y: 0 }, 10, 0, 0).scale).toBe(MAX_SCALE);
+    expect(zoomAt({ scale: 1, x: 0, y: 0 }, 0.01, 0, 0).scale).toBe(MIN_SCALE);
+  });
+});
+
+describe("labelOpacity", () => {
+  it("fades labels in between the fade scales", () => {
+    expect(labelOpacity(1)).toBe(0);
+    expect(labelOpacity(1.3)).toBe(1);
+    expect(labelOpacity(1.15)).toBeCloseTo(0.5);
   });
 });

@@ -24,7 +24,7 @@ import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldA
 import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { subjectSpokenLabel } from "../../../src/subjectLabel";
-import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, fitScale, LABEL_LINE_HEIGHT, layoutGraph, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, type Center, type PositionedNode } from "../../../src/graphLayout";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, LABEL_LINE_HEIGHT, labelOpacity, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, zoomAt, type Center, type PositionedNode } from "../../../src/graphLayout";
 
 /** Node labels show subjects with "->"; screen readers get commas. */
 const spoken = (n: GraphNode) => (n.type === "subject" ? subjectSpokenLabel(n.label.split("->").join(", ")) : n.label);
@@ -46,13 +46,6 @@ function nodeColors(colors: ThemeColors): Record<GraphNode["type"], string> {
 }
 
 
-// How far the user can zoom in/out, and the scale window over which relation
-// labels fade in — below MIN they're fully transparent (too crowded to read,
-// and the loosened layout below hasn't given them room yet), fully opaque by
-// LABEL_FADE_IN_SCALE so a quick pinch past that point doesn't feel laggy.
-const MAX_SCALE = 3;
-const LABEL_FADE_OUT_SCALE = 1.0;
-const LABEL_FADE_IN_SCALE = 1.3;
 // Plain scroll-to-zoom (no modifier key) matches common map/canvas
 // conventions on web, where there's no pinch gesture from a trackpad/mouse.
 const WHEEL_ZOOM_SPEED = 0.0015;
@@ -219,10 +212,8 @@ export default function GraphExplorer() {
   // smaller than the viewport, so far that it leaves the viewport).
   function clampTranslation(s: number) {
     "worklet";
-    const slackX = viewportWidth.value - contentWidth.value * s;
-    const slackY = viewportHeight.value - contentHeight.value * s;
-    translateX.value = Math.min(Math.max(0, slackX), Math.max(Math.min(0, slackX), translateX.value));
-    translateY.value = Math.min(Math.max(0, slackY), Math.max(Math.min(0, slackY), translateY.value));
+    translateX.value = clampOffset(translateX.value, viewportWidth.value, contentWidth.value, s);
+    translateY.value = clampOffset(translateY.value, viewportHeight.value, contentHeight.value, s);
   }
 
   // Zooms to `next` while keeping the canvas point under (focalX, focalY)
@@ -230,12 +221,11 @@ export default function GraphExplorer() {
   // drifting toward the canvas's own center.
   function zoomAbout(next: number, focalX: number, focalY: number) {
     "worklet";
-    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
-    const ratio = clamped / scale.value;
-    translateX.value = focalX - (focalX - translateX.value) * ratio;
-    translateY.value = focalY - (focalY - translateY.value) * ratio;
-    scale.value = clamped;
-    clampTranslation(clamped);
+    const z = zoomAt({ scale: scale.value, x: translateX.value, y: translateY.value }, next, focalX, focalY);
+    translateX.value = z.x;
+    translateY.value = z.y;
+    scale.value = z.scale;
+    clampTranslation(z.scale);
   }
 
   const pinchStartScale = useSharedValue(1);
@@ -297,20 +287,10 @@ export default function GraphExplorer() {
   const edgeAnimatedProps = useAnimatedProps(() => ({ strokeWidth: 1.25 / scale.value }));
   const pillAnimatedProps = useAnimatedProps(() => ({
     strokeWidth: 1 / scale.value,
-    opacity:
-      scale.value <= LABEL_FADE_OUT_SCALE
-        ? 0
-        : scale.value >= LABEL_FADE_IN_SCALE
-          ? 1
-          : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
+    opacity: labelOpacity(scale.value),
   }));
   const labelAnimatedProps = useAnimatedProps(() => ({
-    opacity:
-      scale.value <= LABEL_FADE_OUT_SCALE
-        ? 0
-        : scale.value >= LABEL_FADE_IN_SCALE
-          ? 1
-          : (scale.value - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE),
+    opacity: labelOpacity(scale.value),
   }));
 
   const titleScreen = <Stack.Screen options={{ title: exploringTitle(data?.nodes.find((n) => n.id === data.centerId)?.label) }} />;

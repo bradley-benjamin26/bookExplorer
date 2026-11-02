@@ -352,6 +352,11 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
 
 /** The furthest the graph zooms out. */
 export const MIN_SCALE = 0.25;
+/** The furthest the graph zooms in. */
+export const MAX_SCALE = 3;
+/** Relation labels are fully transparent at or below this scale (too crowded to read) and fully opaque from LABEL_FADE_IN_SCALE. */
+export const LABEL_FADE_OUT_SCALE = 1.0;
+export const LABEL_FADE_IN_SCALE = 1.3;
 /** Clearance kept around the graph at the initial fit: a 44pt zoom button plus its 12pt inset. */
 export const CONTROLS_GUTTER = 56;
 
@@ -361,4 +366,32 @@ export function fitScale(viewport: { width: number; height: number }, content: {
   if (content.width <= viewport.width && content.height <= viewport.height) return 1;
   const fit = Math.min(1, (viewport.width - 2 * gutter) / content.width, (viewport.height - 2 * gutter) / content.height);
   return Math.max(MIN_SCALE, fit);
+}
+
+/** Clamps a canvas offset on one axis so no empty viewport shows beside the canvas (or, when smaller than the viewport, so it never leaves it). */
+export function clampOffset(offset: number, viewport: number, content: number, scale: number): number {
+  "worklet";
+  const slack = viewport - content * scale;
+  return Math.min(Math.max(0, slack), Math.max(Math.min(0, slack), offset));
+}
+
+/** Zooms to `nextScale` (clamped to [MIN_SCALE, MAX_SCALE]) keeping the canvas point under (focalX, focalY) fixed on screen; does not clamp translation. */
+export function zoomAt(
+  view: { scale: number; x: number; y: number },
+  nextScale: number,
+  focalX: number,
+  focalY: number,
+): { scale: number; x: number; y: number } {
+  "worklet";
+  const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
+  const ratio = scale / view.scale;
+  return { scale, x: focalX - (focalX - view.x) * ratio, y: focalY - (focalY - view.y) * ratio };
+}
+
+/** Relation-label opacity at `scale`: 0 up to LABEL_FADE_OUT_SCALE, 1 from LABEL_FADE_IN_SCALE, linear between. */
+export function labelOpacity(scale: number): number {
+  "worklet";
+  if (scale <= LABEL_FADE_OUT_SCALE) return 0;
+  if (scale >= LABEL_FADE_IN_SCALE) return 1;
+  return (scale - LABEL_FADE_OUT_SCALE) / (LABEL_FADE_IN_SCALE - LABEL_FADE_OUT_SCALE);
 }
