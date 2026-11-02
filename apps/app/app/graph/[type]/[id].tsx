@@ -200,10 +200,12 @@ export default function GraphExplorer() {
   // never magnified — centered, instead of cropping outer nodes.
   function resetView() {
     if (!layout) return;
-    const initial = fitScale({ width, height: canvasHeight }, { width: layout.contentWidth, height: layout.contentHeight }, CONTROLS_GUTTER);
+    const { bounds } = layout;
+    const initial = fitScale({ width, height: canvasHeight }, bounds, CONTROLS_GUTTER);
     scale.value = initial;
-    translateX.value = (width - layout.contentWidth * initial) / 2;
-    translateY.value = (canvasHeight - layout.contentHeight * initial) / 2;
+    // Centred on the nodes themselves, which needn't sit in the middle of the content box.
+    translateX.value = (width - bounds.width * initial) / 2 - bounds.x * initial;
+    translateY.value = (canvasHeight - bounds.height * initial) / 2 - bounds.y * initial;
     clampTranslation(initial);
   }
 

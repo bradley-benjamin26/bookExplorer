@@ -3,7 +3,7 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { isIsbnBarcode } from "../src/batchScan";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
@@ -46,6 +46,9 @@ function IsbnEntry() {
         returnKeyType="go"
         onSubmitEditing={submit}
       />
+      <Button variant="pill" onPress={submit} style={styles.entrySubmit}>
+        Open book
+      </Button>
       {invalid && (
         <Text style={styles.entryError} accessibilityLiveRegion="polite">
           That isn't a valid ISBN. Check the 10 or 13 digits on the back cover.
@@ -85,13 +88,14 @@ export default function Scan() {
 
   if (!permission.granted) {
     return (
-      <View style={styles.permissionScreen}>
+      // Android resizes the window for the keyboard itself; iOS needs the padding.
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.permissionScreen}>
         <Text style={styles.message}>Camera access is needed to scan book barcodes.</Text>
         <Button variant="primary" onPress={requestPermission}>
           Allow camera
         </Button>
         <IsbnEntry />
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -108,14 +112,14 @@ export default function Scan() {
         barcodeScannerSettings={{ barcodeTypes: ["ean13"] }}
         onBarcodeScanned={handleScanned}
       />
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.overlay}>
         <View style={styles.scanBox} />
         <Text style={styles.hint}>Align the book's barcode within the frame</Text>
         <Button variant="pill" onPress={() => setBatch(true)} accessibilityLabel="Scan multiple books">
           Scan multiple
         </Button>
         <IsbnEntry />
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -155,6 +159,7 @@ function createStyles({ colors, spacing, fonts, typeScale, radii }: Theme) {
       color: colors.ink,
       backgroundColor: colors.background,
     },
+    entrySubmit: { alignSelf: "flex-start" },
     entryError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger },
   });
 }

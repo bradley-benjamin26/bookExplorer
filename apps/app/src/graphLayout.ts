@@ -345,6 +345,8 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
     edges: placeEdgeLabels(positionedNodes, positionedEdges, graph.centerId),
     contentWidth,
     contentHeight,
+    // The nodes' own extent: the content box is never smaller than the viewport, so the initial fit uses this.
+    bounds: { x: minX + offsetX, y: minY + offsetY, width: maxX - minX, height: maxY - minY },
   };
 }
 
@@ -353,8 +355,10 @@ export const MIN_SCALE = 0.25;
 /** Clearance kept around the graph at the initial fit: a 44pt zoom button plus its 12pt inset. */
 export const CONTROLS_GUTTER = 56;
 
-/** The scale that fits `content` inside `viewport` less `gutter` on every side: never magnified, never below MIN_SCALE. */
+/** 1 for content that already fits `viewport`; otherwise the scale that fits it inside `viewport` less `gutter` on every side, never below MIN_SCALE. */
 export function fitScale(viewport: { width: number; height: number }, content: { width: number; height: number }, gutter: number): number {
+  // shortcut: a graph that already fits opens at 1, so a node in its bottom-right corner can still sit under the zoom buttons; test real node positions against the controls if that shows up.
+  if (content.width <= viewport.width && content.height <= viewport.height) return 1;
   const fit = Math.min(1, (viewport.width - 2 * gutter) / content.width, (viewport.height - 2 * gutter) / content.height);
   return Math.max(MIN_SCALE, fit);
 }

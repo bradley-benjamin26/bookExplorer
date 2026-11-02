@@ -17,7 +17,8 @@ import { Button } from "./Button";
 /**
  * "Save to list" on a work: asks which ISBN edition to save and saves that edition as a book.
  * A work with no ISBN edition is saved as a work. `onSaved` gets the saved edition's ISBN, or null for a work;
- * for an edition it runs once the sheet closes, so a Hardcover message left in the sheet is read first.
+ * for an edition it runs once the sheet closes (so a Hardcover message left in the sheet is read first), with null
+ * when there is no edition to follow, so the page can drop state it held for the follow.
  */
 export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: Work; saved: boolean; onSaved: (isbn: string | null) => void; ref?: Ref<SaveSheetHandle> }) {
   const styles = useThemedStyles(createStyles);
@@ -47,6 +48,10 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
     else sheet.current?.open(why);
   };
   useImperativeHandle(ref, () => ({ open }));
+  const dismissChooser = () => {
+    setChoosing(false);
+    onSaved(null);
+  };
   const pick = (isbn: string | null) => {
     setChoosing(false);
     saved.current = false;
@@ -81,18 +86,18 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
           if (!isbn && saved.current) onSaved(null);
         }}
         onClose={async () => {
-          if (!doneRan.current || !isbn) return;
+          if (!isbn) return;
+          const ran = doneRan.current;
           doneRan.current = false;
-          const lists = await getLists("book").catch(() => []);
+          const lists = ran ? await getLists("book").catch(() => []) : [];
           const listed = lists.some((l) => l.members.some((m) => m.type === "book" && m.id === isbn));
-          const follow = editionToOpen(isbn, listed);
-          if (follow) onSaved(follow);
+          onSaved(editionToOpen(isbn, ran && listed));
         }}
       />
-      <Modal visible={choosing} transparent animationType="fade" onRequestClose={() => setChoosing(false)}>
+      <Modal visible={choosing} transparent animationType="fade" onRequestClose={dismissChooser}>
         <View style={styles.backdrop}>
           {/* A sibling behind the popup, so the popup's controls are not nested inside a button. */}
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setChoosing(false)} accessibilityLabel="Close" />
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissChooser} accessibilityLabel="Close" />
           <View style={styles.popup}>
             <ScrollView style={{ flexShrink: 1 }} accessibilityViewIsModal>
               <Text accessibilityRole="header" style={styles.title}>Choose an edition</Text>
