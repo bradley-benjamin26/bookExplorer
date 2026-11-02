@@ -71,6 +71,30 @@ describe("labelWidthOf", () => {
   });
 });
 
+describe("initial fit of a real layout", () => {
+  const pair: Graph = {
+    centerId: "work:OL1W",
+    nodes: [
+      { id: "work:OL1W", type: "work", label: "Dune", navigable: true },
+      { id: "author:OL1A", type: "author", label: "Frank Herbert", navigable: true },
+    ],
+    edges: [{ source: "author:OL1A", target: "work:OL1W", relation: "wrote" }],
+  };
+
+  it("opens a two-node graph unshrunk on a phone", () => {
+    const { bounds } = layoutGraph(pair, 390, 600);
+    expect(fitScale({ width: 390, height: 600 }, bounds, CONTROLS_GUTTER)).toBe(1);
+  });
+
+  it("measures bounds inside the content box", () => {
+    const { bounds, contentWidth, contentHeight } = layoutGraph(pair, 390, 600);
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(contentWidth);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(contentHeight);
+  });
+});
+
 describe("fitScale", () => {
   it("shrinks large content to fit inside the gutter", () => {
     expect(fitScale({ width: 390, height: 600 }, { width: 800, height: 800 }, 56)).toBeCloseTo(0.348, 2);
