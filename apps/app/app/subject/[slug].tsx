@@ -32,7 +32,7 @@ export default function SubjectDetail() {
   });
 
   useEffect(() => {
-    if (data) addRecent({ kind: "subject", id: data.slug, title: subjectLabel(subjectDisplayName(data.slug, data.name, label)), subtitle: null });
+    if (data) addRecent({ kind: "subject", id: data.slug, title: subjectLabel(subjectDisplayName(data.slug, data.name, label)), subtitle: null, subjectLabel: label });
   }, [data, label]);
 
   const [sort, setSort] = useState(DEFAULT_SUBJECT_SORT);
