@@ -43,6 +43,21 @@ describe("accountStore", () => {
     deleteSession("t");
     expect(getSession("t")).toBeNull();
   });
+  it("getSession forgets a session 90 days after it was created", () => {
+    vi.useFakeTimers();
+    createSession("t", session);
+    vi.setSystemTime(Date.now() + 90 * 864e5 + 1);
+    expect(getSession("t")).toBeNull();
+  });
+  it("refreshing tokens doesn't extend a session", () => {
+    vi.useFakeTimers();
+    createSession("t", session);
+    vi.setSystemTime(Date.now() + 89 * 864e5);
+    updateTokens("t", { accessToken: "a2", refreshToken: "r2", expiresAt: 2000 });
+    expect(getSession("t")).not.toBeNull();
+    vi.setSystemTime(Date.now() + 864e5 + 1);
+    expect(getSession("t")).toBeNull();
+  });
   it("never stores tokens in plaintext", async () => {
     const path = `${process.env.TMPDIR ?? "/tmp"}/acct-${Date.now()}.db`;
     closeAccountStore();

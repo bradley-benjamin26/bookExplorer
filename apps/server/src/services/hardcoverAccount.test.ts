@@ -90,6 +90,13 @@ describe("hardcoverAccount", () => {
     expect(redeemHandoff(code)).toBeNull();
   });
 
+  it("userAuthorization returns null for a lapsed session", async () => {
+    vi.useFakeTimers();
+    const out = redeemHandoff(await connect())!;
+    vi.setSystemTime(Date.now() + 90 * 864e5 + 1);
+    expect(await userAuthorization(out.token)).toBeNull();
+  });
+
   it("userAuthorization is null for missing, non-string or unknown tokens", async () => {
     expect(await userAuthorization(undefined)).toBeNull();
     expect(await userAuthorization(5)).toBeNull();

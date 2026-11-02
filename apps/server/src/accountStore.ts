@@ -75,7 +75,11 @@ export function takeHandoff(code: string): string | null {
   return open(row.session_token);
 }
 
+// Absolute lifetime from sign-in; refreshing tokens doesn't extend it.
+const SESSION_TTL_MS = 90 * 24 * 60 * 60_000;
+
 export function createSession(sessionToken: string, s: StoredSession): void {
+  conn().prepare("DELETE FROM sessions WHERE created_at <= ?").run(Date.now() - SESSION_TTL_MS);
   conn()
     .prepare("INSERT OR REPLACE INTO sessions VALUES (?, ?, ?, ?, ?, ?, ?)")
     .run(sha256(sessionToken), s.hardcoverUserId, s.username, seal(s.accessToken), seal(s.refreshToken), s.expiresAt, Date.now());
@@ -83,8 +87,8 @@ export function createSession(sessionToken: string, s: StoredSession): void {
 
 export function getSession(sessionToken: string): StoredSession | null {
   const r = conn()
-    .prepare("SELECT hardcover_user_id, username, access_token, refresh_token, access_expires_at FROM sessions WHERE token_hash = ?")
-    .get(sha256(sessionToken)) as
+    .prepare("SELECT hardcover_user_id, username, access_token, refresh_token, access_expires_at FROM sessions WHERE token_hash = ? AND created_at > ?")
+    .get(sha256(sessionToken), Date.now() - SESSION_TTL_MS) as
     | { hardcover_user_id: number; username: string; access_token: string; refresh_token: string; access_expires_at: number }
     | undefined;
   if (!r) return null;
