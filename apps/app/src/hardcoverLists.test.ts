@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
 import { ApiError } from "./api/client";
-import { copyToHardcover, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
+import { copyToHardcover, importChosenLists, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
 import { createList, addToList, getList, linkList, replaceMembers } from "./storage/savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
@@ -89,6 +89,22 @@ describe("hardcoverLists", () => {
     await copyToHardcover(await seed(["a", "b", "c"]), () => {}, sleep);
     expect(sleep).toHaveBeenCalledWith(30_000);
     expect(sentIds()).toEqual(["a", "b", "b", "c"]);
+  });
+
+  it("importChosenLists returns the new local list ids in order", async () => {
+    fetchList.mockImplementation(async (id: number) => ({ name: `H${id}`, description: "", booksCount: 0, books: [] }));
+    const ids = await importChosenLists([7, 8]);
+    expect(ids).toHaveLength(2);
+    expect((await getList(ids[0]))!.hardcoverListId).toBe(7);
+    expect((await getList(ids[1]))!.hardcoverListId).toBe(8);
+  });
+
+  it("importChosenLists stops at the first failure and rethrows", async () => {
+    fetchList
+      .mockResolvedValueOnce({ name: "A", description: "", booksCount: 0, books: [] })
+      .mockRejectedValueOnce(new ApiError("boom", 500));
+    await expect(importChosenLists([1, 2, 3])).rejects.toThrow("boom");
+    expect(fetchList).toHaveBeenCalledTimes(2);
   });
 
   it("calls onWait with the retry delay before sleeping on a 429", async () => {

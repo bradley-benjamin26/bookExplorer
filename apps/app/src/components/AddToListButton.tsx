@@ -1,9 +1,12 @@
+import type { HardcoverListSummary } from "@book-explorer/shared";
 import { Plus, Square, SquareCheck } from "lucide-react-native";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
-import { createHardcoverList } from "../api/client";
+import { createHardcoverList, fetchHardcoverLists } from "../api/client";
 import { confirmLeave } from "../confirm";
+import { hardcoverChoices } from "../hardcoverChoices";
+import { importChosenLists } from "../hardcoverLists";
 import { getSessionToken } from "../hardcoverSession";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import { getPreferences } from "../storage/preferences";
@@ -137,6 +140,8 @@ export function AddToListButton({
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [remoteLists, setRemoteLists] = useState<HardcoverListSummary[]>([]);
+  const [remoteChecked, setRemoteChecked] = useState<Set<number>>(new Set());
   const [onAnyList, setOnAnyList] = useState(false);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -160,9 +165,13 @@ export function AddToListButton({
   const load = (reset: boolean) => {
     setLoadError("");
     setLoading(true);
-    return Promise.all([getLists(kind), getPreferences()])
-      .then(([ls, prefs]) => {
+    // A Hardcover failure just leaves those rows out.
+    const remote = getSessionToken() && kind === "book" ? fetchHardcoverLists().catch(() => []) : Promise.resolve([]);
+    return Promise.all([getLists(kind), getPreferences(), remote])
+      .then(([ls, prefs, rem]) => {
         setLists(ls);
+        setRemoteLists(hardcoverChoices(rem, ls));
+        if (reset) setRemoteChecked(new Set());
         if (!reset) return;
         const held = ls.filter(holds);
         // On no list yet: start with the default list ticked, so saving there is just Done.
@@ -185,13 +194,22 @@ export function AddToListButton({
       if (!next.delete(list.id)) next.add(list.id);
       return next;
     });
+  const toggleRemote = (id: number) =>
+    setRemoteChecked((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
   const done = async () => {
     setError("");
     setBusy(true); // also blocks a second tap while the confirm is up
     try {
-      if (leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
+      if (remoteChecked.size === 0 && leavesLibrary(lists, member, checked) && !(await confirmLeave(member.title))) return;
       let issue = "";
-      await applyListChanges(member, listChanges(lists, member, checked), onSave, (m) => {
+      // Import first: the imported lists then get the book through the normal add path.
+      const imported = await importChosenLists([...remoteChecked]);
+      const changes = listChanges(lists, member, checked);
+      await applyListChanges(member, { ...changes, add: [...changes.add, ...imported] }, onSave, (m) => {
         issue = m;
         setError(m);
       });
@@ -255,6 +273,26 @@ export function AddToListButton({
                         <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
                         <Text style={styles.rowText} numberOfLines={2}>
                           {list.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                  {remoteLists.map((r) => {
+                    const isChecked = remoteChecked.has(r.id);
+                    const Icon = isChecked ? SquareCheck : Square;
+                    return (
+                      <Pressable
+                        ref={titleRef(`Import ${r.name} from Hardcover and add this book`)}
+                        key={`h${r.id}`}
+                        style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                        onPress={() => toggleRemote(r.id)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isChecked }}
+                        accessibilityLabel={`${r.name}, a Hardcover list; adds this book and imports the list`}
+                      >
+                        <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
+                        <Text style={styles.rowText} numberOfLines={2}>
+                          {r.name} · on Hardcover
                         </Text>
                       </Pressable>
                     );

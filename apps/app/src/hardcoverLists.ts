@@ -28,6 +28,13 @@ export async function importList(hardcoverListId: number): Promise<{ list: Saved
   return { list, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }
 
+/** Imports one at a time; the first failure rethrows and lists already imported stay. */
+export async function importChosenLists(hardcoverListIds: number[]): Promise<string[]> {
+  const ids: string[] = [];
+  for (const id of hardcoverListIds) ids.push((await importList(id)).list.id);
+  return ids;
+}
+
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const MAX_RATE_LIMIT_RETRIES = 5;
 
