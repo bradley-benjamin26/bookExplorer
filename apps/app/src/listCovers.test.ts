@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { listCoverUrls } from "./listCovers";
+import { listCoverUrls, recentCoverUrl } from "./listCovers";
+import type { RecentItem } from "./storage/history";
 import type { ListMember } from "./storage/savedLists";
 
 const member = (type: ListMember["type"], id: string): ListMember => ({ type, id, title: id, addedAt: 0 });
@@ -22,5 +23,17 @@ describe("listCoverUrls", () => {
 
   it("gives an empty list for an empty list", () => {
     expect(listCoverUrls([])).toEqual([]);
+  });
+});
+
+describe("recentCoverUrl", () => {
+  const recent = (kind: RecentItem["kind"], id: string): RecentItem => ({ kind, id, title: null, subtitle: null });
+
+  it("gives the small Open Library cover for a book", () => {
+    expect(recentCoverUrl(recent("book", "9780141439518"))).toBe("https://covers.openlibrary.org/b/isbn/9780141439518-S.jpg");
+  });
+
+  it("gives null for works, authors and subjects", () => {
+    for (const kind of ["work", "author", "subject"] as const) expect(recentCoverUrl(recent(kind, "x"))).toBeNull();
   });
 });

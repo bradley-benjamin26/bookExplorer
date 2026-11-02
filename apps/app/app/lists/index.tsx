@@ -4,7 +4,9 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CreateListForm } from "../../src/components/AddToListButton";
 import { Button } from "../../src/components/Button";
+import { CoverStack } from "../../src/components/CoverStack";
 import { Footer } from "../../src/components/Footer";
+import { listCoverUrls } from "../../src/listCovers";
 import { routes } from "../../src/navigation";
 import { getLists, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -80,6 +82,7 @@ export default function Lists() {
                     accessibilityRole="button"
                     accessibilityLabel={`${list.name}, ${count}`}
                   >
+                    <CoverStack urls={listCoverUrls(list.members)} />
                     <View style={styles.rowMain}>
                       <Text style={styles.rowText} numberOfLines={2}>
                         {list.name}

@@ -2,6 +2,7 @@ import { isValidIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
+import { Image } from "expo-image";
 import { FlatList, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
@@ -10,7 +11,9 @@ import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
 import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
+import { CoverPlaceholder } from "../src/components/CoverPlaceholder";
 import { FeedbackBanner } from "../src/components/FeedbackBanner";
+import { recentCoverUrl } from "../src/listCovers";
 import { rowFeedback } from "../src/rowFeedback";
 
 type RecentFilter = "all" | "books" | "authors" | "subjects";
@@ -150,6 +153,13 @@ export default function Home() {
                     )}
                     <View style={[styles.node, { backgroundColor: theme.colors[KIND_COLOR[item.kind]] }]} />
                   </View>
+                  {item.kind === "book" && (
+                    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.recentCover}>
+                      {/* Under the image: Open Library serves a transparent 1x1 for an ISBN with no cover. */}
+                      <CoverPlaceholder width={32} height={48} />
+                      <Image source={{ uri: recentCoverUrl(item) ?? undefined }} contentFit="cover" style={StyleSheet.absoluteFill} />
+                    </View>
+                  )}
                   <View style={styles.recentText}>
                     <Text style={styles.recentItemText}>{item.title ?? item.id}</Text>
                     <Text style={styles.recentAuthor}>
@@ -232,6 +242,7 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     threadFirst: { top: "50%" },
     threadLast: { bottom: "50%" },
     node: { width: 8, height: 8, borderRadius: 4 },
+    recentCover: { width: 32, height: 48, borderRadius: radii.xs, overflow: "hidden" },
     recentText: { flex: 1 },
     recentItemText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     recentAuthor: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xs },
