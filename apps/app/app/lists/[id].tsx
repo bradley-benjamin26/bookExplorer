@@ -1,10 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { EmptyState } from "../../src/components/EmptyState";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
+import { EmptyState } from "../../src/components/EmptyState";
+import { ExportButton } from "../../src/components/ExportButton";
+import type { ExportFormat } from "../../src/exportFormats";
 import { CenteredModal } from "../../src/components/CenteredModal";
 import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
@@ -66,7 +68,7 @@ export default function ListDetail() {
   };
 
   // Same failure handling as BackupSection's attempt.
-  const exportList = async (ext: "csv" | "json") => {
+  const exportList = async (ext: ExportFormat) => {
     setError("");
     try {
       const file = `${shelfSlug(list?.name ?? "") || "list"}-${today()}.${ext}`;
@@ -178,18 +180,19 @@ export default function ListDetail() {
               </Text>
             </View>
           </CenteredModal>
-          {list.kind === "book" && getSessionToken() !== null ? (
-            <View style={styles.exportRow}>
-              {list.hardcoverListId ? (
+          <View style={styles.exportRow}>
+            <ExportButton onChoose={exportList} label="Export this list" />
+            {list.kind === "book" && getSessionToken() !== null ? (
+              list.hardcoverListId ? (
                 <>
                   <Button variant="pill" disabled={busy} onPress={sync}>{busy ? "Syncing…" : "Sync with Hardcover"}</Button>
                   <Button variant="pill" disabled={busy} onPress={unlink}>Unlink</Button>
                 </>
               ) : (
                 <Button variant="pill" disabled={busy} onPress={copy}>{progress || "Copy to Hardcover"}</Button>
-              )}
-            </View>
-          ) : null}
+              )
+            ) : null}
+          </View>
           {list.members.length === 0 ? (
             list.kind === "author" ? (
               <EmptyState message="This list is empty. Save an author from their page to add them here." />
@@ -223,14 +226,6 @@ export default function ListDetail() {
               </View>
             ))
           )}
-          <View style={styles.exportRow}>
-            <Button variant="pill" onPress={() => exportList("csv")} tooltip="Download for Goodreads or StoryGraph">
-              Export CSV
-            </Button>
-            <Button variant="pill" onPress={() => exportList("json")} tooltip="Download a backup of this list">
-              Export JSON
-            </Button>
-          </View>
           <Button variant="pill" onPress={confirmDelete} style={styles.deleteButton} textStyle={styles.removeText}>
             Delete list
           </Button>

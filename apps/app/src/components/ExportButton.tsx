@@ -12,12 +12,12 @@ const CHOICES: { format: ExportFormat; label: string; help: string; a11y: string
 ];
 
 /** One Export pill that asks which format to download. */
-export function ExportButton({ onChoose }: { onChoose: (format: ExportFormat) => void }) {
+export function ExportButton({ onChoose, label = "Export your library" }: { onChoose: (format: ExportFormat) => void; label?: string }) {
   const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="pill" onPress={() => setOpen(true)} accessibilityLabel="Export your library" tooltip="Export your library">
+      <Button variant="pill" onPress={() => setOpen(true)} accessibilityLabel={label} tooltip={label}>
         Export
       </Button>
       <CenteredModal visible={open} label="Export as" onClose={() => setOpen(false)}>
