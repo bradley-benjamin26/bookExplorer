@@ -3,15 +3,18 @@ import { Pressable, Text, View } from "react-native";
 import { titleRef } from "../webTitle";
 import { useTheme } from "../theme";
 
-/** Header title with a small "Shelf Thread" home link above the page title, so every screen has a way home. */
+/** Large "Shelf Thread" on every screen (the link home off the home page) above the page title, or the tagline on home. */
 export function HeaderTitle({ children }: { children: string }) {
   const router = useRouter();
   const { colors, fonts, typeScale } = useTheme();
   if (children === "Shelf Thread") {
     return (
-      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, color: colors.ink, fontSize: typeScale.lg }}>
-        Shelf Thread
-      </Text>
+      <View>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, color: colors.ink, fontSize: typeScale.lg }}>
+          Shelf Thread
+        </Text>
+        <Text style={{ fontFamily: fonts.body, color: colors.inkFaint, fontSize: typeScale.xs }}>find your next read</Text>
+      </View>
     );
   }
   return (
@@ -22,7 +25,7 @@ export function HeaderTitle({ children }: { children: string }) {
         accessibilityRole="link"
         accessibilityLabel="Shelf Thread"
       >
-        <Text style={{ fontFamily: fonts.display, color: colors.cover, fontSize: typeScale.xs }}>Shelf Thread</Text>
+        <Text style={{ fontFamily: fonts.display, color: colors.cover, fontSize: typeScale.lg }}>Shelf Thread</Text>
       </Pressable>
       <Text numberOfLines={1} style={{ fontFamily: fonts.displayMedium, color: colors.ink, fontSize: typeScale.sm }}>
         {children}
