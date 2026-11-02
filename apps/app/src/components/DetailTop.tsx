@@ -45,7 +45,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     header: { alignItems: "flex-start", width: "100%", gap: spacing.md },
     headerWide: { flexDirection: "row", gap: spacing.xl },
     image: { alignItems: "flex-start" },
-    text: { flexShrink: 1, flexGrow: 1, alignItems: "flex-start" },
+    text: { flexShrink: 1, flexGrow: 1, alignItems: "flex-start", alignSelf: "stretch" },
     title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
     actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
     primaryActions: { flexDirection: "row", flexWrap: "nowrap", alignItems: "stretch", alignSelf: "stretch", gap: spacing.sm, marginTop: spacing.md },
