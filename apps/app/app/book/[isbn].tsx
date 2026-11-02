@@ -26,7 +26,7 @@ import { ShareButton } from "../../src/components/ShareButton";
 import { AwardsSection, EditLinkRow, TermsSection } from "../../src/components/TermsSection";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
-import { getSavedBook, saveBook, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
+import { getSavedBook, saveBook, seedSavedBookFromApi, updateSavedBook, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { editLinkHost } from "../../src/termsEditHost";
 import { useEditLock } from "../../src/useEditLock";
@@ -74,6 +74,11 @@ export default function BookDetail() {
       if (savedIsbn) getSavedBook(savedIsbn).then(setSavedRecord);
     }, [savedIsbn])
   );
+
+  // A book saved from a Hardcover list starts blank; give it the API's tags once they load.
+  useEffect(() => {
+    if (data && savedRecord) seedSavedBookFromApi(savedRecord.isbn, data).then((r) => r && setSavedRecord(r));
+  }, [data, savedRecord]);
 
   // Once a book is saved, its own record (subjects/genres the user has
   // edited, on top of the snapshot taken at save time) is what's shown and

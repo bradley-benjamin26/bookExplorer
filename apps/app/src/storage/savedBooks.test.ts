@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Book } from "@book-explorer/shared";
 import AsyncStorage from "../test/asyncStorageMock";
-import { getSavedBook, removeSavedBook, saveBook, saveBookFromApi, unsaveBook, updateSavedBook } from "./savedBooks";
+import { getSavedBook, removeSavedBook, saveBook, saveBookFromApi, seedSavedBookFromApi, saveListedBook, unsaveBook, updateSavedBook } from "./savedBooks";
 import { getSavedItems } from "./savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
@@ -114,5 +114,18 @@ describe("saveBook", () => {
     await unsaveBook(book.isbn);
     expect(await getSavedItems()).toEqual([]);
     expect(await getSavedBook(book.isbn)).toBeNull();
+  });
+
+  it("seedSavedBookFromApi fills a stub once", async () => {
+    await saveListedBook(book.isbn, book.title);
+    expect(await seedSavedBookFromApi(book.isbn, book)).toMatchObject({ authorNames: ["Jane Austen"], subjects: ["Courtship"], genres: ["Romance"], openLibraryWorkId: "OL66554W" });
+    expect(await seedSavedBookFromApi(book.isbn, book)).toBeNull();
+  });
+
+  it("seedSavedBookFromApi leaves a record with authors alone", async () => {
+    await saveBook(book);
+    await updateSavedBook(book.isbn, { subjects: [], genres: [] });
+    expect(await seedSavedBookFromApi(book.isbn, book)).toBeNull();
+    expect(await getSavedBook(book.isbn)).toMatchObject({ subjects: [], genres: [] });
   });
 });

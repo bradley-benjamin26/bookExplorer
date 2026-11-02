@@ -5,7 +5,7 @@ import { fetchBookWithAlternate } from "./api/bookLookup";
 import { fetchWork } from "./api/client";
 import { toAlternateIsbn } from "./isbn";
 import { pendingTargets, runBounded, type PrefetchTarget } from "./prefetchSaved";
-import { getAllSavedBooks } from "./storage/savedBooks";
+import { getAllSavedBooks, seedSavedBookFromApi } from "./storage/savedBooks";
 import { getAllSavedWorks, seedSavedWorkFromApi } from "./storage/savedWorks";
 
 // Items that failed on their own (a 404, a 500) are left for the next session, so a rerun skips them too.
@@ -26,7 +26,9 @@ async function pass(queryClient: QueryClient) {
   // Same per-item public lookups the detail pages make; nothing about the library as a whole is sent.
   const failed = await runBounded(targets, (t) =>
     t.kind === "book"
-      ? queryClient.fetchQuery({ queryKey: ["book", t.id], queryFn: () => fetchBookWithAlternate(t.id) })
+      ? queryClient
+          .fetchQuery({ queryKey: ["book", t.id], queryFn: () => fetchBookWithAlternate(t.id) })
+          .then((book) => seedSavedBookFromApi(t.id, book).catch(() => undefined))
       : queryClient
           .fetchQuery({ queryKey: ["work", t.id], queryFn: () => fetchWork(t.id) })
           // A seeding failure is local storage, not the fetch, so it never marks the item failed.

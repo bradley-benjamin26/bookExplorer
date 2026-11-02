@@ -1,5 +1,6 @@
 import type { HardcoverListSummary } from "@book-explorer/shared";
 import { Plus, Square, SquareCheck } from "lucide-react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
@@ -8,6 +9,7 @@ import { confirmLeave } from "../confirm";
 import { hardcoverChoices, keepOffered, linkedTo, listsNotHolding } from "../hardcoverChoices";
 import { importChosenLists } from "../hardcoverLists";
 import { getSessionToken } from "../hardcoverSession";
+import { prefetchMissingSaved } from "../useSavedPrefetch";
 import { applyListChanges, leavesLibrary, listChanges } from "../storage/listMembership";
 import { getPreferences } from "../storage/preferences";
 import {
@@ -139,6 +141,7 @@ export function AddToListButton({
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
+  const queryClient = useQueryClient();
   const kind: SavedList["kind"] = member.type === "author" ? "author" : "book";
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<SavedList[]>([]);
@@ -216,6 +219,7 @@ export function AddToListButton({
       let issue = "";
       // Import first: the imported lists then get the book through the normal add path.
       const created = await importChosenLists([...remoteChecked]);
+      if (created.length) void prefetchMissingSaved(queryClient);
       setChecked((prev) => new Set([...prev, ...created]));
       // An imported list may already hold the book; adding it again would re-push it to Hardcover.
       const imported = created.length ? listsNotHolding(await getLists(kind), member, created) : [];

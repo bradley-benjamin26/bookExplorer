@@ -77,6 +77,57 @@ export function saveBookFromApi(book: Book): Promise<SavedBookRecord> {
   });
 }
 
+/** Saves a book that's already on a list (from a Hardcover import or sync): a stub record until its details load; a live record is left as is. */
+export async function saveListedBook(isbn: string, title: string): Promise<void> {
+  await enqueueWrite(storageKey(isbn), async () => {
+    const existing = await readRecord(isbn);
+    if (existing && !existing.deletedAt) return;
+    const stub: SavedBookRecord = stamp({
+      isbn,
+      wikidataId: null,
+      openLibraryEditionId: null,
+      openLibraryWorkId: null,
+      title,
+      authorNames: [],
+      format: null,
+      subjects: [],
+      genres: [],
+      notes: "",
+      savedAt: Date.now(),
+    });
+    await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(stub));
+  });
+  await ensureSaved({ type: "book", id: isbn, title });
+}
+
+/**
+ * Fills a stub (see `saveListedBook`) from `book`, once; a record with authors keeps whatever tags the user left.
+ * Returns the seeded record, or null when nothing was written.
+ */
+export function seedSavedBookFromApi(isbn: string, book: Book): Promise<SavedBookRecord | null> {
+  return enqueueWrite(storageKey(isbn), async () => {
+    const existing = await readRecord(isbn);
+    if (!existing || existing.deletedAt || existing.authorNames.length + existing.subjects.length + existing.genres.length > 0) return null;
+    const seeded = {
+      authorNames: book.authors.map((a) => a.name),
+      subjects: book.subjects.map((t) => t.label),
+      genres: book.genres.map((t) => t.label),
+    };
+    if (seeded.authorNames.length + seeded.subjects.length + seeded.genres.length === 0) return null;
+    const next = {
+      ...existing,
+      ...seeded,
+      format: book.format,
+      wikidataId: book.wikidataId,
+      openLibraryEditionId: book.openLibraryEditionId,
+      openLibraryWorkId: book.openLibraryWorkId,
+      updatedAt: Date.now(),
+    };
+    await AsyncStorage.setItem(storageKey(isbn), JSON.stringify(next));
+    return next;
+  });
+}
+
 /**
  * Waits for any queued writes to this book first, so a screen re-reading on focus (e.g.
  * the book page after a removal or edit on the Saved screen) sees their

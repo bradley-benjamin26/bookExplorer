@@ -1,6 +1,8 @@
 import { ApiError, addHardcoverListBook, createHardcoverList, fetchHardcoverList, removeHardcoverListBook } from "./api/client";
 import { reconcile } from "./storage/hardcoverReconcile";
+import { saveListedBook } from "./storage/savedBooks";
 import { createList, getList, linkList, replaceMembers, setMemberHardcoverId, type ListMember, type SavedList } from "./storage/savedLists";
+import { unsaveIfUnlisted } from "./storage/unlisted";
 
 export async function pushAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
   if (!list.hardcoverListId || member.type === "author") return "skipped";
@@ -24,7 +26,9 @@ export async function pushRemove(list: SavedList, member: ListMember): Promise<v
 export async function importList(hardcoverListId: number): Promise<{ list: SavedList; skipped: string[] }> {
   const remote = await fetchHardcoverList(hardcoverListId);
   const list = await createList({ name: remote.name, description: remote.description, kind: "book", hardcoverListId });
-  await replaceMembers(list.id, reconcile([], remote.books, Date.now()));
+  const members = reconcile([], remote.books, Date.now());
+  await replaceMembers(list.id, members);
+  for (const m of members) if (m.type === "book") await saveListedBook(m.id, m.title);
   return { list, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }
 
@@ -82,6 +86,12 @@ export async function syncWithHardcover(list: SavedList): Promise<{ missing: str
   if (remote.books.length < remote.booksCount) throw new Error("Hardcover sent only part of this list, so nothing was removed. Try again later.");
   const latest = await getList(list.id); // re-read so ids just set by the push are included
   if (!latest) throw new Error("This list no longer exists.");
-  await replaceMembers(list.id, reconcile(latest.members, remote.books, Date.now()));
+  const next = reconcile(latest.members, remote.books, Date.now());
+  await replaceMembers(list.id, next);
+  const key = (m: Pick<ListMember, "type" | "id">) => `${m.type}:${m.id}`;
+  const before = new Set(latest.members.map(key));
+  const after = new Set(next.map(key));
+  for (const m of next) if (m.type === "book" && !before.has(key(m))) await saveListedBook(m.id, m.title);
+  for (const m of latest.members) if (!after.has(key(m))) await unsaveIfUnlisted(m);
   return { missing, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }

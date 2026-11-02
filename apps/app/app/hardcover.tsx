@@ -7,6 +7,7 @@ import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
 import { importList } from "../src/hardcoverLists";
+import { prefetchMissingSaved } from "../src/useSavedPrefetch";
 import { routes } from "../src/navigation";
 import { getLists } from "../src/storage/savedLists";
 import { connectHardcover } from "../src/hardcoverConnect";
@@ -40,6 +41,7 @@ export default function HardcoverAccount() {
     setError("");
     try {
       const { list, skipped: s } = await importList(id);
+      void prefetchMissingSaved(queryClient);
       await queryClient.invalidateQueries({ queryKey: ["hardcover"] });
       router.push({ pathname: "/lists/[id]", params: { id: list.id, ...(s.length ? { skipped: JSON.stringify(s) } : {}) } });
     } catch (err) {

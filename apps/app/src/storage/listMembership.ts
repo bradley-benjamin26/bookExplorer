@@ -1,8 +1,6 @@
 import { pushAdd, pushRemove } from "../hardcoverLists";
-import { unsaveBook } from "./savedBooks";
-import { removeSaved } from "./savedItems";
-import { addToList, deleteList, getList, isOnAnyList, removeFromList, type ListMember, type SavedList } from "./savedLists";
-import { unsaveWork } from "./savedWorks";
+import { unsaveIfUnlisted } from "./unlisted";
+import { addToList, deleteList, getList, removeFromList, type ListMember, type SavedList } from "./savedLists";
 
 type Member = Omit<ListMember, "addedAt">;
 
@@ -21,14 +19,7 @@ export function leavesLibrary(lists: SavedList[], member: Pick<ListMember, "type
   return remove.length > 0 && !lists.some((l) => checked.has(l.id));
 }
 
-/** Unsaves `member` (dropping its notes) when no live list holds it; returns whether it did. */
-export async function unsaveIfUnlisted(member: Pick<ListMember, "type" | "id">): Promise<boolean> {
-  if (await isOnAnyList(member.type, member.id)) return false;
-  if (member.type === "book") await unsaveBook(member.id);
-  else if (member.type === "work") await unsaveWork(member.id);
-  else await removeSaved("author", member.id);
-  return true;
-}
+export { unsaveIfUnlisted } from "./unlisted";
 
 /**
  * Adds first and removes last, so a move between lists never leaves the item on none

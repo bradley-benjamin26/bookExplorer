@@ -16,6 +16,7 @@ import { shareFile } from "../../src/backupFiles";
 import { shelfSlug } from "../../src/csv";
 import { confirmDestructive, confirmLeave } from "../../src/confirm";
 import { copyToHardcover, syncWithHardcover } from "../../src/hardcoverLists";
+import { prefetchMissingSaved } from "../../src/useSavedPrefetch";
 import { getSessionToken } from "../../src/hardcoverSession";
 import { memberHref, routes } from "../../src/navigation";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
@@ -111,7 +112,12 @@ export default function ListDetail() {
       setCopying(false);
     }
   };
-  const sync = () => runHardcover(syncWithHardcover);
+  const sync = () =>
+    runHardcover(async (l) => {
+      const r = await syncWithHardcover(l);
+      void prefetchMissingSaved(queryClient);
+      return r;
+    });
   const unlink = async () => {
     if (busyRef.current) return;
     busyRef.current = true;

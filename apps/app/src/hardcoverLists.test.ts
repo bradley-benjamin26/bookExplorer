@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
 import { ApiError } from "./api/client";
 import { copyToHardcover, importChosenLists, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
+import { getSavedBook, saveListedBook, unsaveBook, updateSavedBook } from "./storage/savedBooks";
+import { getSavedItems } from "./storage/savedItems";
 import { createList, addToList, getList, linkList, replaceMembers } from "./storage/savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
@@ -227,5 +229,44 @@ describe("hardcoverLists", () => {
     await expect(copyToHardcover((await getList(l.id))!, () => {}, vi.fn())).rejects.toThrow("boom");
     await syncWithHardcover((await getList(l.id))!);
     expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["a", "b", "c"]);
+  });
+
+  describe("saving listed books", () => {
+    const dune = { hardcoverBookId: 1, title: "Dune", isbn: "9780441013593" };
+    const remoteList = { name: "HC", description: "", booksCount: 1, books: [dune] };
+
+    it("importList saves each imported book", async () => {
+      fetchList.mockResolvedValue(remoteList);
+      await importList(9);
+      expect(await getSavedBook(dune.isbn)).toMatchObject({ title: "Dune", notes: "" });
+      expect(await getSavedItems()).toContainEqual(expect.objectContaining({ type: "book", id: dune.isbn }));
+    });
+
+    it("importList brings back a book the user had removed", async () => {
+      await saveListedBook(dune.isbn, "Dune");
+      await unsaveBook(dune.isbn);
+      fetchList.mockResolvedValue(remoteList);
+      await importList(9);
+      expect(await getSavedBook(dune.isbn)).not.toBeNull();
+    });
+
+    it("importList keeps an already-saved book's notes", async () => {
+      await saveListedBook(dune.isbn, "Dune");
+      await updateSavedBook(dune.isbn, { notes: "mine" });
+      fetchList.mockResolvedValue(remoteList);
+      await importList(9);
+      expect(await getSavedBook(dune.isbn)).toMatchObject({ notes: "mine" });
+    });
+
+    it("syncWithHardcover saves books it pulls in and unsaves ones Hardcover dropped", async () => {
+      const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+      await addToList(l.id, { type: "book", id: "A", title: "A" });
+      await saveListedBook("A", "A");
+      await replaceMembers(l.id, (await getList(l.id))!.members.map((m) => ({ ...m, hardcoverBookId: 2 })));
+      fetchList.mockResolvedValue(remoteList);
+      await syncWithHardcover((await getList(l.id))!);
+      expect(await getSavedBook(dune.isbn)).toMatchObject({ title: "Dune" });
+      expect(await getSavedBook("A")).toBeNull();
+    });
   });
 });
