@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
-import { addRecent, clearRecent, getRecent, recentOfKind, type RecentItem } from "./history";
+import { addRecent, clearRecent, getRecent, recentHref, recentOfKind, type RecentItem } from "./history";
 import { setPreferences } from "./preferences";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
@@ -54,6 +54,22 @@ describe("history", () => {
     await addRecent(book("1"));
     await addRecent({ kind: "book", id: "1", title: "Dune", subtitle: "Frank Herbert" });
     expect(await getRecent()).toEqual([{ kind: "book", id: "1", title: "Dune", subtitle: "Frank Herbert" }]);
+  });
+
+  it("preserves a subject label when reopening a recent subject", async () => {
+    const subjectLabel = "Young adult fiction, Historical, Medieval";
+    await addRecent({
+      kind: "subject",
+      id: "young_adult_fiction_historical_medieval",
+      title: "Young Adult Fiction->Historical->Medieval",
+      subtitle: null,
+      subjectLabel,
+    });
+
+    expect(recentHref((await getRecent())[0])).toEqual({
+      pathname: "/subject/[slug]",
+      params: { slug: "young_adult_fiction_historical_medieval", label: subjectLabel },
+    });
   });
 
   it("dedupes on kind and id, newest first", async () => {

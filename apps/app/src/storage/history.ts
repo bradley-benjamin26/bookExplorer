@@ -16,6 +16,7 @@ export interface RecentItem {
   title: string | null;
   /** The authors, for books and works. */
   subtitle: string | null;
+  subjectLabel?: string;
 }
 
 interface LegacyRecentBook {
@@ -60,5 +61,6 @@ export function recentOfKind(items: RecentItem[], filter: "all" | "books" | "aut
 }
 
 export function recentHref(item: RecentItem): Href {
+  if (item.kind === "subject" && item.subjectLabel) return routes.subject(item.id, item.subjectLabel);
   return routes[item.kind](item.id);
 }
