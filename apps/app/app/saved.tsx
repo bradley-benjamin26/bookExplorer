@@ -2,9 +2,20 @@ import { useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Footer } from "../src/components/Footer";
+import { HardcoverLogo } from "../src/components/HardcoverLogo";
+import { LIBRARY_ROWS } from "../src/libraryRows";
 import { routes } from "../src/navigation";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 import { titleRef } from "../src/webTitle";
+
+const ROUTES = {
+  hardcover: routes.hardcover,
+  lists: routes.lists,
+  recommendations: routes.recommendations,
+  connection: routes.connection,
+  backup: routes.backup,
+  settings: routes.settings,
+};
 
 export default function Saved() {
   const router = useRouter();
@@ -12,16 +23,22 @@ export default function Saved() {
   const styles = useThemedStyles(createStyles);
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {([["Lists", routes.lists()], ["Recommendations", routes.recommendations()], ["Find Connection", routes.connection()], ["Import & Export", routes.backup()], ["Settings", routes.settings()]] as const).map(([label, href]) => (
+      {LIBRARY_ROWS.map(({ id, label }) => (
         <Pressable
           ref={titleRef(`Open ${label}`)}
-          key={label}
+          key={id}
           style={({ pressed }) => [styles.navRow, pressed && styles.pressed]}
-          onPress={() => router.push(href)}
+          onPress={() => router.push(ROUTES[id]())}
           accessibilityRole="button"
           accessibilityLabel={label}
         >
-          <Text style={styles.navRowText}>{label}</Text>
+          {id === "hardcover" ? (
+            <View style={styles.navRowText}>
+              <HardcoverLogo height={22} />
+            </View>
+          ) : (
+            <Text style={styles.navRowText}>{label}</Text>
+          )}
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <ChevronRight size={18} color={theme.colors.inkFaint} />
           </View>
@@ -42,6 +59,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,
+      minHeight: 44,
       paddingVertical: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
