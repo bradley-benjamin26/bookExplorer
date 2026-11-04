@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Image } from "expo-image";
-import { FlatList, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { NODE_LABELS } from "../src/graphLabels";
@@ -69,22 +69,20 @@ export default function Home() {
           </View>
         )}
 
-        {Platform.OS !== "web" && (
-          <Pressable
-            ref={titleRef("Scan a book's barcode")}
-            onPress={() => router.push("/scan")}
-            accessibilityRole="button"
-            accessibilityLabel="Scan a book"
-            style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
-              styles.scanButton,
-              pressed && styles.pressed,
-              focused && styles.focused,
-            ]}
-          >
-            <ScanBarcode size={22} color={theme.colors.primaryText} />
-            <Text style={styles.scanText}>Scan a book</Text>
-          </Pressable>
-        )}
+        <Pressable
+          ref={titleRef("Scan a book's barcode")}
+          onPress={() => router.push("/scan")}
+          accessibilityRole="button"
+          accessibilityLabel="Scan a book"
+          style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
+            styles.scanButton,
+            pressed && styles.pressed,
+            focused && styles.focused,
+          ]}
+        >
+          <ScanBarcode size={22} color={theme.colors.primaryText} />
+          <Text style={styles.scanText}>Scan a book</Text>
+        </Pressable>
 
         <View style={styles.searchRow}>
           <TextInput
