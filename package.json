@@ -8,6 +8,7 @@
   "scripts": {
     "dev:server": "npm run dev --workspace=apps/server",
     "dev:app": "npm run start --workspace=apps/app",
+    "usage-report": "npm run usage-report --workspace=apps/server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   }
