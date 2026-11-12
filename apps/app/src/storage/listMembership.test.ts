@@ -7,11 +7,13 @@ import { getSavedWork, saveWorkFromApi, updateSavedWork } from "./savedWorks";
 import type { Work } from "@book-explorer/shared";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
-const push = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
+const push = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), olAdd: vi.fn(), olRemove: vi.fn() }));
 vi.mock("../api/client", () => ({
   ApiError: class extends Error {},
   addHardcoverListBook: push.add,
   removeHardcoverListBook: push.remove,
+  addOpenLibraryMembers: push.olAdd,
+  removeOpenLibrarySeed: push.olRemove,
 }));
 
 const emma = { type: "work" as const, id: "OL1W", title: "Emma" };
@@ -115,5 +117,34 @@ describe("applyListChanges Hardcover pushes", () => {
     await setMemberHardcoverId(a.id, "work", "OL1W", 77);
     await applyListChanges(emma, { add: [], remove: [a.id] }, async () => {});
     expect(push.remove).toHaveBeenCalledWith(5, 77);
+  });
+});
+
+describe("applyListChanges Open Library pushes", () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    push.add.mockReset();
+    push.olAdd.mockReset();
+  });
+
+  it("a list linked to both services pushes to both, and one failing doesn't stop the other", async () => {
+    push.add.mockRejectedValue(new Error("boom"));
+    push.olAdd.mockResolvedValue({ added: [{ type: "work", id: "OL1W", seed: "/works/OL1W" }], missing: [] });
+    const a = await createList({ name: "A", kind: "book", hardcoverListId: 5, openLibraryListId: "L" });
+    const issue = vi.fn();
+    await applyListChanges(emma, { add: [a.id], remove: [] }, async () => {}, issue);
+    expect(push.olAdd).toHaveBeenCalled();
+    expect((await getList(a.id))!.members[0].openLibrarySeed).toBe("/works/OL1W");
+    expect(issue).toHaveBeenCalledTimes(1);
+    expect(issue).toHaveBeenCalledWith("Saved here. Hardcover didn't update; use Sync with Hardcover on the list to retry.");
+  });
+
+  it("a failed Open Library push keeps the local add and reports the retry message", async () => {
+    push.olAdd.mockRejectedValue(new Error("boom"));
+    const a = await createList({ name: "A", kind: "book", openLibraryListId: "L" });
+    const issue = vi.fn();
+    await applyListChanges(emma, { add: [a.id], remove: [] }, async () => {}, issue);
+    expect((await getList(a.id))!.members).toHaveLength(1);
+    expect(issue).toHaveBeenCalledWith("Saved here. Open Library didn't update; use Sync with Open Library on the list to retry.");
   });
 });

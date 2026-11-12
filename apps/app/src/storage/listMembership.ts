@@ -1,4 +1,5 @@
 import { pushAdd, pushRemove } from "../hardcoverLists";
+import { pushOpenLibraryAdd, pushOpenLibraryRemove } from "../openLibraryLists";
 import { unsaveIfUnlisted } from "./unlisted";
 import { addToList, deleteList, getList, removeFromList, type ListMember, type SavedList } from "./savedLists";
 
@@ -29,9 +30,9 @@ export async function applyListChanges(
   member: Member,
   changes: { add: string[]; remove: string[] },
   save: () => Promise<unknown>,
-  onHardcoverIssue?: (message: string) => void,
+  onSyncIssue?: (message: string) => void,
 ): Promise<void> {
-  const report = (message: string) => onHardcoverIssue?.(message);
+  const report = (message: string) => onSyncIssue?.(message);
   for (const id of changes.add) {
     await addToList(id, member);
     const list = await getList(id);
@@ -41,6 +42,11 @@ export async function applyListChanges(
       if ((await pushAdd(list, added)) === "missing") report("Saved here, but Hardcover doesn't have this book yet.");
     } catch {
       report("Saved here. Hardcover didn't update; use Sync with Hardcover on the list to retry.");
+    }
+    try {
+      if ((await pushOpenLibraryAdd(list, added)) === "missing") report("Saved here, but Open Library doesn't have this edition.");
+    } catch {
+      report("Saved here. Open Library didn't update; use Sync with Open Library on the list to retry.");
     }
   }
   for (const id of changes.remove) {
@@ -53,6 +59,11 @@ export async function applyListChanges(
       await pushRemove(list, held);
     } catch {
       report("Removed here. Hardcover didn't update, so it may come back on the next sync.");
+    }
+    try {
+      await pushOpenLibraryRemove(list, held);
+    } catch {
+      report("Removed here. Open Library didn't update, so it may come back on the next sync.");
     }
   }
   // Saving is idempotent, so also run it for a member already listed but unsaved.
