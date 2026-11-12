@@ -12,7 +12,7 @@ export function GoogleBooksAttribution({ label }: { label: string }) {
   return (
     <Pressable ref={titleRef("Visit Google Books")} style={styles.row} accessibilityRole="link" onPress={() => Linking.openURL("https://books.google.com")}>
       <Text style={styles.label}>{label}</Text>
-      <Image source={{ uri: LOGO_URL }} style={styles.logo} resizeMode="contain" />
+      <Image source={{ uri: LOGO_URL }} accessibilityLabel="Google Books" style={styles.logo} resizeMode="contain" />
     </Pressable>
   );
 }

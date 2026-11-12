@@ -1,6 +1,6 @@
 import type { Graph } from "@book-explorer/shared";
 import { describe, expect, it } from "vitest";
-import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, labelOpacity, labelWidthOf, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, wrapLabel, zoomAt } from "./graphLayout";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, clampPoint, createDragSimulation, entryPositions, fitScale, hitNode, labelOpacity, labelWidthOf, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, wrapLabel, zoomAt } from "./graphLayout";
 
 describe("wrapLabel", () => {
   it("keeps a short label on one line", () => {
@@ -47,6 +47,55 @@ describe("layoutGraph", () => {
         expect(gap).toBeGreaterThan(radius(nodes[i].id) + radius(nodes[j].id));
       }
     }
+  });
+
+  it("content box holds every node's clearance", () => {
+    // The 3-work graph is a case where nothing needs shifting yet a node's label overruns the viewport-sized box.
+    const small = { ...graph, nodes: graph.nodes.slice(0, 4), edges: graph.edges.slice(0, 3) };
+    for (const g of [graph, small]) {
+      const { nodes, contentWidth: width, contentHeight: height } = layoutGraph(g, 400, 600);
+      for (const p of nodes) expect(clampPoint(p, { width, height })).toEqual({ x: p.x, y: p.y });
+    }
+  });
+  it("hitNode finds the node under the point, topmost first", () => {
+    const pts = [{ x: 0, y: 0, r: 10 }, { x: 5, y: 0, r: 10 }];
+    expect(hitNode(pts, 4, 0)).toBe(1);
+    expect(hitNode(pts, 50, 50)).toBe(-1);
+  });
+  it("clampPoint keeps a point inside the content box", () => {
+    expect(clampPoint({ x: -500, y: -500 }, { width: 400, height: 600 })).toEqual({ x: 60, y: CENTER_NODE_RADIUS });
+  });
+  it("entryPositions starts at the origin, ends at the layout, eases out", () => {
+    const final = [{ x: 100, y: 0 }];
+    expect(entryPositions(final, { x: 0, y: 0 }, 0)).toEqual([{ x: 0, y: 0 }]);
+    expect(entryPositions(final, { x: 0, y: 0 }, 1)).toEqual([{ x: 100, y: 0 }]);
+    expect(entryPositions(final, { x: 0, y: 0 }, 0.5)[0].x).toBeCloseTo(87.5);
+  });
+  it("dragging a node pulls its neighbour along and never moves the center", () => {
+    const g = { ...graph, edges: [...graph.edges, { source: "work:OL0W", target: "work:OL1W", relation: "sequel" }] };
+    const { nodes, edges, contentWidth: width, contentHeight: height } = layoutGraph(g, 400, 600);
+    const sim = createDragSimulation(nodes, edges, { width, height }, g.centerId);
+    const center = nodes.find((n) => n.id === g.centerId)!;
+    const dragged = nodes.find((n) => n.id === "work:OL1W")!;
+    const neighbour = nodes.find((n) => n.id === "work:OL0W")!;
+    const before = { cx: center.x, cy: center.y, nx: neighbour.x };
+    const dir = Math.sign(dragged.x - before.nx) || 1; // drag away from the neighbour
+    Object.assign(dragged, clampPoint({ x: dragged.x + dir * 200, y: dragged.y }, { width, height }));
+    dragged.fx = dragged.x; dragged.fy = dragged.y;
+    sim.alpha(1); sim.tick(100);
+    expect([center.x, center.y]).toEqual([before.cx, before.cy]);
+    expect((neighbour.x - before.nx) * dir).toBeGreaterThan(0);
+  });
+  it("keeps every node inside the content box after a drag to the corner", () => {
+    const { nodes, edges, contentWidth: width, contentHeight: height } = layoutGraph(graph, 400, 600);
+    const sim = createDragSimulation(nodes, edges, { width, height }, graph.centerId);
+    const n = nodes[1];
+    Object.assign(n, clampPoint({ x: -500, y: -500 }, { width, height }));
+    n.fx = n.x; n.fy = n.y;
+    sim.alpha(1); sim.tick(300);
+    n.fx = n.fy = null;
+    while (sim.alpha() >= sim.alphaMin()) sim.tick();
+    for (const p of nodes) expect(clampPoint(p, { width, height })).toEqual({ x: p.x, y: p.y });
   });
 });
 

@@ -8,9 +8,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import { getHeaderTitle, Header } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { StyleSheet, Text, useColorScheme, View } from "react-native";
+import { Platform, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
@@ -104,7 +105,19 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
         )}
         <View style={styles.stackArea}>
           <Stack
+            // Wraps the screen body only, so the header stays outside <main>.
+            screenLayout={({ children }) => <View role="main" style={styles.root}>{children}</View>}
             screenOptions={{
+              // Web only: on native this would replace the platform header.
+              ...(Platform.OS === "web"
+                ? {
+                    header: ({ back, options, route }) => (
+                      <View role="banner">
+                        <Header {...options} back={back} title={getHeaderTitle(options, route.name)} />
+                      </View>
+                    ),
+                  }
+                : null),
               headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
               headerTitleStyle: { fontFamily: theme.fonts.displayMedium, color: theme.colors.ink },
               headerStyle: { backgroundColor: theme.colors.paper },

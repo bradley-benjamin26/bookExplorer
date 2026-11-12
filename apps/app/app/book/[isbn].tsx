@@ -3,6 +3,7 @@ import { normalizeIsbn } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
+import { coverAlt } from "../../src/coverAlt";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ApiError } from "../../src/api/client";
 import { fetchBookWithAlternate } from "../../src/api/bookLookup";
@@ -120,7 +121,7 @@ export default function BookDetail() {
       <DetailTop
         image={
           <>
-            {data.coverUrl && <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" />}
+            {data.coverUrl && <Image source={{ uri: data.coverUrl }} accessibilityLabel={coverAlt(data.title, data.authors.map((a) => a.name))} style={styles.cover} contentFit="contain" />}
             {/* When the description is also from Google Books, that credit alone covers the cover too, so this is skipped. */}
             {data.coverSource === "googleBooks" && data.descriptionSource !== "googleBooks" && (
               <GoogleBooksAttribution label="Cover image" />
@@ -171,7 +172,7 @@ export default function BookDetail() {
         {data.authors.map((author) => (
           <Pressable
             ref={titleRef(`View ${author.name}`)}
-            accessibilityRole="button"
+            accessibilityRole="link"
             key={author.openLibraryId}
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => router.push(routes.author(author.openLibraryId))}

@@ -210,7 +210,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     titleLine: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
     editLinkRow: { marginTop: spacing.xxl, width: "100%", alignItems: "flex-end" },
     editLink: { minHeight: 44, justifyContent: "center" },
-    editLinkText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover, textDecorationLine: "underline" },
+    editLinkText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.cover },
     row: { gap: spacing.sm },
     tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     genreTag: {

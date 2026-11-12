@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
+import { coverAlt } from "../../src/coverAlt";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
@@ -103,7 +104,7 @@ export default function WorkDetail() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <DetailTop
-        image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" /> : undefined}
+        image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} accessibilityLabel={coverAlt(data.title, data.authors.map((a) => a.name))} style={styles.cover} contentFit="contain" /> : undefined}
         title={data.title}
         primaryActions={
           (
@@ -149,7 +150,7 @@ export default function WorkDetail() {
         {data.authors.map((author) => (
           <Pressable
             ref={titleRef(`View ${author.name}`)}
-            accessibilityRole="button"
+            accessibilityRole="link"
             key={author.openLibraryId}
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => router.push(routes.author(author.openLibraryId))}
@@ -162,7 +163,7 @@ export default function WorkDetail() {
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (
-        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
+        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="link" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
         </Pressable>
       )}
