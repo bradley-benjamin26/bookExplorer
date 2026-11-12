@@ -226,6 +226,16 @@ describe("mergeSnapshots", () => {
     }
   });
 
+  it("a member keeps the losing copy's openLibrarySeed, and so does a removed member", () => {
+    const m = { type: "work" as const, id: "OL1W", title: "Dune", addedAt: 1 };
+    const a = snap({ lists: [list("x", 10, { members: [{ ...m, openLibrarySeed: "/works/OL1W" }], removedMembers: [{ type: "book" as const, id: "1", removedAt: 5, openLibrarySeed: "/books/OL1M" }] })] });
+    const b = snap({ lists: [list("x", 20, { members: [m] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0].members).toEqual([{ ...m, openLibrarySeed: "/works/OL1W" }]);
+      expect(merged.lists[0].removedMembers).toEqual([{ type: "book", id: "1", removedAt: 5, openLibrarySeed: "/books/OL1M" }]);
+    }
+  });
+
   it("keeps a member's Hardcover link when the newer copy lacks it", () => {
     const m = { type: "work" as const, id: "OL1W", title: "Dune", addedAt: 1 };
     const a = snap({ lists: [list("x", 10, { members: [{ ...m, hardcoverBookId: 9 }] })] });

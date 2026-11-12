@@ -3,7 +3,7 @@ import AsyncStorage from "../test/asyncStorageMock";
 import { upsertLibrary } from "./librarySettings";
 import { getSavedBook, removeSavedBook, updateSavedBook } from "./savedBooks";
 import { ensureSaved, getSavedItems, removeSaved } from "./savedItems";
-import { addToList, createList, getLists, linkList, setMemberHardcoverId } from "./savedLists";
+import { addToList, createList, getLists, linkList, linkOpenLibraryList, setMemberHardcoverId, setMemberOpenLibrarySeed } from "./savedLists";
 import { getSavedWork, updateSavedWork } from "./savedWorks";
 import { SnapshotExportSchema } from "@book-explorer/shared";
 import { booksToCsv } from "../csv";
@@ -241,5 +241,18 @@ describe("hardcover links", () => {
     await setMemberHardcoverId(list.id, "book", "9780441013593", 9);
     const parsed = SnapshotExportSchema.parse(JSON.parse(JSON.stringify(await getSnapshot())));
     expect(parsed.lists[0]).toMatchObject({ hardcoverListId: 5, members: [{ hardcoverBookId: 9 }] });
+  });
+});
+
+describe("open library links", () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  it("export → import keeps openLibraryListId and openLibrarySeed", async () => {
+    const list = await createList({ name: "L", kind: "book" });
+    await addToList(list.id, { type: "book", id: "9780441013593", title: "Dune" });
+    await linkOpenLibraryList(list.id, "OL5L");
+    await setMemberOpenLibrarySeed(list.id, "book", "9780441013593", "/books/OL9M");
+    const parsed = SnapshotExportSchema.parse(JSON.parse(JSON.stringify(await getSnapshot())));
+    expect(parsed.lists[0]).toMatchObject({ openLibraryListId: "OL5L", members: [{ openLibrarySeed: "/books/OL9M" }] });
   });
 });

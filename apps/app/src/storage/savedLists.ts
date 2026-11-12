@@ -21,6 +21,7 @@ export interface ListMember {
   title: string;
   addedAt: number;
   hardcoverBookId?: number;
+  openLibrarySeed?: string;
 }
 
 export interface SavedList extends Versioned {
@@ -29,9 +30,10 @@ export interface SavedList extends Versioned {
   description: string;
   kind: "book" | "author"; // a book list holds books and works
   members: ListMember[];
-  removedMembers?: { type: ListMember["type"]; id: string; removedAt: number; hardcoverBookId?: number }[]; // so a merge doesn't re-add them from an older copy
+  removedMembers?: { type: ListMember["type"]; id: string; removedAt: number; hardcoverBookId?: number; openLibrarySeed?: string }[]; // so a merge doesn't re-add them from an older copy
   createdAt: number;
   hardcoverListId?: number;
+  openLibraryListId?: string;
   deletedAt?: number; // tombstone, see SavedItem
 }
 
@@ -61,7 +63,7 @@ function updateList(id: string, change: (list: SavedList) => SavedList): Promise
     const has = (l: SavedList, m: { type: string; id: string }) => l.members.some((x) => x.type === m.type && x.id === m.id);
     const removedMembers = [
       ...(next.removedMembers ?? []).filter((r) => !has(next, r)),
-      ...prev.members.filter((m) => !has(next, m)).map((m) => ({ type: m.type, id: m.id, removedAt: now, ...(m.hardcoverBookId ? { hardcoverBookId: m.hardcoverBookId } : {}) })),
+      ...prev.members.filter((m) => !has(next, m)).map((m) => ({ type: m.type, id: m.id, removedAt: now, ...(m.hardcoverBookId ? { hardcoverBookId: m.hardcoverBookId } : {}), ...(m.openLibrarySeed ? { openLibrarySeed: m.openLibrarySeed } : {}) })),
     ];
     const { removedMembers: _, ...rest } = next;
     lists[index] = { ...rest, ...(removedMembers.length ? { removedMembers } : {}), updatedAt: now };
@@ -83,7 +85,7 @@ export async function getList(id: string): Promise<SavedList | null> {
   return (await getAllLists()).find((l) => l.id === id && !l.deletedAt) ?? null;
 }
 
-export function createList(input: { name: string; description?: string; kind: SavedList["kind"]; hardcoverListId?: number }): Promise<SavedList> {
+export function createList(input: { name: string; description?: string; kind: SavedList["kind"]; hardcoverListId?: number; openLibraryListId?: string }): Promise<SavedList> {
   const name = input.name.trim();
   const description = (input.description ?? "").trim();
   // The export schema rejects these, so storing one would break every later backup.
@@ -100,6 +102,7 @@ export function createList(input: { name: string; description?: string; kind: Sa
       members: [],
       createdAt: now,
       ...(input.hardcoverListId ? { hardcoverListId: input.hardcoverListId } : {}),
+      ...(input.openLibraryListId ? { openLibraryListId: input.openLibraryListId } : {}),
     });
     await write([...(await read()), list]);
     return list;
@@ -165,6 +168,18 @@ export function setMemberHardcoverId(listId: string, type: ListMember["type"], i
   return updateList(listId, (list) => ({ ...list, members: list.members.map((m) => (m.type === type && m.id === id ? { ...m, hardcoverBookId } : m)) }));
 }
 
+/** Links the list to an Open Library list, or unlinks it with null (the key is removed so the export schema still validates). */
+export function linkOpenLibraryList(id: string, openLibraryListId: string | null): Promise<void> {
+  return updateList(id, (list) => {
+    const { openLibraryListId: _, ...rest } = list;
+    return openLibraryListId === null ? rest : { ...rest, openLibraryListId };
+  });
+}
+
+export function setMemberOpenLibrarySeed(listId: string, type: ListMember["type"], id: string, openLibrarySeed: string): Promise<void> {
+  return updateList(listId, (list) => ({ ...list, members: list.members.map((m) => (m.type === type && m.id === id ? { ...m, openLibrarySeed } : m)) }));
+}
+
 export function replaceMembers(listId: string, members: ListMember[]): Promise<void> {
   return updateList(listId, (list) => ({ ...list, members }));
 }
@@ -185,13 +200,17 @@ export function deleteList(id: string): Promise<void> {
   });
 }
 
-/** Forgets which removed members still need deleting on Hardcover. Not an edit, so updatedAt stays. */
-export function settleRemovals(listId: string): Promise<void> {
+/** Forgets which removed members still need deleting on one service, leaving the other's pending deletes. Not an edit, so updatedAt stays. */
+export function settleRemovals(listId: string, service: "hardcover" | "openLibrary" = "hardcover"): Promise<void> {
   return enqueueWrite(KEY, async () => {
     const lists = await read();
     const list = lists.find((l) => l.id === listId);
-    if (!list?.removedMembers?.some((r) => r.hardcoverBookId)) return;
-    list.removedMembers = list.removedMembers.map(({ hardcoverBookId: _, ...r }) => r);
+    if (!list?.removedMembers?.some((r) => (service === "hardcover" ? r.hardcoverBookId : r.openLibrarySeed))) return;
+    const drop = service === "hardcover" ? "hardcoverBookId" : "openLibrarySeed";
+    list.removedMembers = list.removedMembers.map((r) => {
+      const { [drop]: _, ...rest } = r;
+      return rest;
+    });
     await write(lists);
   });
 }

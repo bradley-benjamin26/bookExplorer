@@ -392,6 +392,7 @@ export const SavedListExportSchema = z.object({
         title: text,
         addedAt: z.number().int().nonnegative(),
         hardcoverBookId: z.number().int().positive().optional(),
+        openLibrarySeed: z.string().optional(),
       })
     )
     .max(MAX_IMPORT_RECORDS),
@@ -402,11 +403,13 @@ export const SavedListExportSchema = z.object({
         id: z.string().min(1).max(200),
         removedAt: z.number().int().nonnegative(),
         hardcoverBookId: z.number().int().positive().optional(), // set until sync has deleted the book on Hardcover
+        openLibrarySeed: z.string().optional(), // likewise for Open Library
       })
     )
     .max(MAX_IMPORT_RECORDS)
     .optional(),
   hardcoverListId: z.number().int().positive().optional(),
+  openLibraryListId: z.string().regex(/^OL\d+L$/).optional(),
   createdAt: z.number().int().nonnegative(),
 });
 
