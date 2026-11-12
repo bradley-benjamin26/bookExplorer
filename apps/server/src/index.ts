@@ -17,6 +17,7 @@ import { upstreamErrorHandler } from "./upstreamErrorHandler.js";
 import { initPersistentCache } from "./cache.js";
 import { openAccountStore } from "./accountStore.js";
 import { hardcoverRoutes } from "./routes/hardcover.js";
+import { openLibraryRoutes } from "./routes/openLibrary.js";
 
 // Behind a load balancer or reverse proxy (most hosting platforms), every
 // request arrives from the proxy's own IP — without trusting its
@@ -75,6 +76,7 @@ await app.register(seriesRoutes);
 await app.register(pathRoutes);
 await app.register(suggestRoutes);
 await app.register(hardcoverRoutes);
+await app.register(openLibraryRoutes);
 if (process.env.WEB_INDEX_HTML) {
   await app.register(ogRoutes, { indexHtml: process.env.WEB_INDEX_HTML, origin: process.env.PUBLIC_WEB_URL });
 }

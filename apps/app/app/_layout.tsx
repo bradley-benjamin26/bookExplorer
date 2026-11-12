@@ -20,6 +20,7 @@ import { WebTooltip } from "../src/components/WebTooltip";
 import { persistOptions } from "../src/queryCache";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
 import { loadSession, onSessionCleared } from "../src/hardcoverSession";
+import { loadOpenLibrarySession, onOpenLibrarySessionCleared } from "../src/openLibrarySession";
 import { migrateStorage } from "../src/storage/snapshot";
 import { CONTENT_MAX_WIDTH, ThemeProvider, useTheme } from "../src/theme";
 import { darkColors, lightColors } from "../src/themeColors";
@@ -31,6 +32,7 @@ export default function RootLayout() {
   );
   // gcTime is Infinity, so signed-out Hardcover data would otherwise linger (and persist) after disconnect or a 401.
   useEffect(() => onSessionCleared(() => queryClient.removeQueries({ queryKey: ["hardcover"] })), [queryClient]);
+  useEffect(() => onOpenLibrarySessionCleared(() => queryClient.removeQueries({ queryKey: ["openlibrary"] })), [queryClient]);
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,
@@ -46,7 +48,7 @@ export default function RootLayout() {
   // The system scheme, not the saved preference: preferences aren't read until migration finishes.
   const scheme = useColorScheme();
   const migrate = useCallback(() => {
-    Promise.all([migrateStorage(), loadSession().catch(() => {})])
+    Promise.all([migrateStorage(), loadSession().catch(() => {}), loadOpenLibrarySession().catch(() => {})])
       .then(() => setMigrationFailed(false), () => setMigrationFailed(true))
       .finally(() => setMigrated(true));
   }, []);
@@ -134,6 +136,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
             <Stack.Screen name="backup" options={{ title: "Import & export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover" options={{ title: "My Hardcover account", headerRight: inHeader(<HeaderActions />) }} />
+            <Stack.Screen name="openlibrary" options={{ title: "My Open Library Account", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover-connected" options={{ title: "Hardcover", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions show={["library", "search"]} />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />

@@ -392,6 +392,7 @@ export const SavedListExportSchema = z.object({
         title: text,
         addedAt: z.number().int().nonnegative(),
         hardcoverBookId: z.number().int().positive().optional(),
+        openLibrarySeed: z.string().optional(),
       })
     )
     .max(MAX_IMPORT_RECORDS),
@@ -402,11 +403,13 @@ export const SavedListExportSchema = z.object({
         id: z.string().min(1).max(200),
         removedAt: z.number().int().nonnegative(),
         hardcoverBookId: z.number().int().positive().optional(), // set until sync has deleted the book on Hardcover
+        openLibrarySeed: z.string().optional(), // likewise for Open Library
       })
     )
     .max(MAX_IMPORT_RECORDS)
     .optional(),
   hardcoverListId: z.number().int().positive().optional(),
+  openLibraryListId: z.string().regex(/^OL\d+L$/).optional(),
   createdAt: z.number().int().nonnegative(),
 });
 
@@ -488,3 +491,22 @@ export const HardcoverProgressSchema = z.object({
 export type HardcoverListSummary = z.infer<typeof HardcoverListSummarySchema>;
 export type HardcoverListBooks = z.infer<typeof HardcoverListBooksSchema>;
 export type HardcoverProgress = z.infer<typeof HardcoverProgressSchema>;
+
+export const OpenLibraryAccountSchema = z.object({ username: z.string() });
+export const OpenLibrarySessionSchema = OpenLibraryAccountSchema.extend({ token: z.string() });
+export const OpenLibraryMemberSchema = z.object({ type: z.enum(["book", "work", "author"]), id: z.string() });
+export const OpenLibraryListSummarySchema = z.object({ id: z.string(), name: z.string(), seedCount: z.number().int() });
+export const OpenLibraryListSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  seedCount: z.number().int(),
+  seeds: z.array(z.object({ seed: z.string(), title: z.string(), member: OpenLibraryMemberSchema.nullable() })),
+});
+export const OpenLibraryAddResultSchema = z.object({
+  added: z.array(OpenLibraryMemberSchema.extend({ seed: z.string() })),
+  missing: z.array(OpenLibraryMemberSchema),
+});
+export type OpenLibraryMember = z.infer<typeof OpenLibraryMemberSchema>;
+export type OpenLibraryListSummary = z.infer<typeof OpenLibraryListSummarySchema>;
+export type OpenLibraryList = z.infer<typeof OpenLibraryListSchema>;
+export type OpenLibraryAddResult = z.infer<typeof OpenLibraryAddResultSchema>;

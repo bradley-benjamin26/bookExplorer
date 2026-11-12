@@ -2,6 +2,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { z, type ZodType, type ZodTypeDef } from "zod";
 import { clearSession, getSessionToken } from "../hardcoverSession";
+import { clearOpenLibrarySession, getOpenLibrarySessionToken } from "../openLibrarySession";
 import {
   AuthorRefSchema,
   AuthorSchema,
@@ -12,6 +13,11 @@ import {
   HardcoverListBooksSchema,
   HardcoverListSummarySchema,
   HardcoverProgressSchema,
+  OpenLibraryAccountSchema,
+  OpenLibraryAddResultSchema,
+  OpenLibraryListSchema,
+  OpenLibraryListSummarySchema,
+  OpenLibrarySessionSchema,
   PathResultSchema,
   SeriesSchema,
   SubjectSchema,
@@ -23,6 +29,8 @@ import {
   type Graph,
   type Series,
   type GraphNode,
+  type OpenLibraryAddResult,
+  type OpenLibraryMember,
   type PathResult,
   type Subject,
   type Work,
@@ -74,6 +82,8 @@ function headers(extra?: Record<string, string>): Record<string, string> | undef
   if (APP_SHARED_SECRET) h["X-App-Key"] = APP_SHARED_SECRET;
   const session = getSessionToken();
   if (session) h["X-Hardcover-Session"] = session;
+  const olSession = getOpenLibrarySessionToken();
+  if (olSession) h["X-OpenLibrary-Session"] = olSession;
   return Object.keys(h).length ? h : undefined;
 }
 
@@ -83,6 +93,7 @@ async function request<T>(path: string, init: RequestInit, schema?: ZodType<T, Z
     const body = await res.json().catch(() => ({ error: res.statusText }));
     // A rejected session is dead; drop it so the app reads as signed out.
     if (res.status === 401 && path.startsWith("/api/hardcover/")) await clearSession();
+    if (res.status === 401 && path.startsWith("/api/openlibrary/")) await clearOpenLibrarySession();
     // Routes that deliberately return 404 set `error` to a specific message
     // ("No author found for id ..."). An unhandled exception instead gets
     // Fastify's default shape, where `error` is just the generic HTTP status
@@ -200,4 +211,36 @@ export function suggestTerms(kind: "subjects" | "genres", q: string, signal?: Ab
 /** Authors matching a name being typed (at most 5). */
 export function searchAuthors(q: string): Promise<AuthorRef[]> {
   return getJson(`/api/search/authors?${new URLSearchParams({ q })}`, z.array(AuthorRefSchema));
+}
+
+export async function connectOpenLibrary(access: string, secret: string): Promise<{ token: string; username: string }> {
+  return (await sendJson("POST", "/api/openlibrary/session", { access, secret }, OpenLibrarySessionSchema))!;
+}
+
+export function fetchOpenLibraryAccount(): Promise<{ username: string }> {
+  return getJson("/api/openlibrary/session", OpenLibraryAccountSchema);
+}
+
+export async function disconnectOpenLibrary(): Promise<void> {
+  await sendJson("DELETE", "/api/openlibrary/session", {});
+}
+
+export function fetchOpenLibraryLists() {
+  return getJson("/api/openlibrary/lists", z.array(OpenLibraryListSummarySchema));
+}
+
+export function fetchOpenLibraryList(id: string) {
+  return getJson(`/api/openlibrary/lists/${encodeURIComponent(id)}`, OpenLibraryListSchema);
+}
+
+export async function createOpenLibraryList(input: { name: string; description: string }): Promise<{ id: string }> {
+  return (await sendJson("POST", "/api/openlibrary/lists", input, z.object({ id: z.string() })))!;
+}
+
+export async function addOpenLibraryMembers(listId: string, members: OpenLibraryMember[]): Promise<OpenLibraryAddResult> {
+  return (await sendJson("POST", `/api/openlibrary/lists/${encodeURIComponent(listId)}/seeds`, { members }, OpenLibraryAddResultSchema))!;
+}
+
+export async function removeOpenLibrarySeed(listId: string, seed: string): Promise<void> {
+  await sendJson("DELETE", `/api/openlibrary/lists/${encodeURIComponent(listId)}/seeds?seed=${encodeURIComponent(seed)}`, {});
 }

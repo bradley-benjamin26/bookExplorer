@@ -109,6 +109,17 @@ export function removeSavedWork(workId: string): Promise<void> {
   });
 }
 
+/** Saves a work that's already on a list (from an Open Library import or sync): a stub record until its details load; a live record is left as is. */
+export async function saveListedWork(workId: string, title: string): Promise<void> {
+  await enqueueWrite(storageKey(workId), async () => {
+    const existing = await readRecord(workId);
+    if (existing && !existing.deletedAt) return;
+    const stub: SavedWorkRecord = stamp({ openLibraryWorkId: workId, title, authorNames: [], subjects: [], genres: [], notes: "", savedAt: Date.now() });
+    await AsyncStorage.setItem(storageKey(workId), JSON.stringify(stub));
+  });
+  await ensureSaved({ type: "work", id: workId, title });
+}
+
 /** Saves a work (record, then the Saved-screen index) without ever removing it. */
 export async function saveWork(work: Work): Promise<SavedWorkRecord> {
   const record = await saveWorkFromApi(work);

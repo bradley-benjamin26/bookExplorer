@@ -225,8 +225,8 @@ export function AddToListButton({
       const imported = created.length ? listsNotHolding(await getLists(kind), member, created) : [];
       const changes = listChanges(lists, member, checked);
       await applyListChanges(member, { ...changes, add: [...changes.add, ...imported] }, onSave, (m) => {
-        issue = m;
-        setError(m);
+        issue = issue ? `${issue} ${m}` : m;
+        setError(issue);
       });
       onChange?.();
       // Keep the sheet up so the Hardcover message is seen; reload so a second Done doesn't re-apply the same changes.

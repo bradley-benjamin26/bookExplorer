@@ -38,19 +38,27 @@ function mergeList(a: SavedList, b: SavedList): SavedList {
   const key = (m: { type: string; id: string }) => `${m.type}:${m.id}`;
   const have = new Set(winner.members.map(key));
   const links = new Map(other.members.filter((m) => m.hardcoverBookId).map((m) => [key(m), m.hardcoverBookId]));
+  const seeds = new Map(other.members.filter((m) => m.openLibrarySeed).map((m) => [key(m), m.openLibrarySeed]));
   // Members fall back to the loser's Hardcover link (a push may have set it there); hardcoverListId deliberately does not, since a missing one can be a deliberate Unlink.
-  const members = winner.members.map((m) => (m.hardcoverBookId || !links.has(key(m)) ? m : { ...m, hardcoverBookId: links.get(key(m)) }));
+  const members = winner.members.map((m) => ({
+    ...m,
+    ...(!m.hardcoverBookId && links.has(key(m)) ? { hardcoverBookId: links.get(key(m)) } : {}),
+    ...(!m.openLibrarySeed && seeds.has(key(m)) ? { openLibrarySeed: seeds.get(key(m)) } : {}),
+  }));
   const removedAt = new Map<string, number>();
   const removedBookId = new Map<string, number>();
+  const removedSeed = new Map<string, string>();
   for (const r of [...(winner.removedMembers ?? []), ...(other.removedMembers ?? [])]) {
     removedAt.set(key(r), Math.max(removedAt.get(key(r)) ?? 0, r.removedAt));
     if (r.hardcoverBookId) removedBookId.set(key(r), r.hardcoverBookId);
+    if (r.openLibrarySeed) removedSeed.set(key(r), r.openLibrarySeed);
   }
   const removedMembers = [...removedAt].map(([k, at]) => ({
     type: k.split(":")[0] as SavedList["members"][number]["type"],
     id: k.slice(k.indexOf(":") + 1),
     removedAt: at,
     ...(removedBookId.has(k) ? { hardcoverBookId: removedBookId.get(k) } : {}),
+    ...(removedSeed.has(k) ? { openLibrarySeed: removedSeed.get(k) } : {}),
   }));
   const { removedMembers: _, ...rest } = winner;
   return {

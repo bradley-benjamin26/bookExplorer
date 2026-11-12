@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
 import { setPreferences } from "./preferences";
-import { addToList, createList, defaultListFor, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, linkList, removeFromList, replaceMembers, setMemberHardcoverId } from "./savedLists";
+import { addToList, createList, defaultListFor, deleteList, ensureOnAList, getAllLists, getList, getLists, isOnAnyList, linkList, linkOpenLibraryList, removeFromList, replaceMembers, setMemberHardcoverId, setMemberOpenLibrarySeed, settleRemovals } from "./savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
 
@@ -129,6 +129,36 @@ describe("savedLists", () => {
     await setMemberHardcoverId(list.id, "book", dune.id, 12);
     expect((await getList(list.id))?.members).toMatchObject([{ id: dune.id, hardcoverBookId: 12 }, { id: emma.id }]);
     expect((await getList(list.id))?.members[1].hardcoverBookId).toBeUndefined();
+  });
+
+  it("links Open Library lists and seeds, and settleRemovals('openLibrary') keeps pending Hardcover deletes", async () => {
+    const list = await createList({ name: "L", kind: "book", openLibraryListId: "OL1L" });
+    expect(list.openLibraryListId).toBe("OL1L");
+    await linkOpenLibraryList(list.id, "OL2L");
+    expect((await getList(list.id))?.openLibraryListId).toBe("OL2L");
+    await addToList(list.id, dune);
+    await setMemberOpenLibrarySeed(list.id, "book", dune.id, "/books/OL1M");
+    await setMemberHardcoverId(list.id, "book", dune.id, 3);
+    await removeFromList(list.id, "book", dune.id);
+    expect((await getList(list.id))?.removedMembers).toMatchObject([{ id: dune.id, hardcoverBookId: 3, openLibrarySeed: "/books/OL1M" }]);
+    await settleRemovals(list.id, "openLibrary");
+    const r = (await getList(list.id))!.removedMembers![0];
+    expect(r.hardcoverBookId).toBe(3);
+    expect(r.openLibrarySeed).toBeUndefined();
+    await settleRemovals(list.id);
+    expect((await getList(list.id))!.removedMembers![0].hardcoverBookId).toBeUndefined();
+    await linkOpenLibraryList(list.id, null);
+    expect("openLibraryListId" in (await getList(list.id))!).toBe(false);
+  });
+
+  it("unlinking from Open Library drops stale seeds from removal records, keeping Hardcover's", async () => {
+    const list = await createList({ name: "L", kind: "book", openLibraryListId: "OL1L" });
+    await addToList(list.id, dune);
+    await setMemberOpenLibrarySeed(list.id, "book", dune.id, "/books/OL1M");
+    await setMemberHardcoverId(list.id, "book", dune.id, 3);
+    await removeFromList(list.id, "book", dune.id);
+    await linkOpenLibraryList(list.id, null);
+    expect((await getList(list.id))!.removedMembers).toEqual([{ type: "book", id: dune.id, removedAt: expect.any(Number), hardcoverBookId: 3 }]);
   });
 
   it("replaceMembers swaps the members array", async () => {

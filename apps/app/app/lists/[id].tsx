@@ -18,13 +18,17 @@ import { confirmDestructive, confirmLeave } from "../../src/confirm";
 import { copyToHardcover, syncWithHardcover } from "../../src/hardcoverLists";
 import { prefetchMissingSaved } from "../../src/useSavedPrefetch";
 import { getSessionToken } from "../../src/hardcoverSession";
+import { copyToOpenLibrary, syncWithOpenLibrary } from "../../src/openLibraryLists";
+import { getOpenLibrarySessionToken } from "../../src/openLibrarySession";
 import { memberHref, routes } from "../../src/navigation";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
-import { getList, getLists, linkList, type ListMember, type SavedList } from "../../src/storage/savedLists";
+import { getList, getLists, linkList, linkOpenLibraryList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 
+type Service = "Hardcover" | "Open Library";
+
 export default function ListDetail() {
-  const { id, skipped } = useLocalSearchParams<{ id: string; skipped?: string }>();
+  const { id, skipped, from } = useLocalSearchParams<{ id: string; skipped?: string; from?: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
@@ -37,11 +41,13 @@ export default function ListDetail() {
   // State lags a render, so a fast second tap would pass a `busy` check; the ref flips synchronously.
   const busyRef = useRef(false);
   const [progress, setProgress] = useState("");
+  const [active, setActive] = useState<Service | null>(null);
   const [copying, setCopying] = useState(false);
   const [summary, setSummary] = useState(() => {
     try {
       const t: string[] = skipped ? JSON.parse(skipped) : [];
-      return t.length ? `Not imported (no ISBN on Hardcover): ${t.join(", ")}.` : "";
+      if (!t.length) return "";
+      return from === "openlibrary" ? `Not imported from Open Library: ${t.join(", ")}.` : `Not imported (no ISBN on Hardcover): ${t.join(", ")}.`;
     } catch {
       return "";
     }
@@ -61,7 +67,7 @@ export default function ListDetail() {
       const lists = await getLists(member.type === "author" ? "author" : "book");
       const others = new Set(lists.filter((l) => l.id !== id && l.members.some((m) => m.type === member.type && m.id === member.id)).map((l) => l.id));
       if (leavesLibrary(lists, member, others) && !(await confirmLeave(member.title))) return;
-      await applyListChanges(member, { add: [], remove: [id] }, async () => {}, setError);
+      await applyListChanges(member, { add: [], remove: [id] }, async () => {}, (m) => setError((prev) => (prev ? `${prev} ${m}` : m)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -80,55 +86,80 @@ export default function ListDetail() {
     }
   };
 
-  const runHardcover = async (op: (l: SavedList) => Promise<{ missing: string[] }>) => {
+  // Both services share one busy flag, summary line and progress modal.
+  const runSync = async (service: Service, op: (l: SavedList) => Promise<{ missing: string[]; skipped?: string[] }>) => {
     if (!list || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
+    setActive(service);
     setError("");
     setSummary("");
     try {
-      const { missing } = await op(list);
-      setSummary(missing.length ? `Hardcover doesn't have: ${missing.join(", ")}.` : "Hardcover is up to date.");
+      const { missing, skipped = [] } = await op(list);
+      const lines = [
+        ...(missing.length ? [`${service} doesn't have: ${missing.join(", ")}.`] : []),
+        ...(skipped.length ? [`Not synced from ${service}: ${skipped.join(", ")}.`] : []),
+      ];
+      setSummary(lines.join("\n") || `${service} is up to date.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
     setProgress("");
     busyRef.current = false;
     setBusy(false);
+    setActive(null);
     load();
   };
-  const copy = async () => {
+  const copy = async (service: Service) => {
+    if (busyRef.current) return;
+    if (service === "Open Library") {
+      // Hold the flag through the confirm, as unlink does, so a second tap can't start a parallel copy.
+      busyRef.current = true;
+      const ok = await confirmDestructive("Make this list public?", "Open Library lists are public. Anyone can see this list's name, description and books.", "Copy to Open Library");
+      busyRef.current = false; // runSync re-takes it synchronously below
+      if (!ok) return;
+    }
+    const run = service === "Hardcover" ? copyToHardcover : copyToOpenLibrary;
     setCopying(true);
     try {
-      await runHardcover((l) =>
-        copyToHardcover(
+      await runSync(service, (l) =>
+        run(
           l,
           (d, t) => setProgress(`Copying ${d} of ${t}…`),
           undefined,
-          (s) => setProgress(`Hardcover asked us to wait ${s} seconds, then we'll continue.`),
+          (s) => setProgress(`${service} asked us to wait ${s} seconds, then we'll continue.`),
         ),
       );
     } finally {
       setCopying(false);
     }
   };
-  const sync = () =>
-    runHardcover(async (l) => {
-      const r = await syncWithHardcover(l);
+  const sync = (service: Service) =>
+    runSync(service, async (l) => {
+      const r = await (service === "Hardcover" ? syncWithHardcover : syncWithOpenLibrary)(l);
       void prefetchMissingSaved(queryClient);
       return r;
     });
-  const unlink = async () => {
+  const unlink = async (service: Service) => {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      if (!(await confirmDestructive("Unlink from Hardcover?", "This list stops syncing. Nothing changes on Hardcover.", "Unlink"))) return;
-      await linkList(id, null);
+      if (!(await confirmDestructive(`Unlink from ${service}?`, `This list stops syncing. Nothing changes on ${service}.`, "Unlink"))) return;
+      await (service === "Hardcover" ? linkList(id, null) : linkOpenLibraryList(id, null));
     } finally {
       busyRef.current = false;
     }
     load();
   };
+  const syncButtons = (service: Service, linked: boolean) =>
+    linked ? (
+      <>
+        <Button variant="pill" disabled={busy} onPress={() => sync(service)}>{active === service ? "Syncing…" : `Sync with ${service}`}</Button>
+        <Button variant="pill" disabled={busy} onPress={() => unlink(service)} accessibilityLabel={`Unlink from ${service}`}>Unlink</Button>
+      </>
+    ) : (
+      <Button variant="pill" disabled={busy} onPress={() => copy(service)}>{(active === service && progress) || `Copy to ${service}`}</Button>
+    );
 
   const doDelete = async () => {
     setError("");
@@ -177,10 +208,10 @@ export default function ListDetail() {
             </Text>
           ) : null}
           {summary ? <Text style={styles.description}>{summary}</Text> : null}
-          <CenteredModal visible={copying} label="Copying to Hardcover">
+          <CenteredModal visible={copying} label={`Copying to ${active}`}>
             <View style={styles.copyCard}>
               <ActivityIndicator color={theme.colors.cover} />
-              <Text style={styles.copyTitle}>Copying to Hardcover</Text>
+              <Text style={styles.copyTitle}>Copying to {active}</Text>
               <Text style={styles.copyProgress} accessibilityLiveRegion="polite">
                 {progress || "Starting…"}
               </Text>
@@ -188,16 +219,8 @@ export default function ListDetail() {
           </CenteredModal>
           <View style={styles.exportRow}>
             <ExportButton onChoose={exportList} label="Export this list" />
-            {list.kind === "book" && getSessionToken() !== null ? (
-              list.hardcoverListId ? (
-                <>
-                  <Button variant="pill" disabled={busy} onPress={sync}>{busy ? "Syncing…" : "Sync with Hardcover"}</Button>
-                  <Button variant="pill" disabled={busy} onPress={unlink}>Unlink</Button>
-                </>
-              ) : (
-                <Button variant="pill" disabled={busy} onPress={copy}>{progress || "Copy to Hardcover"}</Button>
-              )
-            ) : null}
+            {list.kind === "book" && getSessionToken() !== null ? syncButtons("Hardcover", !!list.hardcoverListId) : null}
+            {getOpenLibrarySessionToken() !== null ? syncButtons("Open Library", !!list.openLibraryListId) : null}
           </View>
           {list.members.length === 0 ? (
             list.kind === "author" ? (
@@ -272,7 +295,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.danger,
     },
     removeText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.danger },
-    exportRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+    exportRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.lg },
     retry: { marginTop: spacing.sm, alignSelf: "flex-start" },
     deleteButton: { marginTop: spacing.xxl, backgroundColor: colors.dangerBackground },
     pressed: { opacity: 0.6 },

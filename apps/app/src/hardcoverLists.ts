@@ -1,9 +1,8 @@
 import { ApiError, addHardcoverListBook, createHardcoverList, fetchHardcoverList, removeHardcoverListBook } from "./api/client";
 import { reconcile } from "./storage/hardcoverReconcile";
-import { getSavedBook, saveListedBook } from "./storage/savedBooks";
-import { getSavedWork } from "./storage/savedWorks";
-import { createList, ensureOnAList, getList, isOnAnyList, linkList, replaceMembers, setMemberHardcoverId, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
-import { unsaveIfUnlisted } from "./storage/unlisted";
+import { applyPulledMembers, retryRateLimited, wait } from "./listSync";
+import { saveListedBook } from "./storage/savedBooks";
+import { createList, getList, linkList, replaceMembers, setMemberHardcoverId, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
 
 export async function pushAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
   if (!list.hardcoverListId || member.type === "author") return "skipped";
@@ -40,9 +39,6 @@ export async function importChosenLists(hardcoverListIds: number[]): Promise<str
   return ids;
 }
 
-const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-const MAX_RATE_LIMIT_RETRIES = 5;
-
 export async function copyToHardcover(
   list: SavedList,
   onProgress: (done: number, total: number) => void,
@@ -63,17 +59,7 @@ export async function copyToHardcover(
   const missing: string[] = [];
   let done = 0;
   for (const m of todo) {
-    for (let tries = 0; ; tries++) {
-      try {
-        if ((await pushAdd(linked, m)) === "missing") missing.push(m.title);
-        break;
-      } catch (e) {
-        if (!(e instanceof ApiError && e.status === 429) || tries >= MAX_RATE_LIMIT_RETRIES) throw e;
-        const seconds = e.retryAfterSeconds ?? 60;
-        onWait(seconds);
-        await sleep(seconds * 1000);
-      }
-    }
+    if ((await retryRateLimited(() => pushAdd(linked, m), sleep, onWait)) === "missing") missing.push(m.title);
     onProgress(++done, todo.length);
   }
   return { missing, skippedAuthors: list.members.length - books.length };
@@ -93,17 +79,7 @@ export async function syncWithHardcover(list: SavedList): Promise<{ missing: str
   if (remote.books.length < remote.booksCount) throw new Error("Hardcover sent only part of this list, so nothing was removed. Try again later.");
   for (const b of remote.books) if (pending.has(b.hardcoverBookId)) await removeHardcoverListBook(list.hardcoverListId, b.hardcoverBookId);
   const next = reconcile(latest.members, remote.books.filter((b) => !pending.has(b.hardcoverBookId)), Date.now());
-  await replaceMembers(list.id, next);
+  await applyPulledMembers(latest, next);
   await settleRemovals(list.id);
-  const key = (m: Pick<ListMember, "type" | "id">) => `${m.type}:${m.id}`;
-  const after = new Set(next.map(key));
-  for (const m of next) if (m.type === "book") await saveListedBook(m.id, m.title); // idempotent; repairs books that never got saved
-  for (const m of latest.members) {
-    if (after.has(key(m))) continue;
-    // Hardcover dropping a member must not silently delete the user's notes.
-    const saved = m.type === "book" ? await getSavedBook(m.id) : m.type === "work" ? await getSavedWork(m.id) : null;
-    if (saved?.notes && !(await isOnAnyList(m.type, m.id))) await ensureOnAList({ type: m.type, id: m.id, title: m.title });
-    else await unsaveIfUnlisted(m);
-  }
   return { missing, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
 }
