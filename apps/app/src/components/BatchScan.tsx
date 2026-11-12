@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, FlatList, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import type { Book } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "../api/bookLookup";
-import { acceptScan, parseTypedIsbn, saveAll } from "../batchScan";
+import { acceptScan, createLookupQueue, lookupFailure, parseTypedIsbn, saveAll } from "../batchScan";
 import { saveBook, updateSavedBook } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
@@ -14,7 +14,7 @@ import { Button } from "./Button";
 interface Row {
   isbn: string;
   book?: Book;
-  lookup: "loading" | "ok" | "error";
+  lookup: "loading" | "ok" | "missing" | "error";
   save: "idle" | "saved" | "failed";
 }
 
@@ -41,6 +41,7 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
   const lastSeen = useRef(new Map<string, number>());
   const known = useRef(new Set<string>());
   const savingLock = useRef(false);
+  const lookupQueue = useRef(createLookupQueue(fetchBookWithAlternate));
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
@@ -56,9 +57,9 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
 
   const resolve = (isbn: string) => {
     patch(isbn, { lookup: "loading" });
-    fetchBookWithAlternate(isbn).then(
+    lookupQueue.current(isbn).then(
       (book) => patch(isbn, { book, lookup: "ok" }),
-      () => patch(isbn, { lookup: "error" })
+      (err) => patch(isbn, { lookup: lookupFailure(err) })
     );
   };
 
@@ -113,9 +114,9 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
   const unsaved = rows.filter((r) => r.save !== "saved");
   const saveable = unsaved.filter((r) => r.book);
   const skipped = unsaved.length - saveable.length;
-  const lookupFailed = unsaved.some((r) => r.lookup === "error");
+  const lookupFailed = unsaved.some((r) => r.lookup === "missing" || r.lookup === "error");
   const rowStatus = (r: Row) =>
-    r.save === "saved" ? "Saved" : r.save === "failed" ? "Save failed" : r.lookup === "loading" ? "Looking up" : r.lookup === "error" ? "Not found" : "Ready";
+    r.save === "saved" ? "Saved" : r.save === "failed" ? "Save failed" : r.lookup === "loading" ? "Looking up" : r.lookup === "missing" ? "Not found" : r.lookup === "error" ? "Couldn't look up" : "Ready";
 
   const list = (
     <FlatList
@@ -129,7 +130,7 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
             <Text style={styles.rowTitle} numberOfLines={1}>{item.book?.title ?? item.isbn}</Text>
             <Text style={styles.muted}>{rowStatus(item)}</Text>
           </View>
-          {item.lookup === "error" && (
+          {(item.lookup === "missing" || item.lookup === "error") && (
             <Button variant="pill" onPress={() => resolve(item.isbn)} accessibilityLabel={`Retry lookup for ${item.isbn}`}>Retry</Button>
           )}
           {item.save === "failed" && (

@@ -50,3 +50,26 @@ export async function saveAll<T extends { isbn: string }>(
   }
   return out;
 }
+
+/** Wraps `run` so at most `concurrency` lookups run at once, each followed by a `gapMs` pause (700 ms is about 85 a minute, under the server's 100). */
+export function createLookupQueue<T>(run: (isbn: string) => Promise<T>, { concurrency = 1, gapMs = 700 } = {}): (isbn: string) => Promise<T> {
+  let active = 0;
+  const waiting: (() => void)[] = [];
+  const release = () => {
+    const next = waiting.shift();
+    if (next) next();
+    else active--;
+  };
+  return async (isbn) => {
+    if (active >= concurrency) await new Promise<void>((r) => waiting.push(r));
+    else active++;
+    try {
+      return await run(isbn);
+    } finally {
+      setTimeout(release, gapMs);
+    }
+  };
+}
+
+/** "missing" only for a real 404; a throttle, outage or offline is "error" so the row doesn't claim the book doesn't exist. */
+export const lookupFailure = (err: unknown): "missing" | "error" => ((err as { status?: number } | undefined)?.status === 404 ? "missing" : "error");

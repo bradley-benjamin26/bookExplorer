@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptScan, DEBOUNCE_MS, isIsbnBarcode, parseTypedIsbn, saveAll } from "./batchScan";
+import { acceptScan, createLookupQueue, DEBOUNCE_MS, isIsbnBarcode, lookupFailure, parseTypedIsbn, saveAll } from "./batchScan";
 
 describe("isIsbnBarcode", () => {
   it("accepts valid 978 and 979 EANs", () => {
@@ -55,5 +55,35 @@ describe("saveAll", () => {
     });
     expect(result).toEqual({ a: "saved", b: "failed", c: "saved" });
     expect(saved).toEqual(["a", "c"]);
+  });
+});
+
+describe("createLookupQueue", () => {
+  it("runs one at a time in order and survives a rejection", async () => {
+    const started: string[] = [];
+    let inFlight = 0;
+    let peak = 0;
+    const run = async (isbn: string) => {
+      started.push(isbn);
+      peak = Math.max(peak, ++inFlight);
+      await new Promise((r) => setTimeout(r, 1));
+      inFlight--;
+      if (isbn === "b") throw new Error("boom");
+      return isbn;
+    };
+    const lookup = createLookupQueue(run, { gapMs: 0 });
+    const results = await Promise.allSettled(["a", "b", "c"].map(lookup));
+    expect(started).toEqual(["a", "b", "c"]);
+    expect(peak).toBe(1);
+    expect(results.map((r) => r.status)).toEqual(["fulfilled", "rejected", "fulfilled"]);
+  });
+});
+
+describe("lookupFailure", () => {
+  it("tells not-found from everything else", () => {
+    expect(lookupFailure({ status: 404 })).toBe("missing");
+    expect(lookupFailure({ status: 429 })).toBe("error");
+    expect(lookupFailure(new TypeError("Network"))).toBe("error");
+    expect(lookupFailure(undefined)).toBe("error");
   });
 });
