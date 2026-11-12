@@ -1,5 +1,5 @@
 import type { Graph, GraphNode } from "@book-explorer/shared";
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from "d3-force";
+import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type Simulation } from "d3-force";
 import { RELATION_LABELS } from "./graphLabels";
 import { subjectLabel } from "./subjectLabel";
 import { titleCase } from "./titleCase";
@@ -10,6 +10,13 @@ const SIMULATION_TICKS = 300;
 const LABEL_MAX_CHARS_PER_LINE = 16;
 const LABEL_MAX_LINES = 3;
 export const LABEL_LINE_HEIGHT = 15;
+
+// Shared by layoutGraph and createDragSimulation so tuning stays in one place.
+// Pushed apart harder, and linked further apart, than d3's defaults for legibility on busy graphs.
+const CHARGE_STRENGTH = -620;
+// Padded enough to clear a full wrapped label below a node, not just the circle.
+const COLLIDE_RADIUS = NODE_RADIUS + 16 + LABEL_MAX_LINES * LABEL_LINE_HEIGHT;
+const linkDistance = (nodeCount: number) => 260 * Math.min(2, Math.max(1, Math.sqrt(nodeCount / 20)));
 
 // SvgText has no built-in wrapping, so a long node label (an author's full
 // name, a multi-word subject) is greedily broken into lines here instead of
@@ -94,7 +101,7 @@ function nodeRects(node: { x: number; y: number; label: string }, radius: number
 // edge's label. Slides each label along its edge (nearest-to-middle first)
 // to the first spot that overlaps none of those, and falls back to the
 // midpoint if the whole edge is crowded.
-function placeEdgeLabels(nodes: PositionedNode[], edges: PositionedEdge[], centerId: string) {
+export function placeEdgeLabels(nodes: PositionedNode[], edges: PositionedEdge[], centerId: string) {
   const obstacles = nodes.flatMap((n) => nodeRects(n, n.id === centerId ? CENTER_NODE_RADIUS : NODE_RADIUS));
   const placed: Box[] = [];
 
@@ -225,6 +232,10 @@ function separateNodes(nodes: PositionedNode[], centerId: string) {
 export interface PositionedNode extends GraphNode {
   x: number;
   y: number;
+  fx?: number | null;
+  fy?: number | null;
+  vx?: number;
+  vy?: number;
 }
 
 export interface PositionedEdge {
@@ -269,18 +280,18 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
     // Tuned against a dense "travel"-style subject graph (15+ related
     // concepts) so adjacent node labels never visually touch at the
     // fully-zoomed-out scale.
-    .force("charge", forceManyBody().strength(-620))
+    .force("charge", forceManyBody().strength(CHARGE_STRENGTH))
     .force(
       "link",
       forceLink(links as never[])
         .id((d) => (d as GraphNode).id)
-        .distance(260 * Math.min(2, Math.max(1, Math.sqrt(nodes.length / 20))))
+        .distance(linkDistance(nodes.length))
     )
     .force("center", forceCenter(width / 2, height / 2))
     // Padded enough to clear a full 3-line wrapped label below a node (see
     // wrapLabel), not just the circle itself — otherwise two nodes placed
     // close together can end up with one's label overlapping the node below it.
-    .force("collide", forceCollide(NODE_RADIUS + 16 + LABEL_MAX_LINES * LABEL_LINE_HEIGHT))
+    .force("collide", forceCollide(COLLIDE_RADIUS))
     .stop();
 
   for (let i = 0; i < SIMULATION_TICKS; i++) simulation.tick();
@@ -351,6 +362,61 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
 }
 
 /** The furthest the graph zooms out. */
+/** Keeps a node's circle and label inside the content box. */
+export function clampPoint(p: { x: number; y: number }, size: { width: number; height: number }) {
+  const maxY = size.height - CENTER_NODE_RADIUS - 14 - LABEL_MAX_LINES * LABEL_LINE_HEIGHT;
+  return {
+    x: Math.min(Math.max(p.x, 60), size.width - 60),
+    y: Math.min(Math.max(p.y, CENTER_NODE_RADIUS), maxY),
+  };
+}
+
+/** Index of the last (topmost) point whose circle contains (x, y), or -1. Runs on the UI thread. */
+export function hitNode(points: { x: number; y: number; r: number }[], x: number, y: number): number {
+  "worklet";
+  for (let i = points.length - 1; i >= 0; i--) {
+    const p = points[i];
+    if ((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) <= p.r * p.r) return i;
+  }
+  return -1;
+}
+
+/** Interpolates each point from origin to its final spot, ease-out cubic. */
+export function entryPositions(final: { x: number; y: number }[], origin: { x: number; y: number }, t: number) {
+  const k = 1 - (1 - t) ** 3;
+  return final.map((p) => ({ x: origin.x + (p.x - origin.x) * k, y: origin.y + (p.y - origin.y) * k }));
+}
+
+/** Live simulation for dragging: same forces as layoutGraph, center pinned, motion kept in the box. Returned stopped at alpha 0. */
+export function createDragSimulation(
+  nodes: PositionedNode[],
+  edges: PositionedEdge[],
+  size: { width: number; height: number },
+  centerId: string
+): Simulation<PositionedNode, undefined> {
+  const center = nodes.find((n) => n.id === centerId);
+  if (center) {
+    center.fx = center.x;
+    center.fy = center.y;
+  }
+  // Copies, because forceLink mutates its links and layout.edges are rendered.
+  const links = edges.map((e) => ({ source: e.source, target: e.target }));
+  const keepInBox = () => {
+    for (const n of nodes) {
+      const c = clampPoint({ x: n.x + (n.vx ?? 0), y: n.y + (n.vy ?? 0) }, size);
+      n.vx = c.x - n.x;
+      n.vy = c.y - n.y;
+    }
+  };
+  return forceSimulation<PositionedNode>(nodes)
+    .force("charge", forceManyBody().strength(CHARGE_STRENGTH))
+    .force("link", forceLink<PositionedNode, (typeof links)[number]>(links).distance(linkDistance(nodes.length)))
+    .force("collide", forceCollide(COLLIDE_RADIUS))
+    .force("bounds", keepInBox)
+    .alpha(0)
+    .stop();
+}
+
 export const MIN_SCALE = 0.25;
 /** The furthest the graph zooms in. */
 export const MAX_SCALE = 3;
