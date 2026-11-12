@@ -73,7 +73,8 @@ export function parseSnapshotJson(text: string): Snapshot {
 /** Merge: union with what's saved, newer edit wins per record. Replace: the backup becomes the whole dataset. */
 export async function importSnapshot(imported: Snapshot, mode: "merge" | "replace"): Promise<void> {
   // After the merge, so a v1 backup's saves get a list only where neither side has one, and so a v1 backup's work items only get a blank record where neither side has one.
-  await applySnapshot(withWorkRecords(withListedSaves(mode === "replace" ? imported : mergeSnapshots(await getSnapshot(), imported))));
+  const before = await getSnapshot();
+  await applySnapshot(withWorkRecords(withListedSaves(mode === "replace" ? imported : mergeSnapshots(before, imported))), before);
 }
 
 export function parseBookCsv(text: string): CsvBookRow[] {

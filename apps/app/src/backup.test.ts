@@ -79,6 +79,41 @@ describe("JSON backup", () => {
     expect(await getSnapshot()).toEqual(before);
   });
 
+  it("replace import restores the old library when a write fails", async () => {
+    await seed();
+    const before = await getSnapshot();
+    const real = AsyncStorage.setItem;
+    let failed = false;
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockImplementation(async (key: string, value: string) => {
+      if (key === "book-explorer:saved-lists" && !failed) {
+        failed = true;
+        throw new Error("QuotaExceeded");
+      }
+      return real(key, value);
+    });
+    try {
+      const emptyish = { ...before, items: [], books: [], works: [], lists: [] };
+      await expect(importSnapshot(emptyish, "replace")).rejects.toThrow("QuotaExceeded");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await getSnapshot()).toEqual(before);
+  });
+
+  it("rethrows the original error when the rollback write also fails", async () => {
+    await seed();
+    const before = await getSnapshot();
+    let n = 0;
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {
+      throw new Error(n++ === 0 ? "first" : "second");
+    });
+    try {
+      await expect(importSnapshot({ ...before, items: [], books: [], works: [], lists: [] }, "replace")).rejects.toThrow("first");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("refuses to make a backup that import would reject, naming the part to fix", async () => {
     await seed();
     await updateSavedBook("9780441013593", { notes: "x".repeat(MAX_TEXT_LENGTH + 1) });
