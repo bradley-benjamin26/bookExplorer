@@ -177,7 +177,7 @@ export default function GraphExplorer() {
   const viewportHeight = useSharedValue(canvasHeight);
 
   const centerNode = layout?.nodes.find((n) => n.id === data?.centerId);
-  // Live positions for drawing; centerNode, resetView and the content size stay on the static layout.
+  // Live positions for drawing; only `bounds` and the content size stay static (centerNode is one of the mutated layout.nodes, so it is live).
   const motion = useGraphMotion(layout, data?.centerId);
   useEffect(() => {
     if (!layout || !centerNode) return;
@@ -259,7 +259,9 @@ export default function GraphExplorer() {
       // Inverse of canvasAnimatedStyle (translate, then scale about the top-left).
       dragIndex.value = hitNode(points.value, (e.x - translateX.value) / scale.value, (e.y - translateY.value) / scale.value);
     })
-    .onStart(() => {
+    .onStart((e) => {
+      // A two-finger gesture is a pinch, not a node drag.
+      if (e.numberOfPointers > 1) dragIndex.value = -1;
       if (dragIndex.value >= 0) {
         dragStarted.value = true;
         runOnJS(dragStart)(dragIndex.value);
@@ -269,6 +271,14 @@ export default function GraphExplorer() {
       panStartY.value = translateY.value;
     })
     .onUpdate((e) => {
+      if (dragIndex.value >= 0 && e.numberOfPointers > 1) {
+        // A second finger landed mid-drag: end the drag and pan the canvas from here, without a jump.
+        if (dragStarted.value) runOnJS(dragEnd)(dragIndex.value);
+        dragIndex.value = -1;
+        dragStarted.value = false;
+        panStartX.value = translateX.value - e.translationX;
+        panStartY.value = translateY.value - e.translationY;
+      }
       if (dragIndex.value >= 0) {
         runOnJS(dragMove)(dragIndex.value, (e.x - translateX.value) / scale.value, (e.y - translateY.value) / scale.value);
         return;
