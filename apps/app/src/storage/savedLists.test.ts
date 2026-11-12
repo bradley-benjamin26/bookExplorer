@@ -151,6 +151,16 @@ describe("savedLists", () => {
     expect("openLibraryListId" in (await getList(list.id))!).toBe(false);
   });
 
+  it("unlinking from Open Library drops stale seeds from removal records, keeping Hardcover's", async () => {
+    const list = await createList({ name: "L", kind: "book", openLibraryListId: "OL1L" });
+    await addToList(list.id, dune);
+    await setMemberOpenLibrarySeed(list.id, "book", dune.id, "/books/OL1M");
+    await setMemberHardcoverId(list.id, "book", dune.id, 3);
+    await removeFromList(list.id, "book", dune.id);
+    await linkOpenLibraryList(list.id, null);
+    expect((await getList(list.id))!.removedMembers).toEqual([{ type: "book", id: dune.id, removedAt: expect.any(Number), hardcoverBookId: 3 }]);
+  });
+
   it("replaceMembers swaps the members array", async () => {
     const list = await createList({ name: "L", kind: "book" });
     await addToList(list.id, dune);

@@ -173,4 +173,19 @@ describe("openLibraryLists", () => {
     await syncWithOpenLibrary(l);
     expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["OL0W"]);
   });
+
+  it("syncWithOpenLibrary names the seeds it couldn't sync", async () => {
+    const l = await listOf(0, { openLibraryListId: "OL9L" });
+    fetchList.mockResolvedValue({ name: "L", description: "", seedCount: 3, seeds: [seed("OL1W"), { seed: "/subjects/love", title: "Love", member: null }, seed("OL1A", "author", "Ada")] });
+    expect((await syncWithOpenLibrary(l)).skipped).toEqual(["Love", "Ada"]);
+  });
+
+  it("syncWithOpenLibrary reports a book Open Library doesn't have by title and keeps it here", async () => {
+    const l = await createList({ name: "L", kind: "book", openLibraryListId: "OL9L" });
+    await addToList(l.id, { type: "book", id: "9780000000000", title: "Rare" });
+    add.mockResolvedValue({ added: [], missing: [{ type: "book", id: "9780000000000" }] });
+    fetchList.mockResolvedValue({ name: "L", description: "", seedCount: 0, seeds: [] });
+    expect((await syncWithOpenLibrary((await getList(l.id))!)).missing).toEqual(["Rare"]);
+    expect((await getList(l.id))!.members.map((m) => m.title)).toEqual(["Rare"]);
+  });
 });

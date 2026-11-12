@@ -87,7 +87,7 @@ export default function ListDetail() {
   };
 
   // Both services share one busy flag, summary line and progress modal.
-  const runSync = async (service: Service, op: (l: SavedList) => Promise<{ missing: string[] }>) => {
+  const runSync = async (service: Service, op: (l: SavedList) => Promise<{ missing: string[]; skipped?: string[] }>) => {
     if (!list || busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -95,8 +95,12 @@ export default function ListDetail() {
     setError("");
     setSummary("");
     try {
-      const { missing } = await op(list);
-      setSummary(missing.length ? `${service} doesn't have: ${missing.join(", ")}.` : `${service} is up to date.`);
+      const { missing, skipped = [] } = await op(list);
+      const lines = [
+        ...(missing.length ? [`${service} doesn't have: ${missing.join(", ")}.`] : []),
+        ...(skipped.length ? [`Not synced from ${service}: ${skipped.join(", ")}.`] : []),
+      ];
+      setSummary(lines.join("\n") || `${service} is up to date.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -108,7 +112,13 @@ export default function ListDetail() {
   };
   const copy = async (service: Service) => {
     if (busyRef.current) return;
-    if (service === "Open Library" && !(await confirmDestructive("Make this list public?", "Open Library lists are public. Anyone can see this list's name, description and books.", "Copy to Open Library"))) return;
+    if (service === "Open Library") {
+      // Hold the flag through the confirm, as unlink does, so a second tap can't start a parallel copy.
+      busyRef.current = true;
+      const ok = await confirmDestructive("Make this list public?", "Open Library lists are public. Anyone can see this list's name, description and books.", "Copy to Open Library");
+      busyRef.current = false; // runSync re-takes it synchronously below
+      if (!ok) return;
+    }
     const run = service === "Hardcover" ? copyToHardcover : copyToOpenLibrary;
     setCopying(true);
     try {

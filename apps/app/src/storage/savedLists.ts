@@ -172,7 +172,9 @@ export function setMemberHardcoverId(listId: string, type: ListMember["type"], i
 export function linkOpenLibraryList(id: string, openLibraryListId: string | null): Promise<void> {
   return updateList(id, (list) => {
     const { openLibraryListId: _, ...rest } = list;
-    return openLibraryListId === null ? rest : { ...rest, openLibraryListId };
+    if (openLibraryListId !== null) return { ...rest, openLibraryListId };
+    // Old seeds would read as pending deletes against whatever list this is copied to next; members' seeds are stripped by that copy.
+    return { ...rest, ...(rest.removedMembers ? { removedMembers: rest.removedMembers.map(({ openLibrarySeed: _s, ...r }) => r) } : {}) };
   });
 }
 

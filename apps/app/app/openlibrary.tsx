@@ -142,9 +142,9 @@ export default function OpenLibraryAccount() {
             <View key={l.id} style={styles.row}>
               <Text style={styles.rowText}>{l.name} · {l.seedCount} items</Text>
               {mine ? (
-                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))}>Imported</Button>
+                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))} accessibilityLabel={`Open imported list ${l.name}`}>Imported</Button>
               ) : (
-                <Button variant="pill" disabled={importing} onPress={() => doImport(l.id)}>Import</Button>
+                <Button variant="pill" disabled={importing} onPress={() => doImport(l.id)} accessibilityLabel={`Import ${l.name}`}>Import</Button>
               )}
             </View>
           );
