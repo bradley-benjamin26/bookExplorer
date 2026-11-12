@@ -61,7 +61,7 @@ export default function ListDetail() {
       const lists = await getLists(member.type === "author" ? "author" : "book");
       const others = new Set(lists.filter((l) => l.id !== id && l.members.some((m) => m.type === member.type && m.id === member.id)).map((l) => l.id));
       if (leavesLibrary(lists, member, others) && !(await confirmLeave(member.title))) return;
-      await applyListChanges(member, { add: [], remove: [id] }, async () => {}, setError);
+      await applyListChanges(member, { add: [], remove: [id] }, async () => {}, (m) => setError((prev) => (prev ? `${prev} ${m}` : m)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }

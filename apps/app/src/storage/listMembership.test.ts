@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "../test/asyncStorageMock";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary, listChanges } from "./listMembership";
 import { getSavedItems } from "./savedItems";
-import { addToList, createList, getList, setMemberHardcoverId, type SavedList } from "./savedLists";
+import { addToList, createList, getList, setMemberHardcoverId, setMemberOpenLibrarySeed, type SavedList } from "./savedLists";
 import { getSavedWork, saveWorkFromApi, updateSavedWork } from "./savedWorks";
 import type { Work } from "@book-explorer/shared";
 
@@ -123,8 +123,7 @@ describe("applyListChanges Hardcover pushes", () => {
 describe("applyListChanges Open Library pushes", () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
-    push.add.mockReset();
-    push.olAdd.mockReset();
+    for (const f of Object.values(push)) f.mockReset();
   });
 
   it("a list linked to both services pushes to both, and one failing doesn't stop the other", async () => {
@@ -146,5 +145,24 @@ describe("applyListChanges Open Library pushes", () => {
     await applyListChanges(emma, { add: [a.id], remove: [] }, async () => {}, issue);
     expect((await getList(a.id))!.members).toHaveLength(1);
     expect(issue).toHaveBeenCalledWith("Saved here. Open Library didn't update; use Sync with Open Library on the list to retry.");
+  });
+});
+
+describe("applyListChanges Open Library removes", () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    for (const f of Object.values(push)) f.mockReset();
+  });
+
+  it("a failed Open Library remove keeps the local removal and reports it", async () => {
+    push.olRemove.mockRejectedValue(new Error("boom"));
+    const a = await createList({ name: "A", kind: "book", openLibraryListId: "L" });
+    await addToList(a.id, emma);
+    await setMemberOpenLibrarySeed(a.id, "work", "OL1W", "/works/OL1W");
+    const issue = vi.fn();
+    await applyListChanges(emma, { add: [], remove: [a.id] }, async () => {}, issue);
+    expect(push.olRemove).toHaveBeenCalledWith("L", "/works/OL1W");
+    expect((await getList(a.id))!.members).toHaveLength(0);
+    expect(issue).toHaveBeenCalledWith("Removed here. Open Library didn't update, so it may come back on the next sync.");
   });
 });
