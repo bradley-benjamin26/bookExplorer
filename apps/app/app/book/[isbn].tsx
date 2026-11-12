@@ -172,7 +172,7 @@ export default function BookDetail() {
         {data.authors.map((author) => (
           <Pressable
             ref={titleRef(`View ${author.name}`)}
-            accessibilityRole="button"
+            accessibilityRole="link"
             key={author.openLibraryId}
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => router.push(routes.author(author.openLibraryId))}

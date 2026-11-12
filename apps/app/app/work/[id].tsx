@@ -150,7 +150,7 @@ export default function WorkDetail() {
         {data.authors.map((author) => (
           <Pressable
             ref={titleRef(`View ${author.name}`)}
-            accessibilityRole="button"
+            accessibilityRole="link"
             key={author.openLibraryId}
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => router.push(routes.author(author.openLibraryId))}
@@ -163,7 +163,7 @@ export default function WorkDetail() {
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (
-        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="button" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
+        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="link" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
           <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
         </Pressable>
       )}
