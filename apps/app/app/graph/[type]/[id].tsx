@@ -6,6 +6,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useAnimatedProps,
   useSharedValue,
@@ -24,7 +25,8 @@ import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldA
 import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { subjectSpokenLabel } from "../../../src/subjectLabel";
-import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, LABEL_LINE_HEIGHT, labelOpacity, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, zoomAt, type Center, type PositionedNode } from "../../../src/graphLayout";
+import { shouldSuppressPress, useGraphMotion } from "../../../src/useGraphMotion";
+import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, hitNode, LABEL_LINE_HEIGHT, labelOpacity, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, zoomAt, type Center, type PositionedNode } from "../../../src/graphLayout";
 
 /** Node labels show subjects with "->"; screen readers get commas. */
 const spoken = (n: GraphNode) => (n.type === "subject" ? subjectSpokenLabel(n.label.split("->").join(", ")) : n.label);
@@ -175,6 +177,8 @@ export default function GraphExplorer() {
   const viewportHeight = useSharedValue(canvasHeight);
 
   const centerNode = layout?.nodes.find((n) => n.id === data?.centerId);
+  // Live positions for drawing; centerNode, resetView and the content size stay on the static layout.
+  const motion = useGraphMotion(layout, data?.centerId);
   useEffect(() => {
     if (!layout || !centerNode) return;
     contentWidth.value = layout.contentWidth;
@@ -231,6 +235,10 @@ export default function GraphExplorer() {
   const pinchStartScale = useSharedValue(1);
   const panStartX = useSharedValue(0);
   const panStartY = useSharedValue(0);
+  // The node a pan began on (-1: the pan moves the canvas instead), and whether that drag got past minDistance.
+  const dragIndex = useSharedValue(-1);
+  const dragStarted = useSharedValue(false);
+  const { points, dragStart, dragMove, dragEnd } = motion;
 
   const pinchGesture = Gesture.Pinch()
     .onStart(() => {
@@ -247,14 +255,32 @@ export default function GraphExplorer() {
     // movement before the Pressable ever sees a press, so taps would stop
     // working under this gesture detector.
     .minDistance(10)
+    .onBegin((e) => {
+      // Inverse of canvasAnimatedStyle (translate, then scale about the top-left).
+      dragIndex.value = hitNode(points.value, (e.x - translateX.value) / scale.value, (e.y - translateY.value) / scale.value);
+    })
     .onStart(() => {
+      if (dragIndex.value >= 0) {
+        dragStarted.value = true;
+        runOnJS(dragStart)(dragIndex.value);
+        return;
+      }
       panStartX.value = translateX.value;
       panStartY.value = translateY.value;
     })
     .onUpdate((e) => {
+      if (dragIndex.value >= 0) {
+        runOnJS(dragMove)(dragIndex.value, (e.x - translateX.value) / scale.value, (e.y - translateY.value) / scale.value);
+        return;
+      }
       translateX.value = panStartX.value + e.translationX;
       translateY.value = panStartY.value + e.translationY;
       clampTranslation(scale.value);
+    })
+    .onFinalize(() => {
+      if (dragIndex.value >= 0 && dragStarted.value) runOnJS(dragEnd)(dragIndex.value);
+      dragIndex.value = -1;
+      dragStarted.value = false;
     });
 
   // Trackpad/mouse equivalent for pinch, since Gesture.Pinch() only fires
@@ -308,6 +334,8 @@ export default function GraphExplorer() {
   }
 
   const handleNodePress = (node: PositionedNode) => {
+    // A drag released over its own node fires a press on web.
+    if (shouldSuppressPress(motion.lastDragEnd(), Date.now())) return;
     if (!node.navigable) return;
     const next = parseNodeId(node.id);
 
@@ -368,7 +396,7 @@ export default function GraphExplorer() {
   }
 
   const legend = legendEntries(data.nodes);
-  const orderedNodes = [...layout.nodes].sort((a, b) =>
+  const orderedNodes = [...motion.nodes].sort((a, b) =>
     a.id === data.centerId ? -1 : b.id === data.centerId ? 1 : 0
   );
 
@@ -377,7 +405,7 @@ export default function GraphExplorer() {
       {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <Text style={styles.hint}>
-        Each circle is a book, author or subject. Tap one to move there; tap the center circle to open its page.
+        Each circle is a book, author or subject. Tap one to move there, drag it to rearrange, or tap the center circle to open its page.
       </Text>
       <View style={styles.legend}>
         {legend.types.map((nodeType) => (
@@ -540,7 +568,7 @@ export default function GraphExplorer() {
               importantForAccessibility="no-hide-descendants"
             >
               <Svg width={layout.contentWidth} height={layout.contentHeight}>
-            {layout.edges.map((edge, i) => {
+            {motion.edges.map((edge, i) => {
               const isSourceCenter = edge.source.id === data.centerId;
               const isTargetCenter = edge.target.id === data.centerId;
               const { x1, y1, x2, y2 } = shortenEdge(
@@ -561,7 +589,7 @@ export default function GraphExplorer() {
                 />
               );
             })}
-            {layout.edges.map((edge, i) => {
+            {motion.edges.map((edge, i) => {
               const { text: label, pillWidth, labelX: midX, labelY: midY } = edge;
               return (
                 <Fragment key={i}>
@@ -589,7 +617,7 @@ export default function GraphExplorer() {
                 </Fragment>
               );
             })}
-            {layout.nodes.map((node) => {
+            {motion.nodes.map((node) => {
               const isCenter = node.id === data.centerId;
               const radius = isCenter ? CENTER_NODE_RADIUS : NODE_RADIUS;
               const lines = wrapLabel(node.label);
