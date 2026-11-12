@@ -268,6 +268,18 @@ describe("CSV import", () => {
     { title: "Three", isbn: "9780000000003" },
   ];
 
+  it("rejects instead of pausing when saving a looked-up book fails", async () => {
+    fetchBook.mockResolvedValue(apiBook("9780000000001", "A"));
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockRejectedValue(new Error("QuotaExceeded"));
+    try {
+      await expect(
+        runCsvImport([{ title: "A", isbn: "9780000000001" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 })
+      ).rejects.toThrow("QuotaExceeded");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("saves each book like the Save button, skips rows without an ISBN and lists failures", async () => {
     fetchBook.mockImplementation(async (isbn) => {
       if (isbn === "9780000000002") throw Object.assign(new Error("404"), { status: 404 });

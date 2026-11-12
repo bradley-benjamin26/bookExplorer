@@ -126,14 +126,17 @@ export async function runCsvImport(
     if (!isbn) p.noIsbn.push(title || `Row ${p.next + 2}`); // +2: 1-based, after the header
     else if (await getSavedBook(isbn)) p.alreadySaved++;
     else {
+      let book: Book | undefined;
       try {
-        const book = await fetchBookWithAlternate(isbn);
-        await saveBook(book);
-        onSaved?.(book);
-        p.saved++;
+        book = await fetchBookWithAlternate(isbn);
       } catch (err) {
         if (stopsPass(err)) return p; // throttled or offline: leave this row for Resume rather than failing every row after it
         p.failed.push(title || isbn);
+      }
+      if (book) {
+        await saveBook(book); // a local save failure is a real error, not a lookup pause
+        onSaved?.(book);
+        p.saved++;
       }
       await new Promise((resolve) => setTimeout(resolve, gapMs));
     }
