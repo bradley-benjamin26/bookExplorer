@@ -10,8 +10,9 @@ const OPEN_LIBRARY_URL = "https://openlibrary.org";
 /** Attribution footer shown at the end of scrollable screens, since Wikidata- and Open Library-sourced data appears throughout the app. */
 export function Footer() {
   const styles = useThemedStyles(createStyles);
+  // shortcut: footer sits inside <main>, so it isn't a page-level contentinfo; move it out of the scroll if an audit flags it.
   return (
-    <View style={styles.footer}>
+    <View role="contentinfo" style={styles.footer}>
       <View style={styles.logoBacking}>
         <Image source={{ uri: WIKIDATA_LOGO_URL }} accessibilityLabel="Wikidata" style={styles.logo} resizeMode="contain" />
       </View>
