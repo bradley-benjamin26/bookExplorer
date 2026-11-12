@@ -1,6 +1,7 @@
+import type { OpenLibraryAddResult, OpenLibraryMember } from "@book-explorer/shared";
 import { accountStoreOpen, createOlSession, deleteOlSession, getOlSession, updateOlCookie } from "../accountStore.js";
 import { randomToken } from "../secretBox.js";
-import { OpenLibraryAuthError, login } from "../sources/openLibraryUser.js";
+import { OpenLibraryAuthError, login, mapPool, seedFor } from "../sources/openLibraryUser.js";
 
 export class OpenLibrarySignedOutError extends Error {}
 
@@ -50,4 +51,16 @@ export function getOpenLibraryAccount(sessionToken: unknown): { username: string
 
 export function disconnectOpenLibrary(sessionToken: unknown): void {
   if (typeof sessionToken === "string") deleteOlSession(sessionToken);
+}
+
+/** Looks members up (a few at a time, no session needed) and splits them into seeds to add and misses, in input order. */
+export async function resolveMembers(members: OpenLibraryMember[]): Promise<OpenLibraryAddResult> {
+  const seeds = await mapPool(members, seedFor);
+  const result: OpenLibraryAddResult = { added: [], missing: [] };
+  members.forEach(({ type, id }, i) => {
+    const seed = seeds[i];
+    if (seed) result.added.push({ type, id, seed });
+    else result.missing.push({ type, id });
+  });
+  return result;
 }

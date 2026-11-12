@@ -59,6 +59,17 @@ const readJson = async <T>(res: Response): Promise<T> => {
   return (await res.json()) as T;
 };
 
+/** Maps with at most `limit` calls in flight, keeping input order. */
+export async function mapPool<T, R>(items: T[], fn: (item: T) => Promise<R>, limit = 4): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let cursor = 0;
+  const worker = async () => {
+    for (let i = cursor++; i < items.length; i = cursor++) out[i] = await fn(items[i]);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 export function seedFor(member: OpenLibraryMember): Promise<string | null> {
   if (member.type === "work") return Promise.resolve(`/works/${member.id}`);
   if (member.type === "author") return Promise.resolve(`/authors/${member.id}`);
@@ -110,12 +121,7 @@ export async function getList(username: string, listId: string): Promise<OpenLib
   }
   entries.length = Math.min(entries.length, MAX_SEEDS);
 
-  const members: (OpenLibraryMember | null)[] = new Array(entries.length).fill(null);
-  let cursor = 0;
-  const worker = async () => {
-    for (let i = cursor++; i < entries.length; i = cursor++) members[i] = await memberFor(entries[i].url);
-  };
-  await Promise.all(Array.from({ length: 4 }, worker));
+  const members = await mapPool(entries, (e) => memberFor(e.url));
 
   return {
     name: info.name,

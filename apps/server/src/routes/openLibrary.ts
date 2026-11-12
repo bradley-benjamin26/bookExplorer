@@ -1,9 +1,9 @@
-import type { OpenLibraryAddResult, OpenLibraryMember } from "@book-explorer/shared";
+import type { OpenLibraryMember } from "@book-explorer/shared";
 import type { FastifyInstance } from "fastify";
 import {
-  OpenLibrarySignedOutError, asUser, connect, disconnectOpenLibrary, getOpenLibraryAccount, openLibraryEnabled,
+  OpenLibrarySignedOutError, asUser, connect, disconnectOpenLibrary, getOpenLibraryAccount, openLibraryEnabled, resolveMembers,
 } from "../services/openLibraryAccount.js";
-import { OpenLibraryAuthError, OpenLibraryRateLimitError, createList, getList, myLists, seedFor, updateSeeds } from "../sources/openLibraryUser.js";
+import { OpenLibraryAuthError, OpenLibraryRateLimitError, createList, getList, myLists, updateSeeds } from "../sources/openLibraryUser.js";
 import { upstreamErrorHandler } from "../upstreamErrorHandler.js";
 
 const SESSION_HEADER = "x-openlibrary-session";
@@ -11,7 +11,7 @@ const SIGNED_OUT = "Connect your Open Library account again.";
 const KEY = /^[A-Za-z0-9]{8,64}$/;
 const LIST_ID = /^OL\d+L$/;
 const SEED = /^\/(works\/OL\d+W|books\/OL\d+M|authors\/OL\d+A)$/;
-const MEMBER_ID = { book: /^(\d{13}|\d{9}[\dX])$/, work: /^OL\d+W$/, author: /^OL\d+A$/ };
+const MEMBER_ID = { book: /^(\d{13}|\d{9}[\dXx])$/, work: /^OL\d+W$/, author: /^OL\d+A$/ };
 
 export async function openLibraryRoutes(app: FastifyInstance) {
   app.setErrorHandler((err: Error, req, reply) => {
@@ -69,18 +69,10 @@ export async function openLibraryRoutes(app: FastifyInstance) {
       Array.isArray(members) && members.length >= 1 && members.length <= 100 &&
       members.every((m) => m && typeof m.id === "string" && Object.hasOwn(MEMBER_ID, m.type) && MEMBER_ID[m.type as keyof typeof MEMBER_ID].test(m.id));
     if (!LIST_ID.test(req.params.listId) || !valid) return reply.code(400).send({ error: "Invalid list or members" });
-    const list = members as OpenLibraryMember[];
-    return asUser(req.headers[SESSION_HEADER], async (s): Promise<OpenLibraryAddResult> => {
-      const seeds = await Promise.all(list.map(({ type, id }) => seedFor({ type, id })));
-      const result: OpenLibraryAddResult = { added: [], missing: [] };
-      list.forEach(({ type, id }, i) => {
-        const seed = seeds[i];
-        if (seed) result.added.push({ type, id, seed });
-        else result.missing.push({ type, id });
-      });
-      if (result.added.length) await updateSeeds(s.username, req.params.listId, { add: result.added.map((a) => a.seed), remove: [] }, s.cookie);
-      return result;
-    });
+    // Lookups need no session, so an expired-cookie retry in asUser only repeats the write.
+    const result = await resolveMembers((members as OpenLibraryMember[]).map((m) => ({ ...m, id: m.id.toUpperCase() })));
+    if (result.added.length) await asUser(req.headers[SESSION_HEADER], (s) => updateSeeds(s.username, req.params.listId, { add: result.added.map((a) => a.seed), remove: [] }, s.cookie));
+    return result;
   });
 
   app.delete<{ Params: { listId: string }; Querystring: { seed?: string } }>("/api/openlibrary/lists/:listId/seeds", async (req, reply) => {

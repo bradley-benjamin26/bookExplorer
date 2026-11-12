@@ -8,6 +8,7 @@ vi.mock("../services/openLibraryAccount.js", () => {
     openLibraryEnabled: vi.fn(),
     connect: vi.fn(),
     asUser: vi.fn(),
+    resolveMembers: vi.fn(),
     getOpenLibraryAccount: vi.fn(),
     disconnectOpenLibrary: vi.fn(),
   };
@@ -19,7 +20,7 @@ vi.mock("../sources/openLibraryUser.js", () => {
       super("rl");
     }
   }
-  return { OpenLibraryAuthError, OpenLibraryRateLimitError, seedFor: vi.fn(), myLists: vi.fn(), getList: vi.fn(), createList: vi.fn(), updateSeeds: vi.fn() };
+  return { OpenLibraryAuthError, OpenLibraryRateLimitError, myLists: vi.fn(), getList: vi.fn(), createList: vi.fn(), updateSeeds: vi.fn() };
 });
 import * as svc from "../services/openLibraryAccount.js";
 import * as user from "../sources/openLibraryUser.js";
@@ -110,7 +111,7 @@ describe("open library routes", () => {
   });
 
   it("adding members makes one updateSeeds call and reports misses", async () => {
-    u.seedFor.mockImplementation(async (mem) => (mem.type === "work" ? "/works/OL1W" : null));
+    m.resolveMembers.mockResolvedValue({ added: [{ type: "work", id: "OL1W", seed: "/works/OL1W" }], missing: [{ type: "book", id: "9780000000002" }] });
     const res = await call({
       method: "POST", url: "/api/openlibrary/lists/OL9L/seeds", headers,
       payload: { members: [{ type: "work", id: "OL1W" }, { type: "book", id: "9780000000002" }] },
@@ -121,9 +122,16 @@ describe("open library routes", () => {
   });
 
   it("skips updateSeeds when every member is missing", async () => {
-    u.seedFor.mockResolvedValue(null);
+    m.resolveMembers.mockResolvedValue({ added: [], missing: [{ type: "book", id: "9780000000002" }] });
     await call({ method: "POST", url: "/api/openlibrary/lists/OL9L/seeds", headers, payload: { members: [{ type: "book", id: "9780000000002" }] } });
     expect(u.updateSeeds).not.toHaveBeenCalled();
+    expect(m.asUser).not.toHaveBeenCalled();
+  });
+
+  it("uppercases a lowercase ISBN-10 check digit before resolving", async () => {
+    m.resolveMembers.mockResolvedValue({ added: [], missing: [] });
+    await call({ method: "POST", url: "/api/openlibrary/lists/OL9L/seeds", headers, payload: { members: [{ type: "book", id: "080442957x" }] } });
+    expect(m.resolveMembers).toHaveBeenCalledWith([{ type: "book", id: "080442957X" }]);
   });
 
   it("rejects malformed list ids, seeds and members with 400", async () => {

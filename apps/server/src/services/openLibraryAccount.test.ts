@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeAccountStore, getOlSession, openAccountStore } from "../accountStore.js";
-import { OpenLibraryAuthError, login } from "../sources/openLibraryUser.js";
-import { OpenLibrarySignedOutError, asUser, connect, disconnectOpenLibrary, getOpenLibraryAccount, openLibraryEnabled } from "./openLibraryAccount.js";
+import { OpenLibraryAuthError, login, seedFor } from "../sources/openLibraryUser.js";
+import { OpenLibrarySignedOutError, asUser, connect, disconnectOpenLibrary, getOpenLibraryAccount, openLibraryEnabled, resolveMembers } from "./openLibraryAccount.js";
 
 vi.mock("../sources/openLibraryUser.js", async () => {
   const actual = await vi.importActual<typeof import("../sources/openLibraryUser.js")>("../sources/openLibraryUser.js");
-  return { OpenLibraryAuthError: actual.OpenLibraryAuthError, login: vi.fn() };
+  return { OpenLibraryAuthError: actual.OpenLibraryAuthError, mapPool: actual.mapPool, login: vi.fn(), seedFor: vi.fn() };
 });
 
 const KEYS = ["abcd1234abcd1234", "wxyz9876wxyz9876"] as const;
@@ -88,5 +88,21 @@ describe("openLibraryAccount", () => {
     await expect(asUser(undefined, run)).rejects.toBeInstanceOf(OpenLibrarySignedOutError);
     await expect(asUser("nope", run)).rejects.toBeInstanceOf(OpenLibrarySignedOutError);
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("resolveMembers keeps input order, reports misses and runs at most 4 lookups at once", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    vi.mocked(seedFor).mockImplementation(async (m) => {
+      peak = Math.max(peak, ++inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return m.id.endsWith("0") ? null : `/works/${m.id}`;
+    });
+    const members = Array.from({ length: 20 }, (_, i) => ({ type: "book" as const, id: `97800000000${String(i).padStart(2, "0")}` }));
+    const res = await resolveMembers(members);
+    expect(peak).toBe(4);
+    expect(res.added.map((a) => a.id)).toEqual(members.filter((m) => !m.id.endsWith("0")).map((m) => m.id));
+    expect(res.missing.map((m) => m.id)).toEqual(members.filter((m) => m.id.endsWith("0")).map((m) => m.id));
   });
 });
