@@ -69,7 +69,8 @@ export async function openLibraryRoutes(app: FastifyInstance) {
       Array.isArray(members) && members.length >= 1 && members.length <= 100 &&
       members.every((m) => m && typeof m.id === "string" && Object.hasOwn(MEMBER_ID, m.type) && MEMBER_ID[m.type as keyof typeof MEMBER_ID].test(m.id));
     if (!LIST_ID.test(req.params.listId) || !valid) return reply.code(400).send({ error: "Invalid list or members" });
-    // Lookups need no session, so an expired-cookie retry in asUser only repeats the write.
+    // Signed-in callers only, so the app key alone can't drive up to 100 lookups; lookups stay outside asUser so an expired-cookie retry only repeats the write.
+    if (!getOpenLibraryAccount(req.headers[SESSION_HEADER])) throw new OpenLibrarySignedOutError("Not signed in");
     const result = await resolveMembers((members as OpenLibraryMember[]).map((m) => ({ ...m, id: m.id.toUpperCase() })));
     if (result.added.length) await asUser(req.headers[SESSION_HEADER], (s) => updateSeeds(s.username, req.params.listId, { add: result.added.map((a) => a.seed), remove: [] }, s.cookie));
     return result;

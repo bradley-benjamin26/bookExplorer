@@ -43,6 +43,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   m.openLibraryEnabled.mockReturnValue(true);
   m.asUser.mockImplementation(async (_t, run) => run({ username: "ada", cookie: "session=c" }));
+  m.getOpenLibraryAccount.mockReturnValue({ username: "ada" });
 });
 
 describe("open library routes", () => {
@@ -126,6 +127,15 @@ describe("open library routes", () => {
     await call({ method: "POST", url: "/api/openlibrary/lists/OL9L/seeds", headers, payload: { members: [{ type: "book", id: "9780000000002" }] } });
     expect(u.updateSeeds).not.toHaveBeenCalled();
     expect(m.asUser).not.toHaveBeenCalled();
+  });
+
+  it("adding members without a session is a 401 before any lookup", async () => {
+    m.getOpenLibraryAccount.mockReturnValue(null);
+    const res = await call({ method: "POST", url: "/api/openlibrary/lists/OL9L/seeds", headers, payload: { members: [{ type: "book", id: "9780000000002" }] } });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ error: "Connect your Open Library account again." });
+    expect(m.resolveMembers).not.toHaveBeenCalled();
+    expect(m.getOpenLibraryAccount).toHaveBeenCalledWith("tok");
   });
 
   it("uppercases a lowercase ISBN-10 check digit before resolving", async () => {

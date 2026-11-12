@@ -24,8 +24,10 @@ async function olFetch(path: string, init: RequestInit & { cookie?: string } = {
     signal: AbortSignal.timeout(10_000),
     headers: { "User-Agent": USER_AGENT, ...(cookie ? { Cookie: cookie } : {}), ...(headers as Record<string, string>) },
   });
+  // shortcut: Retry-After as an HTTP date falls back to 60s, parse dates if Open Library starts sending them
   if (res.status === 429) throw new OpenLibraryRateLimitError(Number(res.headers.get("Retry-After")) || 60);
-  if (res.status === 401 || res.status === 403) throw new OpenLibraryAuthError();
+  // Only a cookie can be rejected; a 401/403 on a read (bot protection) is an upstream error, not a reason to sign out.
+  if (cookie && (res.status === 401 || res.status === 403)) throw new OpenLibraryAuthError();
   return res;
 }
 
@@ -36,7 +38,7 @@ export async function login(accessKey: string, secretKey: string): Promise<{ coo
     body: JSON.stringify({ access: accessKey, secret: secretKey }),
   });
   // Rejected keys come back as 400 invalid_s3keys.
-  if (res.status === 400) throw new OpenLibraryAuthError();
+  if (res.status === 400 || res.status === 401 || res.status === 403) throw new OpenLibraryAuthError();
   if (!res.ok) throw new Error(`Open Library login failed with ${res.status}`);
   // Only the session pair is kept; the other cookies (s3, pd, sfw) aren't needed.
   const cookie = res.headers.getSetCookie().find((c) => c.startsWith("session="))?.split(";")[0];
@@ -70,9 +72,25 @@ export async function mapPool<T, R>(items: T[], fn: (item: T) => Promise<R>, lim
   return out;
 }
 
+const SEED_KEY = { work: /^\/works\/OL\d+W$/, author: /^\/authors\/OL\d+A$/ };
+
+// Redirected or deleted works break every seeds.json read (notes §4), so only a live record's own key becomes a seed.
+async function liveKey(type: "work" | "author", path: string, hops = 1): Promise<string | null> {
+  const res = await olFetch(`${path}.json`);
+  if (res.status === 404) return null;
+  const rec = await readJson<{ key?: string; type?: { key?: string }; location?: string }>(res);
+  if (rec.type?.key === "/type/redirect") {
+    return hops > 0 && rec.location && SEED_KEY[type].test(rec.location) ? liveKey(type, rec.location, hops - 1) : null;
+  }
+  return rec.type?.key === `/type/${type}` && rec.key && SEED_KEY[type].test(rec.key) ? rec.key : null;
+}
+
 export function seedFor(member: OpenLibraryMember): Promise<string | null> {
-  if (member.type === "work") return Promise.resolve(`/works/${member.id}`);
-  if (member.type === "author") return Promise.resolve(`/authors/${member.id}`);
+  const { type } = member;
+  if (type !== "book") {
+    const path = `/${type}s/${encodeURIComponent(member.id)}`;
+    return seedCache.wrap(path, () => liveKey(type, path));
+  }
   // The brief endpoint is read-only; /isbn/<isbn>.json would 302 to junk import records and may trigger imports.
   return seedCache.wrap(member.id, async () => {
     const res = await olFetch(`/api/volumes/brief/isbn/${encodeURIComponent(member.id)}.json`);
@@ -113,7 +131,7 @@ export async function getList(username: string, listId: string): Promise<OpenLib
   const info = await readJson<{ name: string; description?: string | null; seed_count: number }>(head);
 
   const entries: { url: string; title: string }[] = [];
-  // shortcut: stops at 2,000 seeds; sync's seedCount guard refuses to prune past it. Page further if real lists get that big
+  // shortcut: stops at 2,000 seeds, and a large edition-heavy list is resolved inside this one request so it may take a while; sync's seedCount guard refuses to prune past it. Page further (and resolve in the background) if real lists get that big
   for (let next: string | undefined = `${base}/seeds.json`; next && entries.length < MAX_SEEDS; ) {
     const page: { links?: { next?: string }; entries?: { url: string; title: string }[] } = await readJson(await olFetch(next));
     entries.push(...(page.entries ?? []));

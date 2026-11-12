@@ -60,10 +60,48 @@ it("maps 429 to OpenLibraryRateLimitError with Retry-After, defaulting to 60", a
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
-it("seedFor maps works and authors without a request", async () => {
+it("seedFor looks works and authors up and uses the live record's key, cached", async () => {
+  fetchMock
+    .mockResolvedValueOnce(json({ key: "/works/OL45804W", type: { key: "/type/work" } }))
+    .mockResolvedValueOnce(json({ key: "/authors/OL23919A", type: { key: "/type/author" } }));
+  expect(await seedFor({ type: "work", id: "OL45804W" })).toBe("/works/OL45804W");
   expect(await seedFor({ type: "work", id: "OL45804W" })).toBe("/works/OL45804W");
   expect(await seedFor({ type: "author", id: "OL23919A" })).toBe("/authors/OL23919A");
-  expect(fetchMock).not.toHaveBeenCalled();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(fetchMock.mock.calls[0][0]).toBe("https://openlibrary.org/works/OL45804W.json");
+  expect(fetchMock.mock.calls[0][1]!.headers).not.toHaveProperty("Cookie");
+});
+
+it("seedFor follows one redirect to its location", async () => {
+  fetchMock
+    .mockResolvedValueOnce(json({ key: "/works/OL100W", type: { key: "/type/redirect" }, location: "/works/OL123W" }))
+    .mockResolvedValueOnce(json({ key: "/works/OL123W", type: { key: "/type/work" } }));
+  expect(await seedFor({ type: "work", id: "OL100W" })).toBe("/works/OL123W");
+  expect(fetchMock.mock.calls[1][0]).toBe("https://openlibrary.org/works/OL123W.json");
+});
+
+it("seedFor returns null (cached) on a 404, a deleted record, a second redirect or a bad location", async () => {
+  fetchMock.mockResolvedValueOnce(new Response("", { status: 404 }));
+  expect(await seedFor({ type: "work", id: "OL200W" })).toBeNull();
+  expect(await seedFor({ type: "work", id: "OL200W" })).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  fetchMock.mockResolvedValueOnce(json({ key: "/works/OL201W", type: { key: "/type/delete" } }));
+  expect(await seedFor({ type: "work", id: "OL201W" })).toBeNull();
+  fetchMock
+    .mockResolvedValueOnce(json({ type: { key: "/type/redirect" }, location: "/works/OL203W" }))
+    .mockResolvedValueOnce(json({ type: { key: "/type/redirect" }, location: "/works/OL204W" }));
+  expect(await seedFor({ type: "work", id: "OL202W" })).toBeNull();
+  fetchMock.mockResolvedValueOnce(json({ type: { key: "/type/redirect" }, location: "/books/OL1M" }));
+  expect(await seedFor({ type: "author", id: "OL205A" })).toBeNull();
+  expect(fetchMock).toHaveBeenCalledTimes(5);
+});
+
+it("a cookieless 401/403 is an upstream error, not an auth error", async () => {
+  fetchMock.mockResolvedValue(new Response("", { status: 403 }));
+  const err = await myLists("ada").catch((e: unknown) => e);
+  expect(err).toBeInstanceOf(Error);
+  expect(err).not.toBeInstanceOf(OpenLibraryAuthError);
+  await expect(seedFor({ type: "work", id: "OL300W" })).rejects.not.toBeInstanceOf(OpenLibraryAuthError);
 });
 
 it("seedFor resolves an ISBN to its first record key and caches it", async () => {
