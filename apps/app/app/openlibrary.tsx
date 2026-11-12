@@ -24,9 +24,19 @@ export default function OpenLibraryAccount() {
   const [access, setAccess] = useState("");
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
-  const account = useQuery({ queryKey: ["openlibrary", "account"], queryFn: fetchOpenLibraryAccount, enabled: hasToken, retry: false });
+  // A 401 clears the stored session inside request(); follow it here, or the removed query would refetch tokenless in a loop.
+  const account = useQuery({
+    queryKey: ["openlibrary", "account"],
+    queryFn: () =>
+      fetchOpenLibraryAccount().catch((err) => {
+        if (status(err) === 401) setHasToken(false);
+        throw err;
+      }),
+    enabled: hasToken && getOpenLibrarySessionToken() !== null,
+    retry: false,
+  });
 
-  const signedOut = !hasToken || status(account.error) === 401;
+  const signedOut = !hasToken || getOpenLibrarySessionToken() === null || status(account.error) === 401;
   const isUnavailable = unavailable || (hasToken && status(account.error) === 503);
 
   const signIn = async () => {
