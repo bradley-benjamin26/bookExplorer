@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getWork } from "./openLibrary.js";
 
-function mockWork(title: string, editions: { title: string; languages?: string[] }[]) {
+function mockWork(title: string, editions: { title: string; languages?: string[]; covers?: number[] }[], workCovers?: number[]) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => ({
@@ -15,9 +15,10 @@ function mockWork(title: string, editions: { title: string; languages?: string[]
                 title: e.title,
                 isbn_13: [`978000000000${i}`],
                 languages: e.languages?.map((l) => ({ key: `/languages/${l}` })),
+                covers: e.covers,
               })),
             }
-          : { title },
+          : { title, covers: workCovers },
     }))
   );
 }
@@ -50,5 +51,32 @@ describe("getWork's title", () => {
   it("keeps the work's title when no edition is labelled English", async () => {
     mockWork("Les Misérables", [{ title: "Les Misérables", languages: ["fre"] }, { title: "Les Miserables" }]);
     expect((await getWork("OL1W"))?.title).toBe("Les Misérables");
+  });
+});
+
+describe("getWork's cover", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const L = (id: number) => `https://covers.openlibrary.org/b/id/${id}-L.jpg`;
+  it("prefers an English edition's cover over the work's first cover", async () => {
+    mockWork("Le capital au XXIe siècle", [
+      { title: "Le capital au XXIe siècle", languages: ["fre"], covers: [111] },
+      { title: "Capital in the Twenty-First Century", languages: ["eng"], covers: [222] },
+    ], [111]);
+    expect((await getWork("OL16814568W"))?.coverUrl).toBe(L(222));
+  });
+  it("skips English editions without a cover", async () => {
+    mockWork("X", [{ title: "X", languages: ["eng"] }, { title: "X", languages: ["eng"], covers: [-1, 333] }], [111]);
+    expect((await getWork("OL1W"))?.coverUrl).toBe(L(333));
+  });
+  it("keeps the work's cover when no English edition has one", async () => {
+    mockWork("Les Misérables", [{ title: "Les Misérables", languages: ["fre"], covers: [444] }, { title: "Les Miserables", covers: [555] }], [111]);
+    expect((await getWork("OL1W"))?.coverUrl).toBe(L(111));
+  });
+  it("keeps the work's cover when editions aren't fetched", async () => {
+    mockWork("X", [{ title: "X", languages: ["eng"], covers: [222] }], [111]);
+    expect((await getWork("OL1W", { editions: false }))?.coverUrl).toBe(L(111));
   });
 });

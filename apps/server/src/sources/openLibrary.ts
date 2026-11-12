@@ -144,13 +144,13 @@ interface OpenLibraryEditionsData {
 // metadata, preferring ISBN-13, so work pages reached without scanning can offer ISBN-based links
 // and an Editions section.
 // shortcut: only Open Library's first 50 editions are listed, ranked and used as ISBN candidates; fetch further pages if popular works show odd editions.
-async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryEdition[]; englishTitles: string[] }> {
+async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryEdition[]; englishTitles: string[]; englishCoverId: number | null }> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}/editions.json?limit=50`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`Open Library request failed: ${res.status}`);
 
   const data = (await res.json()) as OpenLibraryEditionsData;
-  const editions: (OpenLibraryEdition & { nonEnglish: boolean })[] = [];
+  const editions: (OpenLibraryEdition & { nonEnglish: boolean; english: boolean; coverId: number | undefined })[] = [];
   const englishTitles: string[] = [];
   for (const entry of data.entries ?? []) {
     if (entry.title && entry.languages?.some((l) => l.key === "/languages/eng")) englishTitles.push(entry.title);
@@ -168,12 +168,16 @@ async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryE
       continue;
     }
     const nonEnglish = (entry.languages ?? []).some((l) => l.key && l.key !== "/languages/eng");
-    editions.push({ ...edition, nonEnglish });
+    const english = (entry.languages ?? []).some((l) => l.key === "/languages/eng");
+    editions.push({ ...edition, nonEnglish, english, coverId });
   }
 
   // English and unlabeled editions first, then newest, covers as a small boost; non-English are demoted,
   // not dropped. Open Library's listing order has no language preference.
   const ordered = orderEditions(editions);
+
+  // Only editions labelled English count: unlabeled ones might be translations.
+  const englishCoverId = ordered.find((e) => e.english && e.coverId)?.coverId ?? null;
 
   // Dedupe by ISBN only: two records sharing an ISBN are one printing, but different ISBNs are kept even
   // when publisher/format/year match. `null` ISBNs are never deduped against each other.
@@ -185,7 +189,7 @@ async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryE
     return true;
   });
 
-  return { editions: deduped.map(({ nonEnglish, ...edition }) => edition), englishTitles };
+  return { editions: deduped.map(({ nonEnglish, english, coverId, ...edition }) => edition), englishTitles, englishCoverId };
 }
 
 // A work's title is often its original-language one. When no English edition carries it, the English
@@ -215,7 +219,7 @@ export async function getWork(workId: string, { editions: withEditions = true }:
     .map((key) => key.replace("/authors/", ""));
 
   // Work records only reference authors by id; names are resolved per author.
-  const [authors, { editions, englishTitles }] = await Promise.all([
+  const [authors, { editions, englishTitles, englishCoverId }] = await Promise.all([
     Promise.all(
       authorIds.map(async (id) => {
         const author = await getAuthor(id).catch((err) => {
@@ -232,16 +236,17 @@ export async function getWork(workId: string, { editions: withEditions = true }:
       ? getWorkEditions(workId).catch((err) => {
           if (err instanceof UpstreamUnavailableError) throw err;
           console.warn(`[openLibrary] Failed to resolve editions for work ${workId}:`, err);
-          return { editions: [] as OpenLibraryEdition[], englishTitles: [] };
+          return { editions: [] as OpenLibraryEdition[], englishTitles: [], englishCoverId: null };
         })
-      : { editions: [] as OpenLibraryEdition[], englishTitles: [] },
+      : { editions: [] as OpenLibraryEdition[], englishTitles: [], englishCoverId: null },
   ]);
 
   const isbnCandidates = [...new Set(editions.map((e) => e.isbn).filter((isbn): isbn is string => !!isbn))];
 
   const rawDescription = typeof data.description === "string" ? data.description : data.description?.value ?? null;
   const description = rawDescription ? stripOpenLibraryTrailer(rawDescription) : null;
-  const coverId = data.covers?.find((c) => c > 0);
+  // A work's first cover is often a translation's; an English edition's cover wins.
+  const coverId = englishCoverId ?? data.covers?.find((c) => c > 0);
 
   return {
     title: data.title ? englishTitle(data.title, englishTitles) : "Unknown title",
