@@ -23,7 +23,10 @@ export function CoverStack({ urls }: { urls: (string | null)[] }) {
           <View style={styles.clip}>
             {/* Under the image: Open Library serves a transparent 1x1 for an ISBN with no cover. */}
             <CoverPlaceholder width={WIDTH} height={HEIGHT} />
-            {url && <Image source={{ uri: url }} contentFit="cover" style={styles.image} />}
+            {url && (
+              // Decorative: null alt (the row names the book); also covers Open Library's 1x1 no-cover image.
+              <Image source={{ uri: url }} accessibilityLabel="" contentFit="cover" style={styles.image} />
+            )}
           </View>
         </View>
       ))}

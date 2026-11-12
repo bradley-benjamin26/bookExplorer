@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Image } from "expo-image";
+import { coverAlt } from "../../src/coverAlt";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchWork } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
@@ -103,7 +104,7 @@ export default function WorkDetail() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <DetailTop
-        image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} style={styles.cover} contentFit="contain" /> : undefined}
+        image={data.coverUrl ? <Image source={{ uri: data.coverUrl }} accessibilityLabel={coverAlt(data.title, data.authors.map((a) => a.name))} style={styles.cover} contentFit="contain" /> : undefined}
         title={data.title}
         primaryActions={
           (

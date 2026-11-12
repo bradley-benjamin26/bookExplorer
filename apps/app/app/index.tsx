@@ -145,6 +145,8 @@ export default function Home() {
                       {/* Under the image: Open Library serves a transparent 1x1 for an ISBN with no cover. */}
                       <CoverPlaceholder width={32} height={48} />
                       <Image
+                        // Decorative: null alt (the row names the book); also covers Open Library's 1x1 no-cover image.
+                        accessibilityLabel=""
                         // Entries saved before covers were stored borrow one from the cached page data.
                         source={{ uri: recentCoverUrl(item.coverUrl ? item : { ...item, coverUrl: queryClient.getQueryData<{ coverUrl: string | null }>([item.kind, item.id])?.coverUrl }) ?? undefined }} contentFit="cover" style={StyleSheet.absoluteFill} />
                     </View>
