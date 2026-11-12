@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AsyncStorage from "./test/asyncStorageMock";
 import { ApiError } from "./api/client";
 import { copyToOpenLibrary, importOpenLibraryList, pushOpenLibraryAdd, pushOpenLibraryRemove, syncWithOpenLibrary } from "./openLibraryLists";
+import { getSavedItems } from "./storage/savedItems";
 import { addToList, createList, getList, removeFromList, replaceMembers, type SavedList } from "./storage/savedLists";
+import { getSavedWork } from "./storage/savedWorks";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 const { add, remove, fetchList, create } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetchList: vi.fn(), create: vi.fn() }));
@@ -123,6 +125,7 @@ describe("openLibraryLists", () => {
     expect(list).toMatchObject({ kind: "author", name: "Open Library list", openLibraryListId: "OL5L" });
     expect((await getList(list.id))!.members.map((m) => m.openLibrarySeed)).toEqual(["/authors/OL1A", "/authors/OL2A"]);
     expect(skipped).toEqual(["X"]);
+    expect((await getSavedItems()).map((i) => `${i.type}:${i.id}`).sort()).toEqual(["author:OL1A", "author:OL2A"]);
   });
 
   it("importOpenLibraryList reports subjects, ISBN-less editions and authors on a book list by title", async () => {
@@ -137,6 +140,8 @@ describe("openLibraryLists", () => {
     expect(list.name).toHaveLength(100);
     expect((await getList(list.id))!.members.map((m) => m.id)).toEqual(["OL1W"]);
     expect(skipped).toEqual(["Ada", "Love", "No ISBN"]);
+    expect((await getSavedItems()).map((i) => `${i.type}:${i.id}`)).toEqual(["work:OL1W"]);
+    expect(await getSavedWork("OL1W")).toMatchObject({ openLibraryWorkId: "OL1W", authorNames: [] });
   });
 
   it("syncWithOpenLibrary refuses to prune when fewer seeds than seedCount arrive", async () => {
@@ -172,6 +177,14 @@ describe("openLibraryLists", () => {
     fetchList.mockResolvedValue({ name: "L", description: "", seedCount: 1, seeds: [seed("OL0W")] });
     await syncWithOpenLibrary(l);
     expect((await getList(l.id))!.members.map((m) => m.id)).toEqual(["OL0W"]);
+  });
+
+  it("syncWithOpenLibrary saves works pulled from Open Library", async () => {
+    const l = await listOf(0, { openLibraryListId: "OL9L" });
+    fetchList.mockResolvedValue({ name: "L", description: "", seedCount: 1, seeds: [seed("OL7W")] });
+    await syncWithOpenLibrary(l);
+    expect((await getSavedItems()).map((i) => `${i.type}:${i.id}`)).toEqual(["work:OL7W"]);
+    expect(await getSavedWork("OL7W")).not.toBeNull();
   });
 
   it("syncWithOpenLibrary names the seeds it couldn't sync", async () => {

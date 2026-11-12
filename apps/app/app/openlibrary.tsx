@@ -29,6 +29,7 @@ export default function OpenLibraryAccount() {
   const [access, setAccess] = useState("");
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false); // see importingRef
   // A 401 clears the stored session inside request(); follow it here, or the removed query would refetch tokenless in a loop.
   const account = useQuery({
     queryKey: ["openlibrary", "account"],
@@ -42,7 +43,7 @@ export default function OpenLibraryAccount() {
   });
 
   const router = useRouter();
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState<string | null>(null); // the list being imported
   // State lags a render, so a fast second tap would pass an `importing` check; the ref flips synchronously.
   const importingRef = useRef(false);
   const remote = useQuery({ queryKey: ["openlibrary", "lists"], queryFn: fetchOpenLibraryLists, enabled: !!account.data, retry: false });
@@ -52,7 +53,7 @@ export default function OpenLibraryAccount() {
   const doImport = async (id: string) => {
     if (importingRef.current) return;
     importingRef.current = true;
-    setImporting(true);
+    setImporting(id);
     setError("");
     try {
       const { list, skipped: s } = await importOpenLibraryList(id);
@@ -63,14 +64,15 @@ export default function OpenLibraryAccount() {
       setError((err as Error).message);
     }
     importingRef.current = false;
-    setImporting(false);
+    setImporting(null);
   };
 
   const signedOut = !hasToken || getOpenLibrarySessionToken() === null || status(account.error) === 401;
   const isUnavailable = unavailable || (hasToken && status(account.error) === 503);
 
   const signIn = async () => {
-    if (busy) return;
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
@@ -84,6 +86,7 @@ export default function OpenLibraryAccount() {
     }
     setAccess("");
     setSecret("");
+    busyRef.current = false;
     setBusy(false);
   };
 
@@ -136,6 +139,8 @@ export default function OpenLibraryAccount() {
         <Text style={styles.helpText}>To revoke ShelfThread's access, generate new keys at archive.org.</Text>
         <Text style={styles.heading} accessibilityRole="header">Import a list from Open Library</Text>
         {remote.error ? <Text style={styles.errorText}>{remote.error.message}</Text> : null}
+        {remote.isPending && !remote.error ? <Text style={styles.helpText}>Loading your lists…</Text> : null}
+        {remote.data?.length === 0 ? <Text style={styles.helpText}>You have no Open Library lists yet.</Text> : null}
         {remote.data?.map((l) => {
           const mine = linkedTo(l.id);
           return (
@@ -144,7 +149,9 @@ export default function OpenLibraryAccount() {
               {mine ? (
                 <Button variant="pill" onPress={() => router.push(routes.list(mine.id))} accessibilityLabel={`Open imported list ${l.name}`}>Imported</Button>
               ) : (
-                <Button variant="pill" disabled={importing} onPress={() => doImport(l.id)} accessibilityLabel={`Import ${l.name}`}>Import</Button>
+                <Button variant="pill" disabled={importing !== null} onPress={() => doImport(l.id)} accessibilityLabel={`Import ${l.name}`}>
+                  {importing === l.id ? "Importing…" : "Import"}
+                </Button>
               )}
             </View>
           );

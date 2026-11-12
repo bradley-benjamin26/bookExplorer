@@ -1,6 +1,7 @@
 import { ApiError } from "./api/client";
 import { getSavedBook, saveListedBook } from "./storage/savedBooks";
-import { getSavedWork } from "./storage/savedWorks";
+import { ensureSaved } from "./storage/savedItems";
+import { getSavedWork, saveListedWork } from "./storage/savedWorks";
 import { ensureOnAList, isOnAnyList, replaceMembers, type ListMember, type SavedList } from "./storage/savedLists";
 import { unsaveIfUnlisted } from "./storage/unlisted";
 
@@ -21,12 +22,19 @@ export async function retryRateLimited<T>(run: () => Promise<T>, sleep: (ms: num
   }
 }
 
-/** Stores a pulled member set, then saves new books and unsaves members that left (keeping any with notes on a list). */
+/** Saves a member pulled from a remote list, since every listed member must be a saved item (see withListedSaves). Idempotent. */
+export function saveListed(m: Pick<ListMember, "type" | "id" | "title">): Promise<void> {
+  if (m.type === "book") return saveListedBook(m.id, m.title);
+  if (m.type === "work") return saveListedWork(m.id, m.title);
+  return ensureSaved({ type: "author", id: m.id, title: m.title });
+}
+
+/** Stores a pulled member set, then saves new members and unsaves members that left (keeping any with notes on a list). */
 export async function applyPulledMembers(latest: SavedList, next: ListMember[]): Promise<void> {
   await replaceMembers(latest.id, next);
   const key = (m: Pick<ListMember, "type" | "id">) => `${m.type}:${m.id}`;
   const after = new Set(next.map(key));
-  for (const m of next) if (m.type === "book") await saveListedBook(m.id, m.title); // idempotent; repairs books that never got saved
+  for (const m of next) await saveListed(m); // idempotent; repairs members that never got saved
   for (const m of latest.members) {
     if (after.has(key(m))) continue;
     // The remote service dropping a member must not silently delete the user's notes.

@@ -1,8 +1,7 @@
 import type { OpenLibraryList } from "@book-explorer/shared";
 import { addOpenLibraryMembers, createOpenLibraryList, fetchOpenLibraryList, removeOpenLibrarySeed } from "./api/client";
-import { applyPulledMembers, retryRateLimited, wait } from "./listSync";
+import { applyPulledMembers, retryRateLimited, saveListed, wait } from "./listSync";
 import { reconcileOpenLibrary } from "./storage/openLibraryReconcile";
-import { saveListedBook } from "./storage/savedBooks";
 import { createList, getList, linkOpenLibraryList, replaceMembers, setMemberOpenLibrarySeed, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
 
 export async function pushOpenLibraryAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
@@ -37,7 +36,7 @@ export async function importOpenLibraryList(openLibraryListId: string): Promise<
   const list = await createList({ name: remote.name.trim().slice(0, 100) || "Open Library list", description: remote.description.trim().slice(0, 1000), kind, openLibraryListId });
   const members = reconcileOpenLibrary([], remote.seeds, kind, Date.now());
   await replaceMembers(list.id, members);
-  for (const m of members) if (m.type === "book") await saveListedBook(m.id, m.title);
+  for (const m of members) await saveListed(m);
   return { list, skipped: unlanded(remote.seeds, members) };
 }
 
