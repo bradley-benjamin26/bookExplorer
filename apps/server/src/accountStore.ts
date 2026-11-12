@@ -92,13 +92,20 @@ export function getSession(sessionToken: string): StoredSession | null {
     | { hardcover_user_id: number; username: string; access_token: string; refresh_token: string; access_expires_at: number }
     | undefined;
   if (!r) return null;
-  return {
-    hardcoverUserId: r.hardcover_user_id,
-    username: r.username,
-    accessToken: open(r.access_token),
-    refreshToken: open(r.refresh_token),
-    expiresAt: r.access_expires_at,
-  };
+  try {
+    return {
+      hardcoverUserId: r.hardcover_user_id,
+      username: r.username,
+      accessToken: open(r.access_token),
+      refreshToken: open(r.refresh_token),
+      expiresAt: r.access_expires_at,
+    };
+  } catch {
+    // Sealed with a different key (rotated or misconfigured): unusable, so sign the user out.
+    console.warn("Dropping a Hardcover session that the current key can't decrypt");
+    deleteSession(sessionToken);
+    return null;
+  }
 }
 
 export function updateTokens(sessionToken: string, t: HardcoverTokens): void {

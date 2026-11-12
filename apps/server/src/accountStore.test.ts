@@ -104,5 +104,13 @@ describe("accountStore", () => {
     expect(counts).toEqual([1, 1]);
     openAccountStore(":memory:");
   });
+  it("getSession deletes and returns null for a row sealed with another key", () => {
+    createSession("t", session);
+    vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 9).toString("base64"));
+    expect(getSession("t")).toBeNull();
+    vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 7).toString("base64"));
+    expect(getSession("t")).toBeNull();
+  });
+
   it("getSession on an unknown token → null", () => expect(getSession("nope")).toBeNull());
 });
