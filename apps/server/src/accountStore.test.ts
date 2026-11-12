@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  closeAccountStore, createSession, deleteSession, getSession, openAccountStore,
+  closeAccountStore, createOlSession, createSession, deleteOlSession, deleteSession, getOlSession, getSession, openAccountStore, updateOlCookie,
   saveHandoff, savePending, takeHandoff, takePending, updateTokens,
 } from "./accountStore.js";
 
@@ -117,4 +117,50 @@ describe("accountStore", () => {
   });
 
   it("getSession on an unknown token → null", () => expect(getSession("nope")).toBeNull());
+  describe("Open Library sessions", () => {
+    const ol = { username: "ada", accessKey: "AKEY", secretKey: "SKEY", cookie: "session=abc" };
+    it("round-trips and deletes", () => {
+      createOlSession("t", ol);
+      expect(getOlSession("t")).toEqual(ol);
+      deleteOlSession("t");
+      expect(getOlSession("t")).toBeNull();
+    });
+    it("never stores Open Library keys or cookies in plaintext", async () => {
+      const path = `${process.env.TMPDIR ?? "/tmp"}/acct-ol-${Date.now()}.db`;
+      closeAccountStore();
+      openAccountStore(path);
+      createOlSession("t", ol);
+      closeAccountStore();
+      const { createRequire } = await import("node:module");
+      const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
+      const raw = new sqlite.DatabaseSync(path);
+      const dump = JSON.stringify(raw.prepare("SELECT * FROM ol_sessions").all());
+      raw.close();
+      (await import("node:fs")).rmSync(path);
+      for (const secret of ["AKEY", "SKEY", "session=abc"]) expect(dump).not.toContain(secret);
+      openAccountStore(":memory:");
+    });
+    it("updateOlCookie replaces only the cookie", () => {
+      createOlSession("t", ol);
+      updateOlCookie("t", "session=new");
+      expect(getOlSession("t")).toEqual({ ...ol, cookie: "session=new" });
+    });
+    it("getOlSession on an unknown token returns null", () => {
+      expect(getOlSession("nope")).toBeNull();
+    });
+    it("expires after 90 days", () => {
+      vi.useFakeTimers();
+      createOlSession("t", ol);
+      vi.setSystemTime(Date.now() + 90 * 24 * 60 * 60_000 + 1);
+      expect(getOlSession("t")).toBeNull();
+    });
+    it("drops a row the current key can't unseal", () => {
+      createOlSession("t", ol);
+      vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 9).toString("base64"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(getOlSession("t")).toBeNull();
+      vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 7).toString("base64"));
+      expect(getOlSession("t")).toBeNull();
+    });
+  });
 });

@@ -32,6 +32,7 @@ export function openAccountStore(path: string): void {
     CREATE TABLE IF NOT EXISTS connect_pending (state TEXT PRIMARY KEY, verifier TEXT NOT NULL, return_to TEXT NOT NULL, binding_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS handoffs (code_hash TEXT PRIMARY KEY, session_token TEXT NOT NULL, expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, hardcover_user_id INTEGER NOT NULL, username TEXT NOT NULL, access_token TEXT NOT NULL, refresh_token TEXT NOT NULL, access_expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS ol_sessions (token_hash TEXT PRIMARY KEY, username TEXT NOT NULL, access_key TEXT NOT NULL, secret_key TEXT NOT NULL, cookie TEXT NOT NULL, created_at INTEGER NOT NULL);
   `);
 }
 
@@ -119,4 +120,43 @@ export function updateTokens(sessionToken: string, t: HardcoverTokens): void {
 
 export function deleteSession(sessionToken: string): void {
   conn().prepare("DELETE FROM sessions WHERE token_hash = ?").run(sha256(sessionToken));
+}
+
+export interface OpenLibrarySession {
+  username: string;
+  accessKey: string;
+  secretKey: string;
+  cookie: string;
+}
+
+export function createOlSession(sessionToken: string, s: OpenLibrarySession): void {
+  conn().prepare("DELETE FROM ol_sessions WHERE created_at <= ?").run(Date.now() - SESSION_TTL_MS);
+  conn()
+    .prepare("INSERT OR REPLACE INTO ol_sessions VALUES (?, ?, ?, ?, ?, ?)")
+    .run(sha256(sessionToken), s.username, seal(s.accessKey), seal(s.secretKey), seal(s.cookie), Date.now());
+}
+
+export function getOlSession(sessionToken: string): OpenLibrarySession | null {
+  const r = conn()
+    .prepare("SELECT username, access_key, secret_key, cookie FROM ol_sessions WHERE token_hash = ? AND created_at > ?")
+    .get(sha256(sessionToken), Date.now() - SESSION_TTL_MS) as
+    | { username: string; access_key: string; secret_key: string; cookie: string }
+    | undefined;
+  if (!r) return null;
+  try {
+    return { username: r.username, accessKey: open(r.access_key), secretKey: open(r.secret_key), cookie: open(r.cookie) };
+  } catch {
+    // Sealed with a different key (rotated or misconfigured): unusable, so sign the user out.
+    console.warn("Dropping an Open Library session that the current key can't decrypt");
+    deleteOlSession(sessionToken);
+    return null;
+  }
+}
+
+export function updateOlCookie(sessionToken: string, cookie: string): void {
+  conn().prepare("UPDATE ol_sessions SET cookie = ? WHERE token_hash = ?").run(seal(cookie), sha256(sessionToken));
+}
+
+export function deleteOlSession(sessionToken: string): void {
+  conn().prepare("DELETE FROM ol_sessions WHERE token_hash = ?").run(sha256(sessionToken));
 }
