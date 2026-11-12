@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("expo-linking", () => ({ createURL: (p: string) => `bookexplorer://${p}` }));
 vi.mock("expo-web-browser", () => ({ openAuthSessionAsync: vi.fn() }));
-vi.mock("./api/client", () => ({ startHardcoverConnect: vi.fn(), redeemHardcoverHandoff: mocks.redeem }));
+vi.mock("./api/client", () => ({ API_BASE_URL: "https://api.test", redeemHardcoverHandoff: mocks.redeem }));
 vi.mock("./hardcoverSession", () => ({ saveSession: mocks.save }));
 
 import { parseConnectReturn, redeemOnce } from "./hardcoverConnect";

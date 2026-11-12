@@ -63,7 +63,7 @@ describe("hardcover routes", () => {
   it("503 on every route when the feature is off", async () => {
     m.accountEnabled.mockReturnValue(false);
     for (const [method, url] of [
-      ["POST", "/api/hardcover/connect"],
+      ["GET", "/api/hardcover/connect?returnTo=x"],
       ["GET", "/api/hardcover/callback"],
       ["POST", "/api/hardcover/session"],
       ["GET", "/api/hardcover/session"],
@@ -75,24 +75,40 @@ describe("hardcover routes", () => {
     }
   });
 
-  it("connect returns the authorize URL", async () => {
-    m.startConnect.mockReturnValue("https://hc/authorize");
-    const res = await call({ method: "POST", url: "/api/hardcover/connect", payload: { returnTo: "bookexplorer://x" } });
-    expect(res.json()).toEqual({ authorizeUrl: "https://hc/authorize" });
+  it("connect sets a nonce cookie and 302s to the authorize URL", async () => {
+    m.startConnect.mockReturnValue({ authorizeUrl: "https://hardcover.app/oauth2/authorize?s=1", browserNonce: "n1" });
+    const res = await call({ method: "GET", url: "/api/hardcover/connect?returnTo=bookexplorer://x" });
+    expect(res.statusCode).toBe(302);
+    expect(res.headers.location).toBe("https://hardcover.app/oauth2/authorize?s=1");
+    const cookie = String(res.headers["set-cookie"]);
+    expect(cookie).toContain("hc_connect=n1");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("SameSite=Lax");
   });
 
   it("connect 400s on a disallowed returnTo", async () => {
     m.startConnect.mockImplementation(() => {
       throw new svc.InvalidReturnUrlError("nope");
     });
-    const res = await call({ method: "POST", url: "/api/hardcover/connect", payload: { returnTo: "https://evil/" } });
+    const res = await call({ method: "GET", url: "/api/hardcover/connect?returnTo=https://evil/" });
     expect(res.statusCode).toBe(400);
   });
 
-  it.each([{}, { returnTo: "" }, { returnTo: 5 }])("connect 400s on body %j", async (payload) => {
-    const res = await call({ method: "POST", url: "/api/hardcover/connect", payload });
+  it("connect 400s without returnTo", async () => {
+    const res = await call({ method: "GET", url: "/api/hardcover/connect" });
     expect(res.statusCode).toBe(400);
     expect(m.startConnect).not.toHaveBeenCalled();
+  });
+
+  it("POST connect is gone", async () => {
+    expect((await call({ method: "POST", url: "/api/hardcover/connect", payload: {} })).statusCode).toBe(404);
+  });
+
+  it("callback passes the cookie nonce on and clears the cookie", async () => {
+    m.completeConnect.mockResolvedValue("bookexplorer://done");
+    const res = await call({ method: "GET", url: "/api/hardcover/callback?code=c&state=s&iss=i", headers: { cookie: "a=1; hc_connect=n1" } });
+    expect(m.completeConnect).toHaveBeenCalledWith({ code: "c", state: "s", iss: "i" }, "n1");
+    expect(String(res.headers["set-cookie"])).toContain("Max-Age=0");
   });
 
   it("callback 302s to the service's URL", async () => {

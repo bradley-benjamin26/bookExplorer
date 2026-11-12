@@ -33,7 +33,8 @@ const stateOf = (url: string) => new URL(url).searchParams.get("state")!;
 async function connect(): Promise<string> {
   vi.mocked(oauth.exchangeCode).mockResolvedValue(tokens(1));
   vi.mocked(oauth.fetchMe).mockResolvedValue({ id: 7, username: "ann" });
-  const url = await completeConnect({ code: "c", state: stateOf(startConnect(RETURN)), iss: oauth.HARDCOVER_ISSUER });
+  const { authorizeUrl, browserNonce } = startConnect(RETURN);
+  const url = await completeConnect({ code: "c", state: stateOf(authorizeUrl), iss: oauth.HARDCOVER_ISSUER }, browserNonce);
   return new URL(url.replace("bookexplorer://", "http://x/")).searchParams.get("handoff")!;
 }
 
@@ -71,29 +72,44 @@ describe("hardcoverAccount", () => {
     expect(() => startConnect("https://evil.test/x")).toThrow(InvalidReturnUrlError);
     expect(() => startConnect("http://evil.test/x")).toThrow(InvalidReturnUrlError);
     expect(() => startConnect("https://app.test.evil.com/")).toThrow(InvalidReturnUrlError);
-    expect(startConnect("https://ok.test/hc")).toBeTruthy();
-    expect(startConnect("myapp://cb")).toBeTruthy();
+    expect(startConnect("https://ok.test/hc").authorizeUrl).toBeTruthy();
+    expect(startConnect("myapp://cb").authorizeUrl).toBeTruthy();
   });
 
   it("completeConnect with an unknown state throws ExpiredCallbackError", async () =>
-    expect(completeConnect({ code: "c", state: "nope", iss: oauth.HARDCOVER_ISSUER })).rejects.toThrow(ExpiredCallbackError));
+    expect(completeConnect({ code: "c", state: "nope", iss: oauth.HARDCOVER_ISSUER }, "n")).rejects.toThrow(ExpiredCallbackError));
+
+  it("completeConnect rejects a callback without the starting browser's nonce", async () => {
+    const { authorizeUrl } = startConnect(RETURN);
+    await expect(completeConnect({ code: "c", state: stateOf(authorizeUrl), iss: oauth.HARDCOVER_ISSUER }, undefined)).rejects.toThrow(ExpiredCallbackError);
+    expect(oauth.exchangeCode).not.toHaveBeenCalled();
+  });
+
+  it("completeConnect rejects another browser's nonce", async () => {
+    const { authorizeUrl } = startConnect(RETURN);
+    await expect(completeConnect({ code: "c", state: stateOf(authorizeUrl), iss: oauth.HARDCOVER_ISSUER }, "other")).rejects.toThrow(ExpiredCallbackError);
+    expect(oauth.exchangeCode).not.toHaveBeenCalled();
+  });
 
   it("completeConnect rejects the wrong issuer without exchanging the code", async () => {
-    const state = stateOf(startConnect(RETURN));
-    expect(await completeConnect({ code: "c", state, iss: "https://evil.example" })).toBe(`${RETURN}?error=failed`);
+    const { authorizeUrl, browserNonce } = startConnect(RETURN);
+    const state = stateOf(authorizeUrl);
+    expect(await completeConnect({ code: "c", state, iss: "https://evil.example" }, browserNonce)).toBe(`${RETURN}?error=failed`);
     expect(oauth.exchangeCode).not.toHaveBeenCalled();
   });
 
   it("completeConnect maps error=access_denied to ?error=denied", async () => {
-    const state = stateOf(startConnect(RETURN));
-    expect(await completeConnect({ error: "access_denied", state, iss: oauth.HARDCOVER_ISSUER })).toBe(`${RETURN}?error=denied`);
+    const { authorizeUrl, browserNonce } = startConnect(RETURN);
+    const state = stateOf(authorizeUrl);
+    expect(await completeConnect({ error: "access_denied", state, iss: oauth.HARDCOVER_ISSUER }, browserNonce)).toBe(`${RETURN}?error=denied`);
   });
 
   it("completeConnect returns ?error=failed when the exchange throws", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(oauth.exchangeCode).mockRejectedValue(new Error("boom"));
-    const state = stateOf(startConnect(`${RETURN}?a=1`));
-    expect(await completeConnect({ code: "c", state, iss: oauth.HARDCOVER_ISSUER })).toBe(`${RETURN}?a=1&error=failed`);
+    const { authorizeUrl, browserNonce } = startConnect(`${RETURN}?a=1`);
+    const state = stateOf(authorizeUrl);
+    expect(await completeConnect({ code: "c", state, iss: oauth.HARDCOVER_ISSUER }, browserNonce)).toBe(`${RETURN}?a=1&error=failed`);
   });
 
   it("full flow: handoff redeems once to a session that authorizes", async () => {

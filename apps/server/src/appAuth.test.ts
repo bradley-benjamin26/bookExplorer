@@ -39,6 +39,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/health?x=1")).toBe(true);
     expect(isPublicPath("/og/work/OL1W")).toBe(true);
     expect(isPublicPath("/og/work/OL1W?a=1")).toBe(true);
+    expect(isPublicPath("/api/hardcover/connect?returnTo=x")).toBe(true);
   });
 
   it("rejects everything else, including lookalikes", () => {

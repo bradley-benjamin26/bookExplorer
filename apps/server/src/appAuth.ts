@@ -17,8 +17,8 @@ export function isValidAppKey(provided: unknown, expected: string): boolean {
   return timingSafeEqual(providedBuf, expectedBuf);
 }
 
-/** Routes that skip the app-key check: the health probe, /og/ pages that link-preview crawlers fetch, and the OAuth callback Hardcover redirects the browser to (none send a key). */
+/** Routes that skip the app-key check: the health probe, /og/ pages that link-preview crawlers fetch, and the OAuth connect/callback navigations (a browser navigation can't send a key). */
 export function isPublicPath(url: string): boolean {
   const path = url.split("?")[0];
-  return path === "/health" || path.startsWith("/og/") || path === "/api/hardcover/callback";
+  return path === "/health" || path.startsWith("/og/") || path === "/api/hardcover/callback" || path === "/api/hardcover/connect";
 }

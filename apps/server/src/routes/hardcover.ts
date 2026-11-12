@@ -63,11 +63,16 @@ export async function hardcoverRoutes(app: FastifyInstance) {
     if (!accountEnabled()) return reply.code(503).send({ error: "Hardcover sign-in isn't set up on this server." });
   });
 
-  app.post<{ Body: { returnTo?: unknown } | null }>("/api/hardcover/connect", async (req, reply) => {
-    const returnTo = req.body?.returnTo;
+  const COOKIE = "hc_connect";
+  const cookieAttrs = "Path=/api/hardcover/; HttpOnly; SameSite=Lax";
+
+  app.get<{ Querystring: { returnTo?: string } }>("/api/hardcover/connect", async (req, reply) => {
+    const { returnTo } = req.query;
     if (typeof returnTo !== "string" || !returnTo) return reply.code(400).send({ error: "returnTo is required" });
     try {
-      return { authorizeUrl: startConnect(returnTo) };
+      const { authorizeUrl, browserNonce } = startConnect(returnTo);
+      const secure = process.env.HARDCOVER_REDIRECT_URI?.startsWith("https:") ? "; Secure" : "";
+      return reply.header("Set-Cookie", `${COOKIE}=${browserNonce}; ${cookieAttrs}; Max-Age=600${secure}`).redirect(authorizeUrl, 302);
     } catch (err) {
       if (err instanceof InvalidReturnUrlError) return reply.code(400).send({ error: "That return address isn't allowed." });
       throw err;
@@ -75,8 +80,10 @@ export async function hardcoverRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Querystring: { code?: string; state?: string; iss?: string; error?: string } }>("/api/hardcover/callback", async (req, reply) => {
+    const nonce = req.headers.cookie?.split(/;\s*/).find((c) => c.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
+    reply.header("Set-Cookie", `${COOKIE}=; Path=/api/hardcover/; Max-Age=0`);
     try {
-      return reply.redirect(await completeConnect(req.query), 302);
+      return reply.redirect(await completeConnect(req.query, nonce), 302);
     } catch (err) {
       if (err instanceof ExpiredCallbackError) return reply.code(400).type("text/plain").send(CALLBACK_EXPIRED);
       throw err;
