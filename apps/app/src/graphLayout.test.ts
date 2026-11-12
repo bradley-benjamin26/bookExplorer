@@ -49,6 +49,14 @@ describe("layoutGraph", () => {
     }
   });
 
+  it("content box holds every node's clearance", () => {
+    // The 3-work graph is a case where nothing needs shifting yet a node's label overruns the viewport-sized box.
+    const small = { ...graph, nodes: graph.nodes.slice(0, 4), edges: graph.edges.slice(0, 3) };
+    for (const g of [graph, small]) {
+      const { nodes, contentWidth: width, contentHeight: height } = layoutGraph(g, 400, 600);
+      for (const p of nodes) expect(clampPoint(p, { width, height })).toEqual({ x: p.x, y: p.y });
+    }
+  });
   it("hitNode finds the node under the point, topmost first", () => {
     const pts = [{ x: 0, y: 0, r: 10 }, { x: 5, y: 0, r: 10 }];
     expect(hitNode(pts, 4, 0)).toBe(1);

@@ -273,13 +273,6 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
     .map((e) => ({ ...e }));
 
   const simulation = forceSimulation(nodes as never[])
-    // Pushed apart harder, and linked further apart, than the tighter
-    // defaults this started with — worth it for legibility even on the
-    // busiest graphs (an author's full bibliography can be 20+ nodes), now
-    // that pinch/pan (not a fitted canvas) is how the user sees it all.
-    // Tuned against a dense "travel"-style subject graph (15+ related
-    // concepts) so adjacent node labels never visually touch at the
-    // fully-zoomed-out scale.
     .force("charge", forceManyBody().strength(CHARGE_STRENGTH))
     .force(
       "link",
@@ -288,9 +281,6 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
         .distance(linkDistance(nodes.length))
     )
     .force("center", forceCenter(width / 2, height / 2))
-    // Padded enough to clear a full 3-line wrapped label below a node (see
-    // wrapLabel), not just the circle itself — otherwise two nodes placed
-    // close together can end up with one's label overlapping the node below it.
     .force("collide", forceCollide(COLLIDE_RADIUS))
     .stop();
 
@@ -348,8 +338,9 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
     }
   }
 
-  const contentWidth = Math.max(width, maxX - minX);
-  const contentHeight = Math.max(height, maxY - minY);
+  // Measured from 0 (not minX/minY): without a shift the nodes keep their coordinates, so the box must reach maxX/maxY.
+  const contentWidth = Math.max(width, maxX + offsetX);
+  const contentHeight = Math.max(height, maxY + offsetY);
 
   return {
     nodes: positionedNodes,
@@ -361,7 +352,6 @@ export function layoutGraph(graph: Graph, width: number, height: number) {
   };
 }
 
-/** The furthest the graph zooms out. */
 /** Keeps a node's circle and label inside the content box. */
 export function clampPoint(p: { x: number; y: number }, size: { width: number; height: number }) {
   const maxY = size.height - CENTER_NODE_RADIUS - 14 - LABEL_MAX_LINES * LABEL_LINE_HEIGHT;
@@ -417,6 +407,7 @@ export function createDragSimulation(
     .stop();
 }
 
+/** The furthest the graph zooms out. */
 export const MIN_SCALE = 0.25;
 /** The furthest the graph zooms in. */
 export const MAX_SCALE = 3;
