@@ -192,6 +192,7 @@ export async function fetchWithTimeout(
       // attempt's response either way — this is what the caller gets, same
       // as if this function had never retried at all.
       if (res.ok || res.status < 500 || isLastAttempt) return res;
+      await res.body?.cancel().catch(() => {});
       lastError = new Error(`Request to ${url} failed with ${res.status}`);
     } catch (err) {
       if (err instanceof UpstreamUnavailableError) throw err;
