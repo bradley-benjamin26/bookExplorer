@@ -30,6 +30,7 @@ The `session` value is **not quoted**. Shape: `/people/<username>%2C<timestamp>%
   - **50 adds in one call work** (`seed_count` went from 2 to 52).
 - The `/list/` spelling wasn't needed.
 - **Hazard:** after adding 50 sequential work ids (`/works/OL45805W`…`OL45854W`, all 200 on `/works/X.json`), every `seeds.json` read returned **500 Internal Server Error** until they were removed. Some seed kinds (probably redirect or deleted works) break list reads. So only add seeds the server got from a lookup, and treat a 500 on read as an upstream error (sync must not prune on it).
+  - Follow-up check: 21 of those 50 ids are `/type/redirect` records (`{"type": {"key": "/type/redirect"}, "location": "/works/OL…W"}`), and `/works/X.json` still answers 200 for them. Some redirect to another redirect. So `seedFor` looks works and authors up, follows one redirect hop, and reports anything else as missing.
 
 ## 5. Reading
 
