@@ -142,7 +142,8 @@ interface OpenLibraryEditionsData {
 
 // A work is edition-agnostic (no ISBN of its own). This collects every edition's ISBN and display
 // metadata, preferring ISBN-13, so work pages reached without scanning can offer ISBN-based links
-// and an Editions section. One page of editions is enough without pagination.
+// and an Editions section.
+// shortcut: only Open Library's first 50 editions are listed, ranked and used as ISBN candidates; fetch further pages if popular works show odd editions.
 async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryEdition[]; englishTitles: string[] }> {
   const url = `https://openlibrary.org/works/${encodeURIComponent(workId)}/editions.json?limit=50`;
   const res = await fetchWithTimeout(url, { headers: { "User-Agent": USER_AGENT } });

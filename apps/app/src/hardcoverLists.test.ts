@@ -192,6 +192,18 @@ describe("hardcoverLists", () => {
     expect(saved.members.map((m) => [m.id, m.hardcoverBookId])).toEqual([["111", 1]]);
   });
 
+  it("importList shortens an over-long name and description", async () => {
+    fetchList.mockResolvedValue({ name: "n".repeat(150), description: "d".repeat(1500), booksCount: 0, books: [] });
+    const { list } = await importList(7);
+    expect(list.name).toHaveLength(100);
+    expect(list.description).toHaveLength(1000);
+  });
+
+  it("importList names a blank-named list", async () => {
+    fetchList.mockResolvedValue({ name: "   ", description: "", booksCount: 0, books: [] });
+    expect((await importList(7)).list.name).toBe("Hardcover list");
+  });
+
   it("syncWithHardcover pushes then reconciles against the remote, and rejects unlinked lists", async () => {
     add.mockResolvedValue({ hardcoverBookId: 5 });
     fetchList.mockResolvedValue({ name: "A", description: "", booksCount: 2, books: [{ hardcoverBookId: 5, title: "a", isbn: null }, { hardcoverBookId: 8, title: "New", isbn: "888" }] });

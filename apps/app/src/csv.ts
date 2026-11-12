@@ -40,7 +40,7 @@ export function toCsv(rows: string[][]): string {
   return rows.map((r) => r.map(quote).join(",")).join("\r\n") + "\r\n";
 }
 
-// Goodreads export column names, so the file imports into Goodreads (and back into this app).
+// Goodreads export column names, so the file imports into Goodreads and StoryGraph. Importing it back here restores books by ISBN only; the JSON backup is the full restore.
 const EXPORT_HEADER = ["Title", "Author", "Additional Authors", "ISBN", "ISBN13", "Bookshelves", "Exclusive Shelf", "Private Notes", "Date Added"];
 
 const goodreadsDate = (ms: number) => new Date(ms).toISOString().slice(0, 10).replaceAll("-", "/");

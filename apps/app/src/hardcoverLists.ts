@@ -26,7 +26,7 @@ export async function pushRemove(list: SavedList, member: ListMember): Promise<v
 
 export async function importList(hardcoverListId: number): Promise<{ list: SavedList; skipped: string[] }> {
   const remote = await fetchHardcoverList(hardcoverListId);
-  const list = await createList({ name: remote.name, description: remote.description, kind: "book", hardcoverListId });
+  const list = await createList({ name: remote.name.trim().slice(0, 100) || "Hardcover list", description: remote.description.trim().slice(0, 1000), kind: "book", hardcoverListId });
   const members = reconcile([], remote.books, Date.now());
   await replaceMembers(list.id, members);
   for (const m of members) if (m.type === "book") await saveListedBook(m.id, m.title);
