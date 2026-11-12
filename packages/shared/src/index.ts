@@ -489,6 +489,8 @@ export type HardcoverListSummary = z.infer<typeof HardcoverListSummarySchema>;
 export type HardcoverListBooks = z.infer<typeof HardcoverListBooksSchema>;
 export type HardcoverProgress = z.infer<typeof HardcoverProgressSchema>;
 
+export const OpenLibraryAccountSchema = z.object({ username: z.string() });
+export const OpenLibrarySessionSchema = OpenLibraryAccountSchema.extend({ token: z.string() });
 export const OpenLibraryMemberSchema = z.object({ type: z.enum(["book", "work", "author"]), id: z.string() });
 export const OpenLibraryListSummarySchema = z.object({ id: z.string(), name: z.string(), seedCount: z.number().int() });
 export const OpenLibraryListSchema = z.object({

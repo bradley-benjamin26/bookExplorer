@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { EmptyState } from "../src/components/EmptyState";
-import { ArrowDownUp, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
+import { ArrowDownUp, BookOpen, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../src/components/Button";
@@ -16,13 +16,14 @@ import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 
 const ROUTES = {
   hardcover: routes.hardcover,
+  openlibrary: routes.openLibrary,
   recommendations: routes.recommendations,
   connection: routes.connection,
   backup: routes.backup,
   settings: routes.settings,
 };
 
-const ICONS = { recommendations: Sparkles, connection: Waypoints, backup: ArrowDownUp, settings: Settings };
+const ICONS = { openlibrary: BookOpen, recommendations: Sparkles, connection: Waypoints, backup: ArrowDownUp, settings: Settings };
 
 type RowDef = (typeof LIBRARY_PRIMARY)[number] | (typeof LIBRARY_TOOLS)[number];
 
@@ -61,6 +62,7 @@ export default function Saved() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {navRow(LIBRARY_PRIMARY[0])}
+      {navRow(LIBRARY_PRIMARY[1])}
 
       <Text style={styles.heading} accessibilityRole="header">
         Your lists
@@ -105,7 +107,7 @@ export default function Saved() {
         <Text style={styles.rowText}>See all lists</Text>
       </PressableRow>
 
-      <View style={styles.group}>{LIBRARY_PRIMARY.slice(1).map(navRow)}</View>
+      <View style={styles.group}>{LIBRARY_PRIMARY.slice(2).map(navRow)}</View>
 
       <Text style={styles.tools} accessibilityRole="header">
         Tools

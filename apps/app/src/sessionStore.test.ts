@@ -15,12 +15,12 @@ vi.mock("react-native", () => rn);
 vi.mock("expo-secure-store", () => secure);
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 
-async function fresh() {
+async function fresh(key = "hardcover-session") {
   vi.resetModules();
-  return import("./hardcoverSession");
+  return (await import("./sessionStore")).createSessionStore(key);
 }
 
-describe("hardcoverSession", () => {
+describe("sessionStore", () => {
   beforeEach(async () => {
     secure.m.clear();
     await AsyncStorage.clear();
@@ -29,41 +29,52 @@ describe("hardcoverSession", () => {
 
   it("save → get → clear round-trips in memory and native storage", async () => {
     const s = await fresh();
-    expect(s.getSessionToken()).toBeNull();
-    await s.saveSession("tok");
-    expect(s.getSessionToken()).toBe("tok");
+    expect(s.get()).toBeNull();
+    await s.save("tok");
+    expect(s.get()).toBe("tok");
     expect(secure.m.get("hardcover-session")).toBe("tok");
-    await s.clearSession();
-    expect(s.getSessionToken()).toBeNull();
+    await s.clear();
+    expect(s.get()).toBeNull();
     expect(secure.m.size).toBe(0);
   });
 
-  it("clearSession tells the registered listener, which can unregister", async () => {
+  it("clear tells the registered listener, which can unregister", async () => {
     const s = await fresh();
     const cleared = vi.fn();
-    const off = s.onSessionCleared(cleared);
-    await s.clearSession();
+    const off = s.onCleared(cleared);
+    await s.clear();
     expect(cleared).toHaveBeenCalledTimes(1);
     off();
-    await s.clearSession();
+    await s.clear();
     expect(cleared).toHaveBeenCalledTimes(1);
   });
 
-  it("loadSession restores the stored token", async () => {
+  it("load restores the stored token", async () => {
     secure.m.set("hardcover-session", "stored");
     const s = await fresh();
-    await s.loadSession();
-    expect(s.getSessionToken()).toBe("stored");
+    await s.load();
+    expect(s.get()).toBe("stored");
+  });
+
+  it("two stores with different keys don't share a token", async () => {
+    const { createSessionStore } = await import("./sessionStore");
+    const a = createSessionStore("a");
+    const b = createSessionStore("b");
+    await a.save("t1");
+    expect(b.get()).toBeNull();
+    await b.load();
+    expect(b.get()).toBeNull();
+    expect(secure.m.get("a")).toBe("t1");
   });
 
   it("web uses AsyncStorage", async () => {
     rn.Platform.OS = "web";
     const s = await fresh();
     const storage = (await import("@react-native-async-storage/async-storage")).default; // same instance the module got after resetModules
-    await s.saveSession("w");
+    await s.save("w");
     expect(await storage.getItem("hardcover-session")).toBe("w");
     expect(secure.m.size).toBe(0);
-    await s.clearSession();
+    await s.clear();
     expect(await storage.getItem("hardcover-session")).toBeNull();
   });
 });
