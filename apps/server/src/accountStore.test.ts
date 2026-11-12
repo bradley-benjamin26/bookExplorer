@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closeAccountStore, createOlSession, createSession, deleteOlSession, deleteSession, getOlSession, getSession, openAccountStore, updateOlCookie,
@@ -126,7 +129,8 @@ describe("accountStore", () => {
       expect(getOlSession("t")).toBeNull();
     });
     it("never stores Open Library keys or cookies in plaintext", async () => {
-      const path = `${process.env.TMPDIR ?? "/tmp"}/acct-ol-${Date.now()}.db`;
+      const dir = mkdtempSync(join(tmpdir(), "acct-ol-"));
+      const path = join(dir, "a.db");
       closeAccountStore();
       openAccountStore(path);
       createOlSession("t", ol);
@@ -136,7 +140,7 @@ describe("accountStore", () => {
       const raw = new sqlite.DatabaseSync(path);
       const dump = JSON.stringify(raw.prepare("SELECT * FROM ol_sessions").all());
       raw.close();
-      (await import("node:fs")).rmSync(path);
+      rmSync(dir, { recursive: true });
       for (const secret of ["AKEY", "SKEY", "session=abc"]) expect(dump).not.toContain(secret);
       openAccountStore(":memory:");
     });

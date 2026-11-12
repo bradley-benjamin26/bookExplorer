@@ -1,4 +1,3 @@
-import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 
 export class OpenLibraryAuthError extends Error {
@@ -15,11 +14,12 @@ export class OpenLibraryRateLimitError extends Error {
   }
 }
 
-// Shared by every signed-in Open Library call; never logs bodies, keys or cookies.
+// Plain fetch, as hardcover.ts does: fetchWithTimeout replays POSTs on 5xx and turns one user's 429 into a host-wide cooldown. Never logs bodies, keys or cookies.
 async function olFetch(path: string, init: RequestInit & { cookie?: string } = {}): Promise<Response> {
   const { cookie, headers, ...rest } = init;
-  const res = await fetchWithTimeout(`https://openlibrary.org${path}`, {
+  const res = await fetch(`https://openlibrary.org${path}`, {
     ...rest,
+    signal: AbortSignal.timeout(10_000),
     headers: { "User-Agent": USER_AGENT, ...(cookie ? { Cookie: cookie } : {}), ...(headers as Record<string, string>) },
   });
   if (res.status === 429) throw new OpenLibraryRateLimitError(Number(res.headers.get("Retry-After")) || 60);
