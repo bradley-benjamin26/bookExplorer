@@ -32,4 +32,11 @@ describe("reconcileOpenLibrary", () => {
   it("never duplicates a local member that matches a remote seed by type and id", () => {
     expect(reconcileOpenLibrary([m("OL1W")], [seed("OL1W")], "book", 2)).toEqual([m("OL1W")]);
   });
+  it("adds a repeated seed, or two seeds for the same member, only once", () => {
+    const remote = [seed("OL5W"), seed("OL5W"), { seed: "/books/OL1M", title: "A", member: { type: "book" as const, id: "978" } }, { seed: "/books/OL2M", title: "B", member: { type: "book" as const, id: "978" } }];
+    expect(reconcileOpenLibrary([], remote, "book", 4)).toEqual([
+      { type: "work", id: "OL5W", title: "TOL5W", openLibrarySeed: "/works/OL5W", addedAt: 4 },
+      { type: "book", id: "978", title: "A", openLibrarySeed: "/books/OL1M", addedAt: 4 },
+    ]);
+  });
 });

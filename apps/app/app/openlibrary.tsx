@@ -1,11 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { ApiError, connectOpenLibrary, disconnectOpenLibrary, fetchOpenLibraryAccount } from "../src/api/client";
+import { ApiError, connectOpenLibrary, disconnectOpenLibrary, fetchOpenLibraryAccount, fetchOpenLibraryLists } from "../src/api/client";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
+import { routes } from "../src/navigation";
+import { importOpenLibraryList } from "../src/openLibraryLists";
+import { getLists } from "../src/storage/savedLists";
+import { prefetchMissingSaved } from "../src/useSavedPrefetch";
 import { clearOpenLibrarySession, getOpenLibrarySessionToken, saveOpenLibrarySession } from "../src/openLibrarySession";
 import { useThemedStyles, type Theme } from "../src/theme";
 
@@ -35,6 +40,31 @@ export default function OpenLibraryAccount() {
     enabled: hasToken && getOpenLibrarySessionToken() !== null,
     retry: false,
   });
+
+  const router = useRouter();
+  const [importing, setImporting] = useState(false);
+  // State lags a render, so a fast second tap would pass an `importing` check; the ref flips synchronously.
+  const importingRef = useRef(false);
+  const remote = useQuery({ queryKey: ["openlibrary", "lists"], queryFn: fetchOpenLibraryLists, enabled: !!account.data, retry: false });
+  const local = useQuery({ queryKey: ["openlibrary", "linked"], queryFn: () => getLists(), enabled: !!account.data });
+  const linkedTo = (id: string) => local.data?.find((l) => l.openLibraryListId === id);
+
+  const doImport = async (id: string) => {
+    if (importingRef.current) return;
+    importingRef.current = true;
+    setImporting(true);
+    setError("");
+    try {
+      const { list, skipped: s } = await importOpenLibraryList(id);
+      void prefetchMissingSaved(queryClient);
+      await queryClient.invalidateQueries({ queryKey: ["openlibrary"] });
+      router.push({ pathname: "/lists/[id]", params: { id: list.id, ...(s.length ? { skipped: JSON.stringify(s), from: "openlibrary" } : {}) } });
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    importingRef.current = false;
+    setImporting(false);
+  };
 
   const signedOut = !hasToken || getOpenLibrarySessionToken() === null || status(account.error) === 401;
   const isUnavailable = unavailable || (hasToken && status(account.error) === 503);
@@ -104,7 +134,21 @@ export default function OpenLibraryAccount() {
         <Text style={styles.connected}>Signed in as @{account.data.username}</Text>
         <Button variant="pill" onPress={signOut} style={styles.signOut}>Sign out</Button>
         <Text style={styles.helpText}>To revoke ShelfThread's access, generate new keys at archive.org.</Text>
-        {/* Task 7: "Import a list from Open Library" section goes here. */}
+        <Text style={styles.heading} accessibilityRole="header">Import a list from Open Library</Text>
+        {remote.error ? <Text style={styles.errorText}>{remote.error.message}</Text> : null}
+        {remote.data?.map((l) => {
+          const mine = linkedTo(l.id);
+          return (
+            <View key={l.id} style={styles.row}>
+              <Text style={styles.rowText}>{l.name} · {l.seedCount} items</Text>
+              {mine ? (
+                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))}>Imported</Button>
+              ) : (
+                <Button variant="pill" disabled={importing} onPress={() => doImport(l.id)}>Import</Button>
+              )}
+            </View>
+          );
+        })}
       </>
     );
   else if (account.error) body = <Text style={styles.errorText}>{account.error.message}</Text>;
@@ -139,6 +183,9 @@ function createStyles({ colors, spacing, fonts, typeScale, radii }: Theme) {
       color: colors.ink,
     },
     placeholder: { color: colors.inkFaint },
+    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.xl, marginBottom: spacing.sm },
+    row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingVertical: 8 },
+    rowText: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
     signOut: { alignSelf: "flex-start", marginBottom: spacing.md },
     errorText: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm },
   });
