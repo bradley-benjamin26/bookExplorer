@@ -15,6 +15,7 @@ import {
   type CsvImportProgress,
 } from "../backup";
 import { pickFileText, shareFile } from "../backupFiles";
+import { confirmDestructive } from "../confirm";
 import type { CsvBookRow } from "../csv";
 import { prefetchMissingSaved } from "../useSavedPrefetch";
 import type { Snapshot } from "../storage/snapshot";
@@ -60,6 +61,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
 
   const applyBackup = (mode: "merge" | "replace") =>
     attempt(async () => {
+      if (mode === "replace" && !(await confirmDestructive("Replace your library?", "Everything saved here now, including notes and lists, is replaced by this backup. This can't be undone.", "Replace"))) return;
       if (!pendingBackup || applying.current) return;
       applying.current = true;
       try {
@@ -113,7 +115,7 @@ export function BackupSection({ onImported }: { onImported: () => void }) {
     <View>
       <Text style={styles.sectionTitle} accessibilityRole="header">Import and export your library</Text>
       <Text style={styles.helpText}>
-        Importing adds the books and lists from a backup file. Choose whether to merge with or replace what's here. A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup.
+        Importing adds the books and lists from a backup file. Choose whether to merge with or replace what's here. A backup holds your saved books, authors, tags, notes, lists and libraries. CSV export works with Goodreads and StoryGraph. It includes title, author, ISBN, your notes, date added, and your list names as shelves. Every book is marked “to-read”. Subjects and genres are only kept in the JSON backup. Importing a CSV here adds books by ISBN only, without lists or notes.
       </Text>
       <View style={styles.buttons}>
         <ExportButton
