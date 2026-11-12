@@ -43,21 +43,27 @@ export async function getSnapshot(): Promise<Snapshot> {
   };
 }
 
-/** Writes the snapshot as the full dataset, replacing whatever is stored. Merging is the caller's job. */
-export async function applySnapshot(snapshot: Snapshot): Promise<void> {
-  await Promise.all([
-    replaceSavedItems(snapshot.items),
-    replaceSavedBooks(snapshot.books),
-    replaceSavedWorks(snapshot.works),
-    replaceLibraries(snapshot.libraries),
-    replaceLists(snapshot.lists),
-  ]);
+const writeAll = (s: Snapshot) =>
+  Promise.all([replaceSavedItems(s.items), replaceSavedBooks(s.books), replaceSavedWorks(s.works), replaceLibraries(s.libraries), replaceLists(s.lists)]);
+
+/**
+ * Writes the snapshot as the full dataset, replacing whatever is stored. Merging is the caller's job.
+ * If a write fails and `previous` is given, it is written back and the original error is rethrown.
+ */
+export async function applySnapshot(snapshot: Snapshot, previous?: Snapshot): Promise<void> {
+  try {
+    await writeAll(snapshot);
+  } catch (err) {
+    if (previous) await writeAll(previous).catch(() => {});
+    throw err;
+  }
 }
 
 /** One-time upgrade of data saved before versioning; call once at startup. Safe to call repeatedly. */
 export async function migrateStorage(): Promise<void> {
   if (Number(await AsyncStorage.getItem(VERSION_KEY)) >= SCHEMA_VERSION) return;
-  await applySnapshot(withWorkRecords(withListedSaves(await getSnapshot())));
+  const before = await getSnapshot();
+  await applySnapshot(withWorkRecords(withListedSaves(before)), before);
   await AsyncStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
 }
 

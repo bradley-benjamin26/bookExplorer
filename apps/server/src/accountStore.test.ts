@@ -18,13 +18,17 @@ describe("accountStore", () => {
   });
 
   it("takePending is single-use", () => {
-    savePending("s", { verifier: "v", returnTo: "/r" });
-    expect(takePending("s")).toEqual({ verifier: "v", returnTo: "/r" });
+    savePending("s", { verifier: "v", returnTo: "/r", bindingHash: "h" });
+    expect(takePending("s")).toEqual({ verifier: "v", returnTo: "/r", bindingHash: "h" });
     expect(takePending("s")).toBeNull();
+  });
+  it("drops the legacy oauth_pending table", () => {
+    openAccountStore(":memory:");
+    openAccountStore(":memory:");
   });
   it("takePending expires after 10 minutes", () => {
     vi.useFakeTimers();
-    savePending("s", { verifier: "v", returnTo: "/r" });
+    savePending("s", { verifier: "v", returnTo: "/r", bindingHash: "h" });
     vi.setSystemTime(Date.now() + 10 * 60_000 + 1);
     expect(takePending("s")).toBeNull();
   });
@@ -89,20 +93,28 @@ describe("accountStore", () => {
     closeAccountStore();
     openAccountStore(path);
     vi.useFakeTimers();
-    savePending("old", { verifier: "v", returnTo: "/r" });
+    savePending("old", { verifier: "v", returnTo: "/r", bindingHash: "h" });
     saveHandoff("old", "tok");
     vi.setSystemTime(Date.now() + 10 * 60_000 + 1);
-    savePending("new", { verifier: "v", returnTo: "/r" });
+    savePending("new", { verifier: "v", returnTo: "/r", bindingHash: "h" });
     saveHandoff("new", "tok");
     closeAccountStore();
     const { createRequire } = await import("node:module");
     const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
     const raw = new sqlite.DatabaseSync(path);
-    const counts = ["oauth_pending", "handoffs"].map((t) => (raw.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n);
+    const counts = ["connect_pending", "handoffs"].map((t) => (raw.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get() as { n: number }).n);
     raw.close();
     (await import("node:fs")).rmSync(path);
     expect(counts).toEqual([1, 1]);
     openAccountStore(":memory:");
   });
+  it("getSession deletes and returns null for a row sealed with another key", () => {
+    createSession("t", session);
+    vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 9).toString("base64"));
+    expect(getSession("t")).toBeNull();
+    vi.stubEnv("HARDCOVER_TOKEN_KEY", Buffer.alloc(32, 7).toString("base64"));
+    expect(getSession("t")).toBeNull();
+  });
+
   it("getSession on an unknown token → null", () => expect(getSession("nope")).toBeNull());
 });

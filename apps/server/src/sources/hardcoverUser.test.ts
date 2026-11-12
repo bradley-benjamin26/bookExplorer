@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./hardcover.js", () => ({ hardcoverGraphql: vi.fn() }));
 import { hardcoverGraphql } from "./hardcover.js";
-import { addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "./hardcoverUser.js";
+import { MISSING_BOOK_TTL_MS, addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "./hardcoverUser.js";
 
 const gql = vi.mocked(hardcoverGraphql);
 beforeEach(() => gql.mockReset());
@@ -11,6 +11,24 @@ const progress = (status_id: number, extra = {}) =>
   gql.mockResolvedValue({ me: [{ user_books: [{ status_id, edition: { pages: 300 }, book: { pages: 300 }, user_book_reads: [{ progress_pages: 120 }], ...extra }] }] });
 
 describe("hardcoverUser", () => {
+  it("findBookId forgets a miss after MISSING_BOOK_TTL_MS but keeps a hit", async () => {
+    vi.useFakeTimers();
+    try {
+      gql.mockImplementation(async (...a: unknown[]) => {
+        return (a[1] as { isbns: string[] } | undefined)?.isbns[0] === "M1" ? { editions: [] } : { editions: [{ book_id: 9 }] };
+      });
+      await findBookId(["M1"], "T");
+      await findBookId(["H1"], "T");
+      vi.advanceTimersByTime(MISSING_BOOK_TTL_MS + 1);
+      await findBookId(["M1"], "T");
+      await findBookId(["H1"], "T");
+      expect(gql.mock.calls.filter((c) => (c[1] as { isbns: string[] }).isbns[0] === "M1")).toHaveLength(2);
+      expect(gql.mock.calls.filter((c) => (c[1] as { isbns: string[] }).isbns[0] === "H1")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("findBookId sends every ISBN in one query and caches", async () => {
     gql.mockResolvedValue({ editions: [{ book_id: "42" }] });
     expect(await findBookId(["B", "A"], "T")).toBe(42);

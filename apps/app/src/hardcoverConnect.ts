@@ -1,7 +1,7 @@
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
-import { redeemHardcoverHandoff, startHardcoverConnect } from "./api/client";
+import { API_BASE_URL, redeemHardcoverHandoff } from "./api/client";
 import { saveSession } from "./hardcoverSession";
 
 export function parseConnectReturn(url: string): { handoff: string } | { error: "denied" | "failed" } | null {
@@ -29,13 +29,16 @@ export function redeemOnce(handoff: string): Promise<void> {
   return p;
 }
 
+// A top-level navigation, so the server can bind the sign-in to this browser with a cookie.
+const connectUrl = (returnTo: string) => `${API_BASE_URL}/api/hardcover/connect?returnTo=${encodeURIComponent(returnTo)}`;
+
 export async function connectHardcover(): Promise<"connected" | "cancelled" | "redirected"> {
   if (Platform.OS === "web") {
-    window.location.assign(await startHardcoverConnect(`${window.location.origin}/hardcover-connected`));
+    window.location.assign(connectUrl(`${window.location.origin}/hardcover-connected`));
     return "redirected";
   }
   const returnUrl = Linking.createURL("hardcover-connected");
-  const result = await WebBrowser.openAuthSessionAsync(await startHardcoverConnect(returnUrl), returnUrl);
+  const result = await WebBrowser.openAuthSessionAsync(connectUrl(returnUrl), returnUrl);
   if (result.type !== "success") return "cancelled";
   const parsed = parseConnectReturn(result.url);
   if (!parsed || "error" in parsed) throw new Error("Hardcover wasn't connected.");

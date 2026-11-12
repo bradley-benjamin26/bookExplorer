@@ -41,8 +41,17 @@ function mergeList(a: SavedList, b: SavedList): SavedList {
   // Members fall back to the loser's Hardcover link (a push may have set it there); hardcoverListId deliberately does not, since a missing one can be a deliberate Unlink.
   const members = winner.members.map((m) => (m.hardcoverBookId || !links.has(key(m)) ? m : { ...m, hardcoverBookId: links.get(key(m)) }));
   const removedAt = new Map<string, number>();
-  for (const r of [...(winner.removedMembers ?? []), ...(other.removedMembers ?? [])]) removedAt.set(key(r), Math.max(removedAt.get(key(r)) ?? 0, r.removedAt));
-  const removedMembers = [...removedAt].map(([k, at]) => ({ type: k.split(":")[0] as SavedList["members"][number]["type"], id: k.slice(k.indexOf(":") + 1), removedAt: at }));
+  const removedBookId = new Map<string, number>();
+  for (const r of [...(winner.removedMembers ?? []), ...(other.removedMembers ?? [])]) {
+    removedAt.set(key(r), Math.max(removedAt.get(key(r)) ?? 0, r.removedAt));
+    if (r.hardcoverBookId) removedBookId.set(key(r), r.hardcoverBookId);
+  }
+  const removedMembers = [...removedAt].map(([k, at]) => ({
+    type: k.split(":")[0] as SavedList["members"][number]["type"],
+    id: k.slice(k.indexOf(":") + 1),
+    removedAt: at,
+    ...(removedBookId.has(k) ? { hardcoverBookId: removedBookId.get(k) } : {}),
+  }));
   const { removedMembers: _, ...rest } = winner;
   return {
     ...rest,

@@ -1,7 +1,7 @@
 import {
   accountStoreOpen, createSession, deleteSession, getSession, savePending, saveHandoff, takeHandoff, takePending, updateTokens,
 } from "../accountStore.js";
-import { randomToken } from "../secretBox.js";
+import { randomToken, sha256 } from "../secretBox.js";
 import { DEFAULT_WEB_ORIGIN } from "../socialMeta.js";
 import {
   HARDCOVER_ISSUER, HardcoverAuthRevokedError, authorizeUrl, exchangeCode, fetchMe, newPkce, refreshTokens, revokeToken,
@@ -23,19 +23,22 @@ function allowedPrefixes(): string[] {
   return ["bookexplorer://", `${web}/`];
 }
 
-export function startConnect(returnTo: string): string {
+export function startConnect(returnTo: string): { authorizeUrl: string; browserNonce: string } {
   if (!allowedPrefixes().some((p) => returnTo.startsWith(p))) throw new InvalidReturnUrlError("Return URL not allowed");
   const { verifier, challenge } = newPkce();
   const state = randomToken(24);
-  savePending(state, { verifier, returnTo });
-  return authorizeUrl({ state, challenge });
+  // The nonce goes to the starting browser as a cookie; a callback opened elsewhere can't present it.
+  const browserNonce = randomToken();
+  savePending(state, { verifier, returnTo, bindingHash: sha256(browserNonce) });
+  return { authorizeUrl: authorizeUrl({ state, challenge }), browserNonce };
 }
 
 const withParam = (url: string, param: string) => `${url}${url.includes("?") ? "&" : "?"}${param}`;
 
-export async function completeConnect(query: { code?: string; state?: string; iss?: string; error?: string }): Promise<string> {
+export async function completeConnect(query: { code?: string; state?: string; iss?: string; error?: string }, browserNonce: string | undefined): Promise<string> {
   const pending = query.state ? takePending(query.state) : null;
   if (!pending) throw new ExpiredCallbackError("Unknown or expired state");
+  if (!browserNonce || sha256(browserNonce) !== pending.bindingHash) throw new ExpiredCallbackError("Sign-in started in another browser");
   const { verifier, returnTo } = pending;
   // Checked before code: Hardcover's denial redirect carries error and no code.
   if (query.error) return withParam(returnTo, "error=denied");
@@ -66,7 +69,11 @@ const refreshing = new Map<string, Promise<string>>();
 async function refresh(sessionToken: string, refreshToken: string): Promise<string> {
   // Persist before use: the old refresh token is spent the moment Hardcover answers.
   const t = await refreshTokens(refreshToken);
-  updateTokens(sessionToken, t);
+  try {
+    updateTokens(sessionToken, t);
+  } catch {
+    updateTokens(sessionToken, t); // one retry: the old refresh token is already spent
+  }
   return t.accessToken;
 }
 

@@ -41,6 +41,19 @@ describe("fetchWithTimeout retry behavior", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("cancels a retried 5xx response's body", async () => {
+    const cancel = vi.fn(async () => {});
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, body: { cancel } } as unknown as Response)
+      .mockResolvedValueOnce(mockResponse(200));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchWithTimeout("https://example.com");
+    expect(res.status).toBe(200);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it("retries a thrown network error and returns the eventual success", async () => {
     const fetchMock = vi.fn().mockRejectedValueOnce(new Error("network blip")).mockResolvedValueOnce(mockResponse(200));
     vi.stubGlobal("fetch", fetchMock);

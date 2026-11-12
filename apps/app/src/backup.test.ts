@@ -79,6 +79,41 @@ describe("JSON backup", () => {
     expect(await getSnapshot()).toEqual(before);
   });
 
+  it("replace import restores the old library when a write fails", async () => {
+    await seed();
+    const before = await getSnapshot();
+    const real = AsyncStorage.setItem;
+    let failed = false;
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockImplementation(async (key: string, value: string) => {
+      if (key === "book-explorer:saved-lists" && !failed) {
+        failed = true;
+        throw new Error("QuotaExceeded");
+      }
+      return real(key, value);
+    });
+    try {
+      const emptyish = { ...before, items: [], books: [], works: [], lists: [] };
+      await expect(importSnapshot(emptyish, "replace")).rejects.toThrow("QuotaExceeded");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await getSnapshot()).toEqual(before);
+  });
+
+  it("rethrows the original error when the rollback write also fails", async () => {
+    await seed();
+    const before = await getSnapshot();
+    let n = 0;
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockImplementation(async () => {
+      throw new Error(n++ === 0 ? "first" : "second");
+    });
+    try {
+      await expect(importSnapshot({ ...before, items: [], books: [], works: [], lists: [] }, "replace")).rejects.toThrow("first");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("refuses to make a backup that import would reject, naming the part to fix", async () => {
     await seed();
     await updateSavedBook("9780441013593", { notes: "x".repeat(MAX_TEXT_LENGTH + 1) });
@@ -232,6 +267,18 @@ describe("CSV import", () => {
     { title: "Missing", isbn: "9780000000002" },
     { title: "Three", isbn: "9780000000003" },
   ];
+
+  it("rejects instead of pausing when saving a looked-up book fails", async () => {
+    fetchBook.mockResolvedValue(apiBook("9780000000001", "A"));
+    const spy = vi.spyOn(AsyncStorage, "setItem").mockRejectedValue(new Error("QuotaExceeded"));
+    try {
+      await expect(
+        runCsvImport([{ title: "A", isbn: "9780000000001" }], NEW_CSV_IMPORT, { onProgress: () => {}, isStopped: () => false, gapMs: 0 })
+      ).rejects.toThrow("QuotaExceeded");
+    } finally {
+      spy.mockRestore();
+    }
+  });
 
   it("saves each book like the Save button, skips rows without an ISBN and lists failures", async () => {
     fetchBook.mockImplementation(async (isbn) => {

@@ -28,7 +28,8 @@ export function openAccountStore(path: string): void {
   const sqlite = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
   db = new sqlite.DatabaseSync(path);
   db.exec(`
-    CREATE TABLE IF NOT EXISTS oauth_pending (state TEXT PRIMARY KEY, verifier TEXT NOT NULL, return_to TEXT NOT NULL, created_at INTEGER NOT NULL);
+    DROP TABLE IF EXISTS oauth_pending;
+    CREATE TABLE IF NOT EXISTS connect_pending (state TEXT PRIMARY KEY, verifier TEXT NOT NULL, return_to TEXT NOT NULL, binding_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS handoffs (code_hash TEXT PRIMARY KEY, session_token TEXT NOT NULL, expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, hardcover_user_id INTEGER NOT NULL, username TEXT NOT NULL, access_token TEXT NOT NULL, refresh_token TEXT NOT NULL, access_expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
   `);
@@ -45,19 +46,21 @@ export function closeAccountStore(): void {
 
 export const accountStoreOpen = (): boolean => db !== undefined;
 
-export function savePending(state: string, value: { verifier: string; returnTo: string }): void {
+type Pending = { verifier: string; returnTo: string; bindingHash: string };
+
+export function savePending(state: string, value: Pending): void {
   // Abandoned connects never reach takePending, so expired rows are cleared here.
-  conn().prepare("DELETE FROM oauth_pending WHERE created_at < ?").run(Date.now() - PENDING_TTL_MS);
-  conn().prepare("INSERT OR REPLACE INTO oauth_pending VALUES (?, ?, ?, ?)").run(state, value.verifier, value.returnTo, Date.now());
+  conn().prepare("DELETE FROM connect_pending WHERE created_at < ?").run(Date.now() - PENDING_TTL_MS);
+  conn().prepare("INSERT OR REPLACE INTO connect_pending VALUES (?, ?, ?, ?, ?)").run(state, value.verifier, value.returnTo, value.bindingHash, Date.now());
 }
 
-export function takePending(state: string): { verifier: string; returnTo: string } | null {
-  const row = conn().prepare("SELECT verifier, return_to, created_at FROM oauth_pending WHERE state = ?").get(state) as
-    | { verifier: string; return_to: string; created_at: number }
+export function takePending(state: string): Pending | null {
+  const row = conn().prepare("SELECT verifier, return_to, binding_hash, created_at FROM connect_pending WHERE state = ?").get(state) as
+    | { verifier: string; return_to: string; binding_hash: string; created_at: number }
     | undefined;
-  conn().prepare("DELETE FROM oauth_pending WHERE state = ?").run(state);
+  conn().prepare("DELETE FROM connect_pending WHERE state = ?").run(state);
   if (!row || Date.now() - row.created_at > PENDING_TTL_MS) return null;
-  return { verifier: row.verifier, returnTo: row.return_to };
+  return { verifier: row.verifier, returnTo: row.return_to, bindingHash: row.binding_hash };
 }
 
 export function saveHandoff(code: string, sessionToken: string): void {
@@ -92,13 +95,20 @@ export function getSession(sessionToken: string): StoredSession | null {
     | { hardcover_user_id: number; username: string; access_token: string; refresh_token: string; access_expires_at: number }
     | undefined;
   if (!r) return null;
-  return {
-    hardcoverUserId: r.hardcover_user_id,
-    username: r.username,
-    accessToken: open(r.access_token),
-    refreshToken: open(r.refresh_token),
-    expiresAt: r.access_expires_at,
-  };
+  try {
+    return {
+      hardcoverUserId: r.hardcover_user_id,
+      username: r.username,
+      accessToken: open(r.access_token),
+      refreshToken: open(r.refresh_token),
+      expiresAt: r.access_expires_at,
+    };
+  } catch {
+    // Sealed with a different key (rotated or misconfigured): unusable, so sign the user out.
+    console.warn("Dropping a Hardcover session that the current key can't decrypt");
+    deleteSession(sessionToken);
+    return null;
+  }
 }
 
 export function updateTokens(sessionToken: string, t: HardcoverTokens): void {

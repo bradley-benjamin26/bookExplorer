@@ -29,7 +29,7 @@ export interface SavedList extends Versioned {
   description: string;
   kind: "book" | "author"; // a book list holds books and works
   members: ListMember[];
-  removedMembers?: { type: ListMember["type"]; id: string; removedAt: number }[]; // so a merge doesn't re-add them from an older copy
+  removedMembers?: { type: ListMember["type"]; id: string; removedAt: number; hardcoverBookId?: number }[]; // so a merge doesn't re-add them from an older copy
   createdAt: number;
   hardcoverListId?: number;
   deletedAt?: number; // tombstone, see SavedItem
@@ -61,7 +61,7 @@ function updateList(id: string, change: (list: SavedList) => SavedList): Promise
     const has = (l: SavedList, m: { type: string; id: string }) => l.members.some((x) => x.type === m.type && x.id === m.id);
     const removedMembers = [
       ...(next.removedMembers ?? []).filter((r) => !has(next, r)),
-      ...prev.members.filter((m) => !has(next, m)).map((m) => ({ type: m.type, id: m.id, removedAt: now })),
+      ...prev.members.filter((m) => !has(next, m)).map((m) => ({ type: m.type, id: m.id, removedAt: now, ...(m.hardcoverBookId ? { hardcoverBookId: m.hardcoverBookId } : {}) })),
     ];
     const { removedMembers: _, ...rest } = next;
     lists[index] = { ...rest, ...(removedMembers.length ? { removedMembers } : {}), updatedAt: now };
@@ -182,6 +182,17 @@ export function deleteList(id: string): Promise<void> {
         return { ...rest, description: "", members: [], updatedAt: now, deletedAt: now };
       })
     );
+  });
+}
+
+/** Forgets which removed members still need deleting on Hardcover. Not an edit, so updatedAt stays. */
+export function settleRemovals(listId: string): Promise<void> {
+  return enqueueWrite(KEY, async () => {
+    const lists = await read();
+    const list = lists.find((l) => l.id === listId);
+    if (!list?.removedMembers?.some((r) => r.hardcoverBookId)) return;
+    list.removedMembers = list.removedMembers.map(({ hardcoverBookId: _, ...r }) => r);
+    await write(lists);
   });
 }
 

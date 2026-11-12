@@ -3,6 +3,7 @@ import { TtlCache } from "../cache.js";
 import { hardcoverGraphql } from "./hardcover.js";
 
 const BOOK_ID_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const MISSING_BOOK_TTL_MS = 10 * 60_000;
 const MAX_ISBNS = 20;
 // Hardcover's status_id values; 6 is "ignored", which we treat as not shelved.
 const STATUS = { 1: "want", 2: "reading", 3: "read", 4: "paused", 5: "dnf" } as const;
@@ -16,13 +17,14 @@ const isbnOf = (e: Edition | undefined) => e?.isbn_13 || e?.isbn_10 || null;
 export function findBookId(isbns: string[], auth: string): Promise<number | null> {
   const list = [...new Set(isbns)].sort().slice(0, MAX_ISBNS);
   if (!list.length) return Promise.resolve(null);
-  return bookIdCache.wrap(list.join(","), async () => {
+  return bookIdCache.wrap(list.join(","), async (entry) => {
     const data = await hardcoverGraphql<{ editions: { book_id: number | string }[] }>(
       `query($isbns: [String!]) { editions(where: {_or: [{isbn_13: {_in: $isbns}}, {isbn_10: {_in: $isbns}}]}, limit: 1) { book_id } }`,
       { isbns: list },
       auth
     );
     const id = data.editions[0]?.book_id;
+    if (id == null) entry.ttlMs = MISSING_BOOK_TTL_MS;
     return id == null ? null : Number(id);
   });
 }

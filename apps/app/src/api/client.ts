@@ -113,11 +113,6 @@ export function sendJson<T>(method: "POST" | "DELETE", path: string, body: unkno
   return request(path, { method, headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify(body) }, schema);
 }
 
-export async function startHardcoverConnect(returnTo: string): Promise<string> {
-  const r = await sendJson("POST", "/api/hardcover/connect", { returnTo }, z.object({ authorizeUrl: z.string() }));
-  return r!.authorizeUrl;
-}
-
 export async function redeemHardcoverHandoff(handoff: string): Promise<{ token: string; username: string }> {
   return (await sendJson("POST", "/api/hardcover/session", { handoff }, HardcoverHandoffSchema))!;
 }
