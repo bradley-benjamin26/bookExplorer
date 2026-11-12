@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closeAccountStore, createSession, getSession, openAccountStore } from "../accountStore.js";
+import { closeAccountStore, createSession, getSession, openAccountStore, updateTokens } from "../accountStore.js";
 import * as oauth from "../sources/hardcoverOAuth.js";
 import {
   ExpiredCallbackError, InvalidReturnUrlError, accountEnabled, completeConnect, disconnect, forgetSession,
@@ -19,6 +19,11 @@ vi.mock("../sources/hardcoverOAuth.js", async () => {
     revokeToken: vi.fn(async () => {}),
     fetchMe: vi.fn(),
   };
+});
+
+vi.mock("../accountStore.js", async () => {
+  const a = await vi.importActual<typeof import("../accountStore.js")>("../accountStore.js");
+  return { ...a, updateTokens: vi.fn(a.updateTokens) };
 });
 
 const RETURN = "bookexplorer://hardcover-connected";
@@ -123,6 +128,16 @@ describe("hardcoverAccount", () => {
     expect(a).toBe("Bearer hc_at_2");
     expect(b).toBe("Bearer hc_at_2");
     expect(oauth.refreshTokens).toHaveBeenCalledTimes(1);
+    expect(getSession("tok")?.refreshToken).toBe("hc_rt_2");
+  });
+
+  it("retries a failed token save once before giving up", async () => {
+    createSession("tok", { ...tokens(1, Date.now() + 60_000), hardcoverUserId: 7, username: "ann" });
+    vi.mocked(oauth.refreshTokens).mockResolvedValue(tokens(2));
+    vi.mocked(updateTokens).mockImplementationOnce(() => {
+      throw new Error("SQLITE_BUSY");
+    });
+    expect(await userAuthorization("tok")).toBe("Bearer hc_at_2");
     expect(getSession("tok")?.refreshToken).toBe("hc_rt_2");
   });
 

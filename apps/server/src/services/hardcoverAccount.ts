@@ -66,7 +66,11 @@ const refreshing = new Map<string, Promise<string>>();
 async function refresh(sessionToken: string, refreshToken: string): Promise<string> {
   // Persist before use: the old refresh token is spent the moment Hardcover answers.
   const t = await refreshTokens(refreshToken);
-  updateTokens(sessionToken, t);
+  try {
+    updateTokens(sessionToken, t);
+  } catch {
+    updateTokens(sessionToken, t); // one retry: the old refresh token is already spent
+  }
   return t.accessToken;
 }
 
