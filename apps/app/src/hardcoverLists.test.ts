@@ -4,7 +4,7 @@ import { ApiError } from "./api/client";
 import { copyToHardcover, importChosenLists, importList, pushAdd, pushRemove, syncWithHardcover } from "./hardcoverLists";
 import { getSavedBook, saveListedBook, unsaveBook, updateSavedBook } from "./storage/savedBooks";
 import { getSavedItems } from "./storage/savedItems";
-import { createList, addToList, getList, isOnAnyList, linkList, replaceMembers } from "./storage/savedLists";
+import { createList, addToList, getList, isOnAnyList, linkList, removeFromList, replaceMembers } from "./storage/savedLists";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("./test/asyncStorageMock"));
 const { add, remove, fetchList, create } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn(), fetchList: vi.fn(), create: vi.fn() }));
@@ -209,6 +209,45 @@ describe("hardcoverLists", () => {
     const before = (await getList(l.id))!.members;
     await expect(syncWithHardcover((await getList(l.id))!)).rejects.toThrow("Hardcover sent only part of this list, so nothing was removed. Try again later.");
     expect((await getList(l.id))!.members).toEqual(before);
+  });
+
+  describe("removals that failed on Hardcover", () => {
+    const remoteWith9 = { name: "A", description: "", booksCount: 1, books: [{ hardcoverBookId: 9, isbn: "X", title: "T" }] };
+    async function removedLocally() {
+      const l = await createList({ name: "A", kind: "book", hardcoverListId: 5 });
+      await addToList(l.id, { type: "book", id: "X", title: "T" });
+      await replaceMembers(l.id, (await getList(l.id))!.members.map((m) => ({ ...m, hardcoverBookId: 9 })));
+      await removeFromList(l.id, "book", "X");
+      return l.id;
+    }
+
+    it("sync removes on Hardcover a book whose removal failed, and doesn't re-add it", async () => {
+      const id = await removedLocally();
+      fetchList.mockResolvedValue(remoteWith9);
+      await syncWithHardcover((await getList(id))!);
+      expect(remove).toHaveBeenCalledWith(5, 9);
+      expect((await getList(id))!.members).toEqual([]);
+      expect(await getSavedBook("X")).toBeNull();
+    });
+
+    it("sync forgets settled removals, so a book re-added on Hardcover stays", async () => {
+      const id = await removedLocally();
+      fetchList.mockResolvedValue(remoteWith9);
+      await syncWithHardcover((await getList(id))!);
+      await syncWithHardcover((await getList(id))!);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect((await getList(id))!.members.map((m) => m.id)).toEqual(["X"]);
+    });
+
+    it("sync keeps a book removed and then re-added locally", async () => {
+      const id = await removedLocally();
+      await addToList(id, { type: "book", id: "X", title: "T" });
+      add.mockResolvedValue({ hardcoverBookId: 9 });
+      fetchList.mockResolvedValue(remoteWith9);
+      await syncWithHardcover((await getList(id))!);
+      expect(remove).not.toHaveBeenCalled();
+      expect((await getList(id))!.members.map((m) => m.id)).toEqual(["X"]);
+    });
   });
 
   it("an interrupted fresh copy followed by sync keeps every local member", async () => {

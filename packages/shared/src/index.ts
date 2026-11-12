@@ -396,7 +396,14 @@ export const SavedListExportSchema = z.object({
     )
     .max(MAX_IMPORT_RECORDS),
   removedMembers: z
-    .array(z.object({ type: z.enum(["book", "work", "author"]), id: z.string().min(1).max(200), removedAt: z.number().int().nonnegative() }))
+    .array(
+      z.object({
+        type: z.enum(["book", "work", "author"]),
+        id: z.string().min(1).max(200),
+        removedAt: z.number().int().nonnegative(),
+        hardcoverBookId: z.number().int().positive().optional(), // set until sync has deleted the book on Hardcover
+      })
+    )
     .max(MAX_IMPORT_RECORDS)
     .optional(),
   hardcoverListId: z.number().int().positive().optional(),

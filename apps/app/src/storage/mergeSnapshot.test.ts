@@ -198,6 +198,14 @@ describe("mergeSnapshots", () => {
     }
   });
 
+  it("keeps a removed member's hardcoverBookId through a merge", () => {
+    const a = snap({ lists: [list("x", 10, { removedMembers: [{ type: "book" as const, id: "1", removedAt: 5, hardcoverBookId: 9 }] })] });
+    const b = snap({ lists: [list("x", 30, { removedMembers: [{ type: "book" as const, id: "1", removedAt: 25 }] })] });
+    for (const merged of [mergeSnapshots(a, b), mergeSnapshots(b, a)]) {
+      expect(merged.lists[0].removedMembers).toEqual([{ type: "book", id: "1", removedAt: 25, hardcoverBookId: 9 }]);
+    }
+  });
+
   it("a member re-added after another copy's removal stays", () => {
     const readded = { type: "book" as const, id: "1", title: "One", addedAt: 28 };
     const removedMembers = [{ type: "book" as const, id: "1", removedAt: 25 }];

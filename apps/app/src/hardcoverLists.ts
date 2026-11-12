@@ -2,7 +2,7 @@ import { ApiError, addHardcoverListBook, createHardcoverList, fetchHardcoverList
 import { reconcile } from "./storage/hardcoverReconcile";
 import { getSavedBook, saveListedBook } from "./storage/savedBooks";
 import { getSavedWork } from "./storage/savedWorks";
-import { createList, ensureOnAList, getList, isOnAnyList, linkList, replaceMembers, setMemberHardcoverId, type ListMember, type SavedList } from "./storage/savedLists";
+import { createList, ensureOnAList, getList, isOnAnyList, linkList, replaceMembers, setMemberHardcoverId, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
 import { unsaveIfUnlisted } from "./storage/unlisted";
 
 export async function pushAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
@@ -82,13 +82,19 @@ export async function copyToHardcover(
 export async function syncWithHardcover(list: SavedList): Promise<{ missing: string[]; skipped: string[] }> {
   if (!list.hardcoverListId) throw new Error("This list isn't linked to Hardcover.");
   const { missing } = await copyToHardcover(list, () => {});
+  const latest = await getList(list.id); // re-read so ids just set by the push are included
+  if (!latest) throw new Error("This list no longer exists.");
+  // Books removed here whose Hardcover delete never happened; unless the user re-added them, finish the delete rather than reconciling them back.
+  const live = (r: { type: string; id: string; hardcoverBookId?: number }) =>
+    latest.members.some((m) => (r.hardcoverBookId && m.hardcoverBookId === r.hardcoverBookId) || (m.type === r.type && m.id === r.id));
+  const pending = new Set((latest.removedMembers ?? []).filter((r) => r.hardcoverBookId && !live(r)).map((r) => r.hardcoverBookId));
   const remote = await fetchHardcoverList(list.hardcoverListId);
   // Reconcile drops members missing remotely, so a short page would delete real members.
   if (remote.books.length < remote.booksCount) throw new Error("Hardcover sent only part of this list, so nothing was removed. Try again later.");
-  const latest = await getList(list.id); // re-read so ids just set by the push are included
-  if (!latest) throw new Error("This list no longer exists.");
-  const next = reconcile(latest.members, remote.books, Date.now());
+  for (const b of remote.books) if (pending.has(b.hardcoverBookId)) await removeHardcoverListBook(list.hardcoverListId, b.hardcoverBookId);
+  const next = reconcile(latest.members, remote.books.filter((b) => !pending.has(b.hardcoverBookId)), Date.now());
   await replaceMembers(list.id, next);
+  await settleRemovals(list.id);
   const key = (m: Pick<ListMember, "type" | "id">) => `${m.type}:${m.id}`;
   const after = new Set(next.map(key));
   for (const m of next) if (m.type === "book") await saveListedBook(m.id, m.title); // idempotent; repairs books that never got saved
