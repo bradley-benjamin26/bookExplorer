@@ -488,3 +488,20 @@ export const HardcoverProgressSchema = z.object({
 export type HardcoverListSummary = z.infer<typeof HardcoverListSummarySchema>;
 export type HardcoverListBooks = z.infer<typeof HardcoverListBooksSchema>;
 export type HardcoverProgress = z.infer<typeof HardcoverProgressSchema>;
+
+export const OpenLibraryMemberSchema = z.object({ type: z.enum(["book", "work", "author"]), id: z.string() });
+export const OpenLibraryListSummarySchema = z.object({ id: z.string(), name: z.string(), seedCount: z.number().int() });
+export const OpenLibraryListSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  seedCount: z.number().int(),
+  seeds: z.array(z.object({ seed: z.string(), title: z.string(), member: OpenLibraryMemberSchema.nullable() })),
+});
+export const OpenLibraryAddResultSchema = z.object({
+  added: z.array(OpenLibraryMemberSchema.extend({ seed: z.string() })),
+  missing: z.array(OpenLibraryMemberSchema),
+});
+export type OpenLibraryMember = z.infer<typeof OpenLibraryMemberSchema>;
+export type OpenLibraryListSummary = z.infer<typeof OpenLibraryListSummarySchema>;
+export type OpenLibraryList = z.infer<typeof OpenLibraryListSchema>;
+export type OpenLibraryAddResult = z.infer<typeof OpenLibraryAddResultSchema>;
