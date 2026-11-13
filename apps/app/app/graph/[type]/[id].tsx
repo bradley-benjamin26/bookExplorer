@@ -531,7 +531,7 @@ export default function GraphExplorer() {
                   <Text style={styles.legendLabel}>{NODE_LABELS[node.type]}</Text>
                   {!!href && <ChevronRight size={16} color={theme.colors.inkFaint} strokeWidth={2} />}
                 </Pressable>
-                {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && (
+                {!!href && !isCenter && node.type !== "genre" && node.type !== "editions" && node.type !== "award" && (
                   <Pressable
                     ref={titleRef(`Center graph on ${spoken(node)}`)}
                     onPress={() => handleNodePress(node)}
