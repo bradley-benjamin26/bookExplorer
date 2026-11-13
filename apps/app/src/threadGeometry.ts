@@ -36,10 +36,17 @@ function cubicLength(c: Cubic): number {
   return len;
 }
 
+export interface ThreadLoop {
+  /** Which gap between waypoints (0 = before the first stop) holds the loop. */
+  gap: number;
+  /** Loop size relative to the largest that fits (default 1). */
+  scale?: number;
+}
+
 /** A thread running left to right through `stops` evenly spaced stops (first at `inset`, last at `width - inset`),
- * wandering up and down, with one round loop in the middle gap where the line crosses itself.
+ * wandering up and down, with round loops where the line crosses itself: by default one, in the middle gap.
  * Every part of the curve stays inside the `width` x `height` box. */
-export function threadGeometry(width: number, height: number, stops: number, inset = 8): ThreadGeometry {
+export function threadGeometry(width: number, height: number, stops: number, inset = 8, loops?: ThreadLoop[]): ThreadGeometry {
   const mid = height / 2;
   const wander = height * 0.15;
   const span = width - 2 * inset;
@@ -49,7 +56,7 @@ export function threadGeometry(width: number, height: number, stops: number, ins
     [width, mid],
   ];
   const gaps = waypoints.length - 1;
-  const loopGap = Math.floor(gaps / 2);
+  const loopList = loops ?? [{ gap: Math.floor(gaps / 2) }];
 
   const curves: Cubic[] = [];
   // Index in `curves` of the cubic that ends at each waypoint after the first.
@@ -57,10 +64,11 @@ export function threadGeometry(width: number, height: number, stops: number, ins
   for (let i = 0; i < gaps; i++) {
     const [p, q] = [waypoints[i], waypoints[i + 1]];
     const dx = q[0] - p[0];
-    if (i === loopGap) {
+    const loop = loopList.find((l) => l.gap === i);
+    if (loop) {
       // A cursive loop on the gap's midline: rise to the circle's right side, over the top and down its left side,
       // then cross the rising stroke and carry on to q. Sized to stay inside the box.
-      const rho = Math.min((height - 4) / 2.2, dx * 0.22);
+      const rho = Math.min(((height - 4) / 2.2) * (loop.scale ?? 1), dx * 0.22);
       const base = height - 2;
       const k = rho * 0.5523;
       const mx = (p[0] + q[0]) / 2;

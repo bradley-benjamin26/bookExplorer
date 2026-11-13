@@ -17,7 +17,6 @@ import "../src/suppressKnownWebWarnings";
 import { Button } from "../src/components/Button";
 import { HeaderActions } from "../src/components/HeaderActions";
 import { HeaderTitle } from "../src/components/HeaderTitle";
-import { ThreadRule } from "../src/components/ThreadRule";
 import { WebTooltip } from "../src/components/WebTooltip";
 import { persistOptions } from "../src/queryCache";
 import { useSavedPrefetch } from "../src/useSavedPrefetch";
@@ -115,15 +114,14 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
                     header: ({ back, options, route }) => (
                       <View role="banner">
                         <Header {...options} back={back} title={getHeaderTitle(options, route.name)} />
-                        {/* shortcut: web header only, the native stack keeps its platform header; add a native header renderer if wanted. */}
-                        <ThreadRule />
                       </View>
                     ),
                   }
                 : null),
               headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
               headerTitleStyle: { fontFamily: theme.fonts.displayMedium, color: theme.colors.ink },
-              headerStyle: { backgroundColor: theme.colors.paper },
+              // Web's header is taller to fit the thread under the wordmark.
+              headerStyle: { backgroundColor: theme.colors.paper, ...(Platform.OS === "web" ? { height: 84 } : null) },
               headerShadowVisible: false,
               headerTintColor: theme.colors.cover,
               contentStyle: { backgroundColor: theme.colors.paper },

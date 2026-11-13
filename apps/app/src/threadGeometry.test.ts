@@ -83,4 +83,34 @@ describe("threadGeometry", () => {
   it("is deterministic", () => {
     expect(threadGeometry(320, 28, 4).d).toBe(g.d);
   });
+
+  it("takes several loops of different sizes, like the header thread", () => {
+    const loops = [{ gap: 1, scale: 0.55 }, { gap: 2 }, { gap: 3, scale: 0.7 }];
+    const geo = threadGeometry(120, 22, 4, 8, loops);
+    expect(geo.points).toHaveLength(4);
+    geo.points.forEach((p, i) => i && expect(p.x).toBeGreaterThan(geo.points[i - 1].x));
+    const pts: [number, number][] = [];
+    for (const sg of segments(geo.d)) {
+      for (let t = 0; t <= 1; t += 1 / 40) {
+        const [x, y] = at(sg, t);
+        expect(x).toBeGreaterThanOrEqual(-0.5);
+        expect(x).toBeLessThanOrEqual(120.5);
+        expect(y).toBeGreaterThanOrEqual(-0.5);
+        expect(y).toBeLessThanOrEqual(22.5);
+        pts.push([x, y]);
+      }
+    }
+    // Each loop is a separate crossing: well apart in x, so count the crossings' distinct x positions.
+    const xs: number[] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      for (let j = i + 2; j < pts.length - 1; j++) if (cross(pts[i], pts[i + 1], pts[j], pts[j + 1])) xs.push(pts[i][0]);
+    }
+    const distinct = xs.filter((x, i) => i === 0 || Math.abs(x - xs[i - 1]) > 4).length;
+    expect(distinct).toBe(3);
+  });
+
+  it("draws the default single loop when no loops are given", () => {
+    expect(threadGeometry(320, 28, 4, 8, undefined).d).toBe(g.d);
+  });
 });
+
