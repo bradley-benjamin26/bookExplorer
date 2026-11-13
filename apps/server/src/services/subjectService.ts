@@ -15,13 +15,15 @@ function toSubject(
   ol: openLibrary.OpenLibrarySubject,
   qid: string | null,
   description: string | null,
-  relatedConcepts: SubjectConcept[]
+  relatedConcepts: SubjectConcept[],
+  lcshUri: string | null = null
 ): Subject {
   return {
     slug,
     name: ol.name,
     workCount: ol.workCount,
     wikidataId: qid,
+    lcshUri,
     description,
     relatedConcepts,
     books: ol.works.map((w) => ({
@@ -136,7 +138,8 @@ export function getSubjectDetail(slug: string): Promise<Subject | null> {
       subjectData,
       qid,
       description,
-      mergeSubjectConcepts(wikidataConcepts, lcshConcepts)
+      mergeSubjectConcepts(wikidataConcepts, lcshConcepts),
+      lcshUri
     );
   });
 }

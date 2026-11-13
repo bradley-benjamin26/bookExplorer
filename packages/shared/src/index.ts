@@ -214,6 +214,7 @@ export const SubjectSchema = z.object({
   name: z.string(),
   workCount: z.number(),
   wikidataId: z.string().nullable(),
+  lcshUri: z.string().nullable().default(null), // default: old persisted cache entries lack it
   description: z.string().nullable(),
   relatedConcepts: z.array(SubjectConceptSchema),
   books: z.array(WorkRefSchema),
