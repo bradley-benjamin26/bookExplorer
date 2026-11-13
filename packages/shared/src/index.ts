@@ -307,6 +307,19 @@ export const PathResultSchema = z.discriminatedUnion("found", [
 ]);
 export type PathResult = z.infer<typeof PathResultSchema>;
 
+export const LibraryLevelSchema = z.enum(["availability", "catalog"]);
+export const SupportedLibrarySchema = z.object({ id: z.string(), name: z.string(), level: LibraryLevelSchema });
+export type SupportedLibrary = z.infer<typeof SupportedLibrarySchema>;
+
+export const CopySchema = z.object({
+  branch: z.string(),
+  callNumber: z.string().nullable(),
+  status: z.enum(["available", "checkedOut", "unavailable", "unknown"]),
+  dueDate: z.string().nullable(),
+});
+export const LibraryAvailabilitySchema = z.object({ found: z.boolean(), level: LibraryLevelSchema, copies: z.array(CopySchema) });
+export type LibraryAvailability = z.infer<typeof LibraryAvailabilitySchema>;
+
 /**
  * Strips everything but digits and a check-digit "X" from an ISBN — barcode
  * scans yield bare digits, but typed or pasted ISBNs are often hyphenated
