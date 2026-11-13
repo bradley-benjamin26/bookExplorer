@@ -64,7 +64,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
     </Pressable>
   );
 
-  // Supported (Z39.50) libraries show availability only; the rest get catalog links.
+  // Supported (Z39.50 or SRU) libraries show availability, linked to the record when the server gives one; the rest get catalog links.
   const supportedLibraries = allLibraries.filter((l) => l.z3950Id);
   const libraries = allLibraries.filter((l) => !l.z3950Id);
   const availability = supportedLibraries.map((l) => (

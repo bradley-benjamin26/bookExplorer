@@ -4,6 +4,7 @@ import { LibraryAvailabilitySchema, SupportedLibrarySchema } from "@book-explore
 import { describe, expect, it, vi } from "vitest";
 import { Z3950UnavailableError } from "../z3950/client.js";
 import { Z3950_LIBRARIES } from "../z3950/registry.js";
+import { ALMA_LIBRARIES } from "../sources/almaSru.js";
 import { getLibraryAvailability } from "../services/libraryAvailability.js";
 import { librariesRoutes } from "./libraries.js";
 
@@ -22,18 +23,18 @@ describe("GET /api/libraries", () => {
   it("lists every library without host or port", async () => {
     const res = await get("/api/libraries");
     const body = res.json();
-    expect(body).toHaveLength(Z3950_LIBRARIES.length);
+    expect(body).toHaveLength(Z3950_LIBRARIES.length + ALMA_LIBRARIES.length);
     body.forEach((l: unknown) => SupportedLibrarySchema.parse(l));
-    expect(res.body).not.toMatch(/host|port|database|catalog\.mbln/);
-    expect(body.find((l: { id: string }) => l.id === "mbln").level).toBe("availability");
+    expect(res.body).not.toMatch(/host|port|database|sirsi\.net|exlibris/);
     expect(body.find((l: { id: string }) => l.id === "kcmo").level).toBe("availability");
+    expect(body.find((l: { id: string }) => l.id === "umd").level).toBe("availability");
   });
 });
 
 describe("GET /api/libraries/:id/availability", () => {
   it.each(["", "isbn=123", "isbn=9780141439518;ls", "isbn=97801414395", "isbn=9780141439518&isbn=9780141439518"])("400 for %s without searching", async (qs) => {
     svc.mockClear();
-    expect((await get(`/api/libraries/mbln/availability?${qs}`)).statusCode).toBe(400);
+    expect((await get(`/api/libraries/kcmo/availability?${qs}`)).statusCode).toBe(400);
     expect(svc).not.toHaveBeenCalled();
   });
 
@@ -44,14 +45,14 @@ describe("GET /api/libraries/:id/availability", () => {
 
   it("503 when the catalog is unavailable", async () => {
     svc.mockRejectedValue(new Z3950UnavailableError("x"));
-    const res = await get("/api/libraries/mbln/availability?isbn=9780141439518");
+    const res = await get("/api/libraries/kcmo/availability?isbn=9780141439518");
     expect(res.statusCode).toBe(503);
     expect(res.json()).toEqual({ error: "This library's catalog is temporarily unavailable." });
   });
 
   it("200 with a schema-valid body", async () => {
     svc.mockResolvedValue({ found: true, level: "availability", copies: [{ branch: "Main", callNumber: null, status: "available", dueDate: null }] });
-    const res = await get("/api/libraries/mbln/availability?isbn=9780141439518");
+    const res = await get("/api/libraries/kcmo/availability?isbn=9780141439518");
     expect(res.statusCode).toBe(200);
     LibraryAvailabilitySchema.parse(res.json());
   });
@@ -60,7 +61,7 @@ describe("GET /api/libraries/:id/availability", () => {
     svc.mockResolvedValue({ found: false, level: "catalog", copies: [] });
     const app = await buildApp();
     const codes: number[] = [];
-    for (let i = 0; i < 31; i++) codes.push((await app.inject({ method: "GET", url: "/api/libraries/mbln/availability?isbn=9780141439518" })).statusCode);
+    for (let i = 0; i < 31; i++) codes.push((await app.inject({ method: "GET", url: "/api/libraries/kcmo/availability?isbn=9780141439518" })).statusCode);
     await app.close();
     expect(codes.at(-1)).toBe(429);
     expect(codes.filter((c) => c === 200)).toHaveLength(30);

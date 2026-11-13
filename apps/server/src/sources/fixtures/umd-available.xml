@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>1</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>     cam a2200301Ii 45 0</leader>
+          <controlfield tag="001">990061255570108238</controlfield>
+          <controlfield tag="005">20190821030322.0</controlfield>
+          <controlfield tag="008">180412s2019    enk           000 d eng d</controlfield>
+          <datafield ind1=" " ind2=" " tag="019">
+            <subfield code="a">1031054693</subfield>
+            <subfield code="a">1031313880</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">1912430118</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9781912430116</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(Aleph)006125557MAI01</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">YBP15262307</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)1031197006</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)1031197006</subfield>
+            <subfield code="z">(OCoLC)1031054693</subfield>
+            <subfield code="z">(OCoLC)1031313880</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(EXLNZ-01USMAI_NETWORK)9910226036808236</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">YDX</subfield>
+            <subfield code="b">eng</subfield>
+            <subfield code="c">YDX</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">CDX</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="049">
+            <subfield code="a">UMCP</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="4" tag="050">
+            <subfield code="a">PR6063.C6</subfield>
+            <subfield code="b">A6 2019</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">McNab, Tom,</subfield>
+            <subfield code="e">author.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="245">
+            <subfield code="a">1936:Berlin and other plays /</subfield>
+            <subfield code="c">Tom McNab.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">Twickenham :</subfield>
+            <subfield code="b">Aurora Metro Publications Ltd.,</subfield>
+            <subfield code="c">2019.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">173 pages ;</subfield>
+            <subfield code="c">21 cm</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="336">
+            <subfield code="a">text</subfield>
+            <subfield code="b">txt</subfield>
+            <subfield code="2">rdacontent</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="337">
+            <subfield code="a">unmediated</subfield>
+            <subfield code="b">n</subfield>
+            <subfield code="2">rdamedia</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="505">
+            <subfield code="a">1936:Berlin -- Orwell on Jura -- Whisper in the heart.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="852">
+            <subfield code="b">CPMCK</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="876">
+            <subfield code="j">01</subfield>
+            <subfield code="p">31430059568743</subfield>
+            <subfield code="x">MT:BOOK</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="950">
+            <subfield code="a">WCP/YBP</subfield>
+            <subfield code="c">20190821</subfield>
+            <subfield code="h">0303</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="950">
+            <subfield code="a">AUTH EXTRACT</subfield>
+            <subfield code="c">20200722</subfield>
+            <subfield code="h">1815</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="951">
+            <subfield code="a">006125557</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="980">
+            <subfield code="a">20190819</subfield>
+            <subfield code="b">31.95</subfield>
+            <subfield code="c">136208</subfield>
+            <subfield code="e">25.82</subfield>
+            <subfield code="f">40029322286</subfield>
+            <subfield code="g">1</subfield>
+            <subfield code="k">CP-YBP</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="981">
+            <subfield code="a">CP-GENERAL-APPROVAL-2012</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">990061255570108238</subfield>
+            <subfield code="8">22281852530008238</subfield>
+            <subfield code="a">01USMAI_UMCP</subfield>
+            <subfield code="b">CPPAL</subfield>
+            <subfield code="c">Stacks</subfield>
+            <subfield code="d">PR6063.C6 A6 2019</subfield>
+            <subfield code="e">available</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">0</subfield>
+            <subfield code="j">STACK</subfield>
+            <subfield code="k">0</subfield>
+            <subfield code="p">1</subfield>
+            <subfield code="q">UMCP Performing Arts Library</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordIdentifier>990061255570108238</recordIdentifier>
+      <recordPosition>1</recordPosition>
+    </record>
+  </records>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2026-11-13T16:28:35-0500</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>

@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { buildCommandFile, runYazClient, searchByIsbn, Z3950UnavailableError } from "./client.js";
 import { getZ3950Library } from "./registry.js";
 
-const lib = getZ3950Library("mbln")!;
+const lib = getZ3950Library("kcmo")!;
 const ok = "Connection accepted by v3 target.\nRecord type: USmarc\n";
 
 describe("buildCommandFile", () => {
   it("has the six commands in order", () => {
     expect(buildCommandFile(lib, "9780141439518").trim().split("\n")).toEqual([
-      "open catalog.mbln.org:210/pac",
+      "open kcmo.sirsi.net:2500/UNICORN",
       "find @attr 1=7 9780141439518",
       "format usmarc",
       "elements F",

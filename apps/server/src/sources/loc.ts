@@ -23,7 +23,7 @@ export interface LocMetadata {
 
 export const EMPTY_METADATA: LocMetadata = { subjects: [], genres: [], lcc: null, ddc: null, lccn: null, summary: null };
 
-function decodeXmlEntities(text: string): string {
+export function decodeXmlEntities(text: string): string {
   return text
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")

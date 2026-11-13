@@ -1,14 +1,18 @@
 import type { FastifyInstance } from "fastify";
 import { isValidIsbn, normalizeIsbn, type SupportedLibrary } from "@book-explorer/shared";
+import { UpstreamUnavailableError } from "../httpClient.js";
 import { getLibraryAvailability } from "../services/libraryAvailability.js";
+import { ALMA_LIBRARIES } from "../sources/almaSru.js";
 import { Z3950UnavailableError } from "../z3950/client.js";
 import { Z3950_LIBRARIES } from "../z3950/registry.js";
 
 const AVAILABILITY_RATE_LIMIT = { max: 30, timeWindow: "1 minute" };
 
 export async function librariesRoutes(app: FastifyInstance) {
-  app.get("/api/libraries", async (): Promise<SupportedLibrary[]> =>
-    Z3950_LIBRARIES.map((l) => ({ id: l.id, name: l.name, level: l.holdings !== "none" ? "availability" : "catalog" })));
+  app.get("/api/libraries", async (): Promise<SupportedLibrary[]> => [
+    ...Z3950_LIBRARIES.map((l): SupportedLibrary => ({ id: l.id, name: l.name, level: l.holdings !== "none" ? "availability" : "catalog" })),
+    ...ALMA_LIBRARIES.map((l): SupportedLibrary => ({ id: l.id, name: l.name, level: "availability" })),
+  ]);
 
   app.get<{ Params: { id: string }; Querystring: Record<string, unknown> }>(
     "/api/libraries/:id/availability",
@@ -32,7 +36,7 @@ export async function librariesRoutes(app: FastifyInstance) {
         }
         return result;
       } catch (err) {
-        if (!(err instanceof Z3950UnavailableError)) throw err;
+        if (!(err instanceof Z3950UnavailableError || err instanceof UpstreamUnavailableError)) throw err;
         reply.code(503);
         return { error: "This library's catalog is temporarily unavailable." };
       }
