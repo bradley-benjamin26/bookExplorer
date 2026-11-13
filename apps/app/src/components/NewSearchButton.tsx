@@ -21,7 +21,7 @@ export function NewSearchButton({ iconOnly = false }: { iconOnly?: boolean }) {
           { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
           pressed && { opacity: 0.6 },
           // RN Web only; same focus ring as Button.
-          focused && { outlineWidth: 2, outlineColor: theme.colors.cover, outlineStyle: "solid" as const },
+          focused && { outlineWidth: 3, outlineOffset: 2, outlineColor: theme.colors.focus, outlineStyle: "solid" as const },
         ]}
       >
         <Search size={20} color={theme.colors.ink} />

@@ -8,8 +8,8 @@ const SIDE_BY_SIDE_MIN_WIDTH = 560;
 // Equal-width primary buttons: same basis, grow to fill, capped so they do not stretch on wide screens.
 export const PRIMARY_ACTION_STYLE: ViewStyle = { flexGrow: 1, flexBasis: 0, maxWidth: 240, paddingHorizontal: 12, justifyContent: "center" };
 
-/** The left-aligned top every detail page shares: image, title, byline, then the actions in a row,
- * with the page's main destinations (`primaryActions`, e.g. View as graph) under them. */
+/** The left-aligned top every detail page shares: image, title, byline, then the page's main destinations (`primaryActions`, e.g. View as graph),
+ * then the actions in a row (save, share). */
 export function DetailTop({
   image,
   title,
@@ -33,8 +33,9 @@ export function DetailTop({
       <View style={styles.text}>
         <Text style={styles.title} accessibilityRole="header" accessibilityLabel={accessibilityLabel}>{title}</Text>
         {children}
-        <View style={styles.actions}>{actions}</View>
+        {/* The page's main destination leads; save and share follow. */}
         {primaryActions ? <View style={styles.primaryActions}>{primaryActions}</View> : null}
+        <View style={styles.actions}>{actions}</View>
       </View>
     </View>
   );
@@ -48,6 +49,6 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
     text: { flexShrink: 1, flexGrow: 1, alignItems: "flex-start", alignSelf: "stretch" },
     title: { fontFamily: fonts.display, fontSize: typeScale.lg, textAlign: "left", letterSpacing: -0.3, color: colors.ink },
     actions: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginTop: spacing.md },
-    primaryActions: { flexDirection: "row", flexWrap: "nowrap", alignItems: "stretch", alignSelf: "stretch", gap: spacing.sm, marginTop: spacing.md },
+    primaryActions: { flexDirection: "row", flexWrap: "wrap", alignItems: "stretch", alignSelf: "stretch", gap: spacing.sm, marginTop: spacing.md },
   });
 }

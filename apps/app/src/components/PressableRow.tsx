@@ -73,6 +73,6 @@ function createStyles({ colors, radii, spacing }: Theme) {
     divider: { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
     body: { flex: 1 },
     // RN Web passes `focused`; native ignores it.
-    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
+    focused: { outlineWidth: 3, outlineOffset: 2, outlineColor: colors.focus, outlineStyle: "solid" },
   });
 }

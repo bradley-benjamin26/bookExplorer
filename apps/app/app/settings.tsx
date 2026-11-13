@@ -181,6 +181,9 @@ function SwitchRow({ label, value, onChange }: { label: string; value: boolean; 
         value={value}
         onValueChange={onChange}
         trackColor={{ true: theme.colors.cover }}
+        // The paper colour against the rust track; web's default "on" thumb is a teal that clashes with it.
+        thumbColor={theme.colors.paper}
+        {...({ activeThumbColor: theme.colors.paper } as object)}
         accessibilityLabel={label}
       />
     </View>

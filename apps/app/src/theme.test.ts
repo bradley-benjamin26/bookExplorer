@@ -56,9 +56,27 @@ describe.each([
     ["thread vs paper", c.thread, c.paper, 2],
     ["ink on emptyBackground", c.ink, c.emptyBackground, 4.5],
     ["inkFaint on emptyBackground", c.inkFaint, c.emptyBackground, 4.5],
+    ["focus vs paper", c.focus, c.paper, 3],
+    ["focus vs card", c.focus, c.card, 3],
+    ["graphWork vs paper", c.graphWork, c.paper, 3],
+    ["graphWork vs card", c.graphWork, c.card, 3],
+    ["graphAuthor vs paper", c.graphAuthor, c.paper, 3],
+    ["graphAuthor vs card", c.graphAuthor, c.card, 3],
+    ["graphSubject vs paper", c.graphSubject, c.paper, 3],
+    ["graphSubject vs card", c.graphSubject, c.card, 3],
+    ["graphGenre vs paper", c.graphGenre, c.paper, 3],
+    ["graphGenre vs card", c.graphGenre, c.card, 3],
+    ["marginalia on paper", c.marginalia, c.paper, 4.5],
+    ["selected text on pillActiveBackground", c.primaryText, c.pillActiveBackground, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });
+});
+
+it("keeps the design review's three light-mode pairs", () => {
+  expect(contrast("#FFFFFF", lightColors.primary)).toBeCloseTo(5.02, 1);
+  expect(contrast(lightColors.ink, lightColors.paper)).toBeCloseTo(12.96, 1);
+  expect(contrast(lightColors.cover, lightColors.paper)).toBeCloseTo(5.21, 1);
 });
 
 it("has no cool-hued tag chips", () => {
@@ -66,8 +84,9 @@ it("has no cool-hued tag chips", () => {
   expect("chipBackgroundAccent" in darkColors).toBe(false);
 });
 
-it("defines the four corner sizes", () => {
-  expect(radii).toEqual({ xs: 4, sm: 8, md: 14, pill: 16, full: 999 });
+it("defines the corner sizes, with action buttons a soft 7px rectangle", () => {
+  expect(radii).toEqual({ xs: 4, sm: 8, button: 7, md: 14, pill: 16, full: 999 });
+  expect(radii.button).toBeLessThan(radii.pill);
 });
 
 describe("typeScale", () => {

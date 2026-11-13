@@ -35,7 +35,7 @@ export function FeedbackBanner() {
         style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
           styles.link,
           pressed && styles.pressed,
-          focused && { outlineWidth: 2, outlineColor: theme.colors.cover, outlineStyle: "solid" },
+          focused && { outlineWidth: 3, outlineOffset: 2, outlineColor: theme.colors.focus, outlineStyle: "solid" },
         ]}
       >
         <Text style={styles.linkText}>Share feedback</Text>

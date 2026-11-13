@@ -23,7 +23,7 @@ export function AccordionSection({ title, children }: { title: string; children:
           styles.header,
           pressed && { opacity: 0.6 },
           // RN Web only; same focus ring as Button.
-          focused && { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" as const },
+          focused && { outlineWidth: 3, outlineOffset: 2, outlineColor: colors.focus, outlineStyle: "solid" as const },
         ]}
       >
         <Text style={styles.title}>{title}</Text>

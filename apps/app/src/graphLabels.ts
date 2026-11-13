@@ -83,3 +83,6 @@ export function legendEntries(nodes: GraphNode[]): { types: GraphNode["type"][];
     showUnlinked: nodes.some((n) => !n.navigable),
   };
 }
+
+/** The line under the graph toolbar saying where the graph is centred. */
+export const centeredLabel = (label: string | undefined) => `Centered on ${label ?? "this item"}`;

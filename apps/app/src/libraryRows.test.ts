@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LIBRARY_PRIMARY, LIBRARY_TOOLS } from "./libraryRows";
+import { ACCOUNT_ROWS, DISCOVERY_ROWS, LIBRARY_PRIMARY, LIBRARY_TOOLS } from "./libraryRows";
 
 const ALL = [...LIBRARY_PRIMARY, ...LIBRARY_TOOLS];
 
@@ -9,4 +9,9 @@ describe("library rows", () => {
   it("keeps the primary label order", () =>
     expect(LIBRARY_PRIMARY.map((r) => r.label)).toEqual(["Hardcover account", "My Open Library Account", "Recommendations", "Find connection"]));
   it("keeps the tools label order", () => expect(LIBRARY_TOOLS.map((r) => r.label)).toEqual(["Import & export", "Settings"]));
+  it("splits the primary rows into accounts and discovery", () => {
+    expect(ACCOUNT_ROWS.map((r) => r.id)).toEqual(["hardcover", "openlibrary"]);
+    expect(DISCOVERY_ROWS.map((r) => r.id)).toEqual(["recommendations", "connection"]);
+    expect([...ACCOUNT_ROWS, ...DISCOVERY_ROWS]).toEqual([...LIBRARY_PRIMARY]);
+  });
 });
