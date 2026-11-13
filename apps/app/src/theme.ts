@@ -8,6 +8,7 @@ export type { ThemeColors };
 export const spacing = {
   xs: 4,
   sm: 8,
+  button: 7,
   md: 12,
   lg: 20,
   xl: 24,
@@ -17,6 +18,7 @@ export const spacing = {
 export const radii = {
   xs: 4,
   sm: 8,
+  button: 7,
   md: 14,
   pill: 16,
   full: 999,

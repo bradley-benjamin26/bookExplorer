@@ -84,8 +84,9 @@ it("has no cool-hued tag chips", () => {
   expect("chipBackgroundAccent" in darkColors).toBe(false);
 });
 
-it("defines the four corner sizes", () => {
-  expect(radii).toEqual({ xs: 4, sm: 8, md: 14, pill: 16, full: 999 });
+it("defines the corner sizes, with action buttons a soft 7px rectangle", () => {
+  expect(radii).toEqual({ xs: 4, sm: 8, button: 7, md: 14, pill: 16, full: 999 });
+  expect(radii.button).toBeLessThan(radii.pill);
 });
 
 describe("typeScale", () => {

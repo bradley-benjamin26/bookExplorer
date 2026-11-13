@@ -114,7 +114,7 @@ export default function Home() {
             </Text>
             <View style={styles.filterRow}>
               {filters.map((f) => (
-                <Button key={f.value} variant="pill" active={f.value === filter} onPress={() => setFilter(f.value)}>
+                <Button key={f.value} variant="chip" active={f.value === filter} onPress={() => setFilter(f.value)}>
                   {f.label}
                 </Button>
               ))}

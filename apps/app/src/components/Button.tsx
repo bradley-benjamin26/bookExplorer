@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View, type AccessibilityState, type StyleP
 import { titleRef } from "../webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
-type Variant = "primary" | "pill";
+/** "pill" is an outlined action (a soft rectangle); "chip" is the full-pill look, kept for real filters. */
+type Variant = "primary" | "pill" | "chip";
 
 /** Shared button styling so every screen's primary action (scan, view-as-graph,
  * save-to-library, ...) looks and feels the same, including visual feedback on
@@ -15,7 +16,7 @@ export function Button({
   onPress,
   variant = "primary",
   active = false,
-  /** Pill variant only: shows a star before the text, filled when `active`. For the save/unsave toggle. */
+  /** Pill and chip variants only: shows a star before the text, filled when `active`. For the save/unsave toggle. */
   starIcon = false,
   style,
   textStyle,
@@ -28,7 +29,7 @@ export function Button({
   children: ReactNode;
   onPress: () => void;
   variant?: Variant;
-  /** Pill variant only: toggled visual state, e.g. an item that's already saved. */
+  /** Pill and chip variants only: toggled visual state, e.g. an item that's already saved. */
   active?: boolean;
   starIcon?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -53,9 +54,9 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ ...accessibilityState, ...(variant === "pill" ? { selected: active, disabled } : { disabled }) }}
+      accessibilityState={{ ...accessibilityState, ...(variant !== "primary" ? { selected: active, disabled } : { disabled }) }}
       style={({ pressed, focused }: { pressed: boolean; focused?: boolean }) => [
-        variant === "primary" ? styles.primary : styles.pill,
+        variant === "primary" ? styles.primary : variant === "chip" ? styles.chip : styles.pill,
         active && styles.pillActive,
         (pressed || disabled) && styles.pressed,
         focused && styles.focused,
@@ -85,6 +86,15 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
     },
     primaryText: { color: colors.primaryText, textAlign: "center", fontSize: typeScale.sm, fontFamily: fonts.bodySemiBold },
     pill: {
+      alignSelf: "flex-start",
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: radii.button,
+      backgroundColor: colors.chipBackground,
+      borderWidth: 1,
+      borderColor: colors.pillBorder,
+    },
+    chip: {
       alignSelf: "flex-start",
       paddingVertical: 6,
       paddingHorizontal: 14,
