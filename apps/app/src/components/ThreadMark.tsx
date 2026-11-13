@@ -4,15 +4,16 @@ import { threadGeometry } from "../threadGeometry";
 import { useTheme } from "../theme";
 
 export const THREAD_MARK_HEIGHT = 20;
-// A small, loose thread: a little loop, a big one, then a middling one, like a line of thread dropped on a table.
-const LOOPS = [{ gap: 1, scale: 0.55 }, { gap: 2 }, { gap: 3, scale: 0.7 }];
+// Neat: one level line, three identical loops rising from it, a node between each.
+const LOOPS = [1, 2, 3].map((gap) => ({ gap, scale: 0.8 }));
+const STYLE = { wander: 0, baseline: THREAD_MARK_HEIGHT - 3 };
 
 /** A short thread with loops and the graph's four node colours, as wide as the wordmark it sits under. Decorative. */
 export function ThreadMark({ width }: { width: number }) {
   const { colors } = useTheme();
   if (width <= 0) return null;
   const dots = [colors.graphWork, colors.graphAuthor, colors.graphSubject, colors.graphGenre];
-  const geo = threadGeometry(width, THREAD_MARK_HEIGHT, dots.length, 6, LOOPS);
+  const geo = threadGeometry(width, THREAD_MARK_HEIGHT, dots.length, 6, LOOPS, STYLE);
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Svg width={width} height={THREAD_MARK_HEIGHT}>

@@ -112,5 +112,25 @@ describe("threadGeometry", () => {
   it("draws the default single loop when no loops are given", () => {
     expect(threadGeometry(320, 28, 4, 8, undefined).d).toBe(g.d);
   });
+
+  it("can be drawn tidy: every stop on one baseline, identical loops between them", () => {
+    const loops = [{ gap: 1, scale: 0.8 }, { gap: 2, scale: 0.8 }, { gap: 3, scale: 0.8 }];
+    const geo = threadGeometry(120, 20, 4, 6, loops, { wander: 0, baseline: 17 });
+    expect(new Set(geo.points.map((p) => p.y))).toEqual(new Set([17]));
+    const pts: [number, number][] = [];
+    for (const sg of segments(geo.d)) {
+      for (let t = 0; t <= 1; t += 1 / 40) {
+        const [x, y] = at(sg, t);
+        expect(y).toBeGreaterThanOrEqual(-0.5);
+        expect(y).toBeLessThanOrEqual(20.5);
+        pts.push([x, y]);
+      }
+    }
+    const xs: number[] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      for (let j = i + 2; j < pts.length - 1; j++) if (cross(pts[i], pts[i + 1], pts[j], pts[j + 1])) xs.push(pts[i][0]);
+    }
+    expect(xs.filter((x, i) => i === 0 || Math.abs(x - xs[i - 1]) > 4)).toHaveLength(3);
+  });
 });
 

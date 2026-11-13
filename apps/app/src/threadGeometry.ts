@@ -46,9 +46,18 @@ export interface ThreadLoop {
 /** A thread running left to right through `stops` evenly spaced stops (first at `inset`, last at `width - inset`),
  * wandering up and down, with round loops where the line crosses itself: by default one, in the middle gap.
  * Every part of the curve stays inside the `width` x `height` box. */
-export function threadGeometry(width: number, height: number, stops: number, inset = 8, loops?: ThreadLoop[]): ThreadGeometry {
-  const mid = height / 2;
-  const wander = height * 0.15;
+export function threadGeometry(
+  width: number,
+  height: number,
+  stops: number,
+  inset = 8,
+  loops?: ThreadLoop[],
+  /** `wander`: how far stops drift above/below the baseline, as a fraction of height (default 0.15; 0 keeps them level).
+   * `baseline`: the line's y (default the middle). Loops always rise from the line toward the top. */
+  style: { wander?: number; baseline?: number } = {}
+): ThreadGeometry {
+  const mid = style.baseline ?? height / 2;
+  const wander = height * (style.wander ?? 0.15);
   const span = width - 2 * inset;
   const waypoints: Pt[] = [
     [0, mid],
@@ -68,8 +77,9 @@ export function threadGeometry(width: number, height: number, stops: number, ins
     if (loop) {
       // A cursive loop on the gap's midline: rise to the circle's right side, over the top and down its left side,
       // then cross the rising stroke and carry on to q. Sized to stay inside the box.
-      const rho = Math.min(((height - 4) / 2.2) * (loop.scale ?? 1), dx * 0.22);
-      const base = height - 2;
+      // Loops sit on a given baseline, otherwise just above the bottom edge.
+      const base = style.baseline ?? height - 2;
+      const rho = Math.min(((height - 4) / 2.2) * (loop.scale ?? 1), dx * 0.22, (base - 1) / 2);
       const k = rho * 0.5523;
       const mx = (p[0] + q[0]) / 2;
       const right: Pt = [mx + rho, base - rho];
