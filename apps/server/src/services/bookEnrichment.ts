@@ -30,6 +30,22 @@ export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, 
   };
 }
 
+// LoC is optional, but a work tries up to 5 edition ISBNs in turn, so an
+// unreachable LoC could otherwise hold a page for minutes.
+export const LOC_BUDGET_MS = 5_000;
+
+/** Resolves with `promise`'s value, or `fallback` (after `onLate()`) if it hasn't settled within `ms`. */
+export function withinBudget<T>(promise: Promise<T>, ms: number, fallback: T, onLate: () => void): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const late = new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      onLate();
+      resolve(fallback);
+    }, ms);
+  });
+  return Promise.race([promise, late]).finally(() => clearTimeout(timer));
+}
+
 /**
  * The enrichment pipeline a scanned book (one ISBN) and a work page
  * (edition-agnostic, tried across every edition ISBN found) both need in the
@@ -41,8 +57,14 @@ export function optionalSource<T>(entry: CacheEntryOptions, sourceName: string, 
  * too).
  */
 export function startCommonEnrichment(isbnCandidates: string[], workId: string | null, entry: CacheEntryOptions, hardcoverAuth?: string | null) {
-  const locMetadataPromise = fetchMetadataByAnyIsbn(isbnCandidates).catch(
-    optionalSource(entry, "loc", EMPTY_METADATA)
+  const locMetadataPromise = withinBudget(
+    fetchMetadataByAnyIsbn(isbnCandidates).catch(optionalSource(entry, "loc", EMPTY_METADATA)),
+    LOC_BUDGET_MS,
+    EMPTY_METADATA,
+    () => {
+      entry.ttlMs = Math.min(entry.ttlMs, DEGRADED_TTL_MS);
+      console.warn("[loc] Over budget; serving without LoC headings");
+    }
   );
   const hardcoverPromise = hardcover
     .lookupByAnyIsbn(isbnCandidates, hardcoverAuth)
