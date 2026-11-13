@@ -60,3 +60,9 @@ export const nodeHref = (nodeId: string): Href | null => {
   if (type === "editions") return routes.work(id, { highlight: "editions" });
   return null;
 };
+
+/** Where pressing a graph node goes, or null to recenter the graph on it: genre, editions and award nodes have no graph of their own, and the center opens its page. */
+export const nodePressHref = (nodeId: string, centerId: string): Href | null => {
+  const type = nodeId.split(":")[0];
+  return type === "genre" || type === "editions" || type === "award" || nodeId === centerId ? nodeHref(nodeId) : null;
+};

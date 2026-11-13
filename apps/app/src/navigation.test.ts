@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { memberHref, nodeHref, routes } from "./navigation";
+import { memberHref, nodeHref, nodePressHref, routes } from "./navigation";
 
 describe("memberHref", () => {
   it("routes each member type to its screen", () => {
@@ -38,5 +38,17 @@ describe("nodeHref", () => {
   });
   it("has no page for unresolved (qid) nodes", () => {
     expect(nodeHref("author:qid:Q1")).toBeNull();
+  });
+});
+
+describe("nodePressHref", () => {
+  it("opens the page for nodes with no graph of their own, even when not the center", () => {
+    expect(nodePressHref("award:hugo_award", "work:OL1W")).toEqual(routes.award("hugo_award"));
+    expect(nodePressHref("genre:fantasy", "work:OL1W")).toEqual(routes.subject("fantasy"));
+    expect(nodePressHref("editions:OL1W", "work:OL1W")).toEqual(routes.work("OL1W", { highlight: "editions" }));
+  });
+  it("opens the center's page and recenters on any other node", () => {
+    expect(nodePressHref("work:OL1W", "work:OL1W")).toEqual(routes.work("OL1W"));
+    expect(nodePressHref("work:OL2W", "work:OL1W")).toBeNull();
   });
 });
