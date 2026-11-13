@@ -1,5 +1,7 @@
+import { readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
-import { buildCommandFile, searchByIsbn, Z3950UnavailableError } from "./client.js";
+import { buildCommandFile, runYazClient, searchByIsbn, Z3950UnavailableError } from "./client.js";
 import { getZ3950Library } from "./registry.js";
 
 const lib = getZ3950Library("mbln")!;
@@ -39,5 +41,50 @@ describe("searchByIsbn", () => {
     const run = vi.fn().mockResolvedValue(ok);
     await expect(searchByIsbn(lib, "978-0-14-143951-8", undefined, run)).resolves.toBe(ok);
     expect(run.mock.calls[0][0]).toContain("find @attr 1=7 9780141439518\n");
+  });
+});
+
+describe("concurrency", () => {
+  it("never runs more than 4 at once and frees slots after a rejecting run", async () => {
+    let inFlight = 0;
+    let max = 0;
+    const run = vi.fn(async (cmds: string) => {
+      inFlight++;
+      max = Math.max(max, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      if (cmds.includes("9780141439518")) throw new Z3950UnavailableError("boom");
+      return ok;
+    });
+    const isbns = Array.from({ length: 10 }, (_, i) => (i % 2 ? "9780141439518" : "9780306406157"));
+    const results = await Promise.allSettled(isbns.map((i) => searchByIsbn(lib, i, undefined, run)));
+    expect(run).toHaveBeenCalledTimes(10);
+    expect(max).toBe(4);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(5);
+    // all slots were released: four more calls still run together
+    max = 0;
+    await Promise.all(Array.from({ length: 4 }, () => searchByIsbn(lib, "9780306406157", undefined, run)));
+    expect(max).toBe(4);
+  });
+
+  it("rejects an already-aborted call without running", async () => {
+    const run = vi.fn();
+    await expect(searchByIsbn(lib, "9780306406157", AbortSignal.abort(), run)).rejects.toBeInstanceOf(Z3950UnavailableError);
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe("runYazClient", () => {
+  it("rejects with Z3950UnavailableError and leaves no temp dir when yaz-client is missing", async () => {
+    const count = () => readdirSync(tmpdir()).filter((n) => n.startsWith("yaz-")).length;
+    const before = count();
+    const oldPath = process.env.PATH;
+    process.env.PATH = "/nonexistent-dir";
+    try {
+      await expect(runYazClient("quit\n")).rejects.toBeInstanceOf(Z3950UnavailableError);
+    } finally {
+      process.env.PATH = oldPath;
+    }
+    expect(count()).toBe(before);
   });
 });

@@ -67,6 +67,7 @@ export async function searchByIsbn(
   if (!/^[0-9Xx\- ]+$/.test(isbn) || !isValidIsbn(isbn)) throw new Error("Invalid ISBN");
   await acquire();
   try {
+    if (signal?.aborted) throw new Z3950UnavailableError("Search aborted");
     const out = await run(buildCommandFile(library, normalizeIsbn(isbn)), signal);
     if (/Target closed connection|Connection rejected|Unable to connect/i.test(out) || !/Connection accepted/i.test(out)) {
       throw new Z3950UnavailableError(`${library.name} is unavailable`);
