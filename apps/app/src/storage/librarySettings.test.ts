@@ -31,6 +31,12 @@ describe("librarySettings", () => {
     expect((await removeLibrary("a")).map((l) => l.id)).toEqual(["b"]);
   });
 
+  it("counts a library with a z3950Id and blank URLs as configured", async () => {
+    await upsertLibrary({ id: "z", name: "Z", isbnUrl: "", titleUrl: "", z3950Id: "some-catalog" });
+    await upsertLibrary({ id: "b", name: "B", isbnUrl: "", titleUrl: "" });
+    expect((await getConfiguredLibraries()).map((l) => l.id)).toEqual(["z"]);
+  });
+
   it("refuses an address the backup schema would reject, storing nothing", async () => {
     await expect(upsertLibrary({ id: "a", name: "A", isbnUrl: "catalog.lib.example/?q=", titleUrl: "" })).rejects.toThrow("https://");
     await expect(upsertLibrary({ id: "a", name: "A", isbnUrl: "", titleUrl: "javascript:alert(1)" })).rejects.toThrow("https://");

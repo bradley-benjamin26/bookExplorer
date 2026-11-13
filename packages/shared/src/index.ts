@@ -408,6 +408,7 @@ export const LibraryExportSchema = z.object({
   name: z.string().max(500),
   isbnUrl: webUrl,
   titleUrl: webUrl,
+  z3950Id: z.string().max(100).optional(),
 });
 
 export const SavedListExportSchema = z.object({

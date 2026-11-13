@@ -16,10 +16,12 @@ export interface Library extends Versioned {
   name: string;
   isbnUrl: string;
   titleUrl: string;
+  /** Id of a Z39.50 registry entry; not validated against the registry, so a stale id still loads. */
+  z3950Id?: string;
 }
 
 function isConfigured(library: Library): boolean {
-  return library.isbnUrl.trim().length > 0 || library.titleUrl.trim().length > 0;
+  return library.isbnUrl.trim().length > 0 || library.titleUrl.trim().length > 0 || !!library.z3950Id;
 }
 
 // Not queued on LIBRARIES_KEY: it only runs from getLibraries() when that key
