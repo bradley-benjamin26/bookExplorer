@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { focusSkipTarget, skipTargetId } from "../skipLink";
 import { useThemedStyles, type Theme } from "../theme";
@@ -7,12 +7,14 @@ import { useThemedStyles, type Theme } from "../theme";
 export function SkipLink({ name, label }: { name: string; label: string }) {
   const styles = useThemedStyles(createStyles);
   const [focused, setFocused] = useState(false);
+  const ref = useRef<View>(null);
   if (Platform.OS !== "web") return null;
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="link"
       accessibilityLabel={label}
-      onPress={() => focusSkipTarget(skipTargetId(name), document)}
+      onPress={() => focusSkipTarget(skipTargetId(name), document, ref.current as never)}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={focused ? styles.shown : styles.hidden}
