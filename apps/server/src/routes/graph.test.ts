@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { buildSubjectGraph } from "../services/graphService.js";
 import { graphRoutes } from "./graph.js";
 
-vi.mock("../services/graphService.js", () => ({ buildAuthorGraph: vi.fn(), buildSubjectGraph: vi.fn(), buildWorkGraph: vi.fn() }));
+vi.mock("../services/graphService.js", () => ({ buildAuthorGraph: vi.fn(), buildAwardGraph: vi.fn(), buildSubjectGraph: vi.fn(), buildWorkGraph: vi.fn() }));
 
 describe("GET /api/graph/subject/:id", () => {
   it("returns 400 for a non-slug without building a graph", async () => {

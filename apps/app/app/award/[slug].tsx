@@ -5,7 +5,8 @@ import { ChevronRight } from "lucide-react-native";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fetchAward } from "../../src/api/client";
 import { AboutSection } from "../../src/components/AboutSection";
-import { DetailTop } from "../../src/components/DetailTop";
+import { Button } from "../../src/components/Button";
+import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ErrorState } from "../../src/components/ErrorState";
 import { Footer } from "../../src/components/Footer";
@@ -62,7 +63,19 @@ export default function AwardDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
-      <DetailTop title={data.name} actions={<ShareButton title={data.name} href={routes.award(data.slug, label)} />} />
+      <DetailTop
+        title={data.name}
+        primaryActions={
+          <Button
+            variant="primary"
+            style={PRIMARY_ACTION_STYLE}
+            onPress={() => router.push(routes.graph("award", data.slug))}
+            tooltip="See this award's winners as a graph"
+          >
+            View as graph
+          </Button>
+        }
+        actions={<ShareButton title={data.name} href={routes.award(data.slug, label)} />} />
       {data.description && <AboutSection text={data.description} />}
 
       <View style={styles.section}>
