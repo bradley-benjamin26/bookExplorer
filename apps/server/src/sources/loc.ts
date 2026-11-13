@@ -6,10 +6,10 @@ import { USER_AGENT } from "./openLibrary.js";
 // The SRU gateway onto the Library of Congress's own bibliographic database
 // (distinct from — and far more complete for print books than — the
 // www.loc.gov/search endpoint, which mostly indexes digitized collections
-// like photographs). Documented at https://www.loc.gov/z3950/lcdb.html as
-// http://lx2.loc.gov:210/lcdb; this undocumented HTTPS path serves the same
-// responses (checked byte for byte, 2026-10-26), so it's used instead.
-const SRU_URL = "https://lx2.loc.gov/sru/lcdb";
+// like photographs). The documented address (https://www.loc.gov/z3950/lcdb.html)
+// is plain HTTP on port 210. The HTTPS path stopped answering (connect timeouts,
+// 2026-11-13); port 210 still works, and this public read-only data carries no secret.
+const SRU_URL = "http://lx2.loc.gov:210/lcdb";
 
 export interface LocMetadata {
   subjects: string[];
