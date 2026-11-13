@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useThemedStyles, type Theme } from "../theme";
+import { TOOLBAR_CONTROL_HEIGHT } from "../toolbarMetrics";
 import { titleRef } from "../webTitle";
 
 /** A small group of mutually exclusive choices (e.g. Graph | List). The selected one is filled and announced as selected. */
@@ -50,7 +51,7 @@ export function SegmentedControl<T extends string>({
 function createStyles({ colors, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     group: { flexDirection: "row", padding: 3, borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radii.button, backgroundColor: colors.chipBackground },
-    option: { minHeight: 38, paddingHorizontal: 17, borderRadius: radii.xs, alignItems: "center", justifyContent: "center" },
+    option: { minHeight: TOOLBAR_CONTROL_HEIGHT - 8, paddingHorizontal: 17, borderRadius: radii.xs, alignItems: "center", justifyContent: "center" },
     selected: { backgroundColor: colors.pillActiveBackground },
     text: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.ink },
     selectedText: { color: colors.primaryText },

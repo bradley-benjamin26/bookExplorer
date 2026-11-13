@@ -25,6 +25,7 @@ import { centeredLabel, legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, 
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { nodeHref, nodePressHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
+import { TOOLBAR_CONTROL_HEIGHT } from "../../../src/toolbarMetrics";
 import { subjectSpokenLabel } from "../../../src/subjectLabel";
 import { shouldSuppressPress, useGraphMotion } from "../../../src/useGraphMotion";
 import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, hitNode, LABEL_LINE_HEIGHT, labelOpacity, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, zoomAt, type Center, type PositionedNode } from "../../../src/graphLayout";
@@ -432,13 +433,17 @@ export default function GraphExplorer() {
           }}
           describe={(mode) => (mode === "List" ? { label: "Show nodes as a list", tooltip: "Show as a list" } : { label: "Show graph", tooltip: "Show as a graph" })}
         />
-        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
+        <View style={styles.toolbarActions}>
+        <Button variant="pill" style={{ minHeight: TOOLBAR_CONTROL_HEIGHT }} onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
           href={routes.graph(center.type, center.id, filterToParams(filter))}
+          style={{ minHeight: TOOLBAR_CONTROL_HEIGHT }}
+          align="right"
         />
+        </View>
       </View>
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <View style={styles.sheetBackdrop}>
@@ -862,7 +867,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.cardBorder,
     },
     pressed: { opacity: 0.6 },
-    toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    toolbar: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    toolbarActions: { flexDirection: "row", gap: spacing.sm, marginLeft: "auto" },
     sheetBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {
       width: "100%",
