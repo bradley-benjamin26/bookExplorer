@@ -55,6 +55,30 @@ Today the site answers non-browser requests with a challenge (403, `cf-mitigated
 
 Discord, Telegram, WhatsApp and Mastodon fetchers aren't all Cloudflare "known bots". If their previews fail while X and Facebook work, add their User-Agents to the Skip rule's expression, e.g. `(cf.client.bot or http.user_agent contains "Discordbot" or http.user_agent contains "TelegramBot")`. User-Agents can be faked, so this lets anyone using those strings past the challenge; they still only reach static pages and `/og`.
 
+## Content-Security-Policy
+
+The policy blocks script the app didn't ship, which is what would otherwise reach a reader's session. Cloudflare sets it, not Caddy: Rules > Transform Rules > HTTP Response Header Transform Rule "CSP", for `Hostname equals shelfthread.com`, **Set static** with this value:
+
+```
+default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; connect-src 'self' https://api.shelfthread.com https://fastly.jsdelivr.net https://cloudflareinsights.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+The header name is `Content-Security-Policy-Report-Only` while testing, then `Content-Security-Policy`. Why each source is there:
+
+- `script-src`: the app's own bundle, plus the Cloudflare Web Analytics beacon. `'wasm-unsafe-eval'` lets the web barcode scanner (zxing-wasm) compile its WebAssembly; it does not allow `eval`.
+- `connect-src`: the API, jsDelivr (the scanner fetches its `.wasm` from `fastly.jsdelivr.net`), and the beacon's reporting endpoint.
+- `img-src https:`: covers and author photos come from many hosts (Open Library, Google Books, Hardcover, Wikimedia). Images can't run script.
+- `style-src 'unsafe-inline'`: React Native Web writes its styles into `<style>` tags at runtime.
+
+If you turn off Cloudflare Web Analytics (Cloudflare > the site > Analytics & Logs > Web Analytics, or Speed > Optimization "Automatic RUM"), remove `https://static.cloudflareinsights.com` and `https://cloudflareinsights.com`.
+
+Rolling it out:
+
+1. Cloudflare's Page Shield (script monitoring) adds its own report-only policy (`script-src 'unsafe-inline' 'unsafe-eval'; connect-src 'none'`, reporting to `cdn-cgi/script_monitor`). It never blocks anything, and the browser checks each policy on its own, so it can stay. In the console, ignore violations that quote it and act only on ones that quote this policy. Caddy doesn't send it: `curl -I --resolve shelfthread.com:443:127.0.0.1 https://shelfthread.com/` on the Droplet shows no CSP header.
+2. Deploy the rule as report-only, then browse every screen: home, search, a book, a work, an author, a graph, the scanner, Settings, and connecting Hardcover and Open Library. Read the console's violation lines.
+3. Add any legitimate source the violations name. Script that Cloudflare injects inline (bot or JavaScript detections) will show up as an inline `script-src` violation. Turn that feature off rather than adding `'unsafe-inline'`, which would undo the policy.
+4. When the console is quiet, edit the rule and rename the header to `Content-Security-Policy`.
+
 ## Deploy order
 
 Deploy the server before the web build: the series schema gained `coverUrl`, and a new web build against an old server would not get it.
