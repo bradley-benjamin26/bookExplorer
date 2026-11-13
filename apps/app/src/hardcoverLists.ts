@@ -1,8 +1,9 @@
+import type { HardcoverListBooks } from "@book-explorer/shared";
 import { ApiError, addHardcoverListBook, createHardcoverList, fetchHardcoverList, removeHardcoverListBook } from "./api/client";
 import { reconcile } from "./storage/hardcoverReconcile";
-import { applyPulledMembers, retryRateLimited, wait } from "./listSync";
+import { retryRateLimited, syncLinkedList, wait } from "./listSync";
 import { saveListedBook } from "./storage/savedBooks";
-import { createList, getList, linkList, replaceMembers, setMemberHardcoverId, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
+import { createList, linkList, replaceMembers, setMemberHardcoverId, type ListMember, type SavedList } from "./storage/savedLists";
 
 export async function pushAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
   if (!list.hardcoverListId || member.type === "author") return "skipped";
@@ -65,21 +66,19 @@ export async function copyToHardcover(
   return { missing, skippedAuthors: list.members.length - books.length };
 }
 
-export async function syncWithHardcover(list: SavedList): Promise<{ missing: string[]; skipped: string[] }> {
-  if (!list.hardcoverListId) throw new Error("This list isn't linked to Hardcover.");
-  const { missing } = await copyToHardcover(list, () => {});
-  const latest = await getList(list.id); // re-read so ids just set by the push are included
-  if (!latest) throw new Error("This list no longer exists.");
-  // Books removed here whose Hardcover delete never happened; unless the user re-added them, finish the delete rather than reconciling them back.
-  const live = (r: { type: string; id: string; hardcoverBookId?: number }) =>
-    latest.members.some((m) => (r.hardcoverBookId && m.hardcoverBookId === r.hardcoverBookId) || (m.type === r.type && m.id === r.id));
-  const pending = new Set((latest.removedMembers ?? []).filter((r) => r.hardcoverBookId && !live(r)).map((r) => r.hardcoverBookId));
-  const remote = await fetchHardcoverList(list.hardcoverListId);
-  // Reconcile drops members missing remotely, so a short page would delete real members.
-  if (remote.books.length < remote.booksCount) throw new Error("Hardcover sent only part of this list, so nothing was removed. Try again later.");
-  for (const b of remote.books) if (pending.has(b.hardcoverBookId)) await removeHardcoverListBook(list.hardcoverListId, b.hardcoverBookId);
-  const next = reconcile(latest.members, remote.books.filter((b) => !pending.has(b.hardcoverBookId)), Date.now());
-  await applyPulledMembers(latest, next);
-  await settleRemovals(list.id);
-  return { missing, skipped: remote.books.filter((b) => !b.isbn).map((b) => b.title) };
-}
+export const syncWithHardcover = (list: SavedList) =>
+  syncLinkedList<HardcoverListBooks["books"][number], number>(list, {
+    name: "Hardcover",
+    settle: "hardcover",
+    remoteListId: (l) => l.hardcoverListId,
+    memberRemoteId: (m) => m.hardcoverBookId,
+    push: (l) => copyToHardcover(l, () => {}),
+    fetch: async (id) => {
+      const r = await fetchHardcoverList(id as number);
+      return { items: r.books, total: r.booksCount };
+    },
+    itemId: (b) => b.hardcoverBookId,
+    remove: (id, bookId) => removeHardcoverListBook(id as number, bookId),
+    reconcile: (members, books) => reconcile(members, books, Date.now()),
+    skipped: (books) => books.filter((b) => !b.isbn).map((b) => b.title),
+  });

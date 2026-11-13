@@ -1,8 +1,8 @@
 import type { OpenLibraryList } from "@book-explorer/shared";
 import { addOpenLibraryMembers, createOpenLibraryList, fetchOpenLibraryList, removeOpenLibrarySeed } from "./api/client";
-import { applyPulledMembers, retryRateLimited, saveListed, wait } from "./listSync";
+import { retryRateLimited, saveListed, syncLinkedList, wait } from "./listSync";
 import { reconcileOpenLibrary } from "./storage/openLibraryReconcile";
-import { createList, getList, linkOpenLibraryList, replaceMembers, setMemberOpenLibrarySeed, settleRemovals, type ListMember, type SavedList } from "./storage/savedLists";
+import { createList, linkOpenLibraryList, replaceMembers, setMemberOpenLibrarySeed, type ListMember, type SavedList } from "./storage/savedLists";
 
 export async function pushOpenLibraryAdd(list: SavedList, member: ListMember): Promise<"pushed" | "missing" | "skipped"> {
   if (!list.openLibraryListId) return "skipped";
@@ -69,22 +69,19 @@ export async function copyToOpenLibrary(
   return { missing };
 }
 
-export async function syncWithOpenLibrary(list: SavedList): Promise<{ missing: string[]; skipped: string[] }> {
-  if (!list.openLibraryListId) throw new Error("This list isn't linked to Open Library.");
-  const { missing } = await copyToOpenLibrary(list, () => {});
-  const latest = await getList(list.id); // re-read so seeds just set by the push are included
-  if (!latest) throw new Error("This list no longer exists.");
-  // Members removed here whose Open Library delete never happened; unless the user re-added them, finish the delete rather than reconciling them back.
-  const live = (r: { type: string; id: string; openLibrarySeed?: string }) =>
-    latest.members.some((m) => (r.openLibrarySeed && m.openLibrarySeed === r.openLibrarySeed) || (m.type === r.type && m.id === r.id));
-  const pending = new Set((latest.removedMembers ?? []).filter((r) => r.openLibrarySeed && !live(r)).map((r) => r.openLibrarySeed));
-  const remote = await fetchOpenLibraryList(list.openLibraryListId);
-  // Reconcile drops members missing remotely, so a short read would delete real members.
-  if (remote.seeds.length < remote.seedCount) throw new Error("Open Library sent only part of this list, so nothing was removed. Try again later.");
-  for (const seed of new Set(remote.seeds.map((s) => s.seed))) if (pending.has(seed)) await removeOpenLibrarySeed(list.openLibraryListId, seed);
-  const seeds = remote.seeds.filter((s) => !pending.has(s.seed));
-  const next = reconcileOpenLibrary(latest.members, seeds, latest.kind, Date.now());
-  await applyPulledMembers(latest, next);
-  await settleRemovals(list.id, "openLibrary");
-  return { missing, skipped: unlanded(seeds, next) };
-}
+export const syncWithOpenLibrary = (list: SavedList) =>
+  syncLinkedList<OpenLibraryList["seeds"][number], string>(list, {
+    name: "Open Library",
+    settle: "openLibrary",
+    remoteListId: (l) => l.openLibraryListId,
+    memberRemoteId: (m) => m.openLibrarySeed,
+    push: (l) => copyToOpenLibrary(l, () => {}),
+    fetch: async (id) => {
+      const r = await fetchOpenLibraryList(id as string);
+      return { items: r.seeds, total: r.seedCount };
+    },
+    itemId: (s) => s.seed,
+    remove: (id, seed) => removeOpenLibrarySeed(id as string, seed),
+    reconcile: (members, seeds, l) => reconcileOpenLibrary(members, seeds, l.kind, Date.now()),
+    skipped: unlanded,
+  });
