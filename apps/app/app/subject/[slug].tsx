@@ -13,6 +13,7 @@ import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { ShareButton } from "../../src/components/ShareButton";
+import { SkipLink, SkipTarget } from "../../src/components/SkipLink";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -137,12 +138,18 @@ export default function SubjectDetail() {
           </View>
           {sortParams && sorted.isLoading && <ActivityIndicator color={theme.colors.cover} style={styles.sortSpinner} />}
           {fellBack && <Text style={styles.noMatch}>Couldn't load this order, showing the classic list.</Text>}
+          {books.length > 1 && <SkipLink name="subject-books" label="Skip books" />}
         </View>
       }
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
-      ListFooterComponent={<Footer />}
+      ListFooterComponent={
+        <>
+          {books.length > 1 && <SkipTarget name="subject-books" />}
+          <Footer />
+        </>
+      }
       ListFooterComponentStyle={{ marginTop: "auto" }}
     />
   );

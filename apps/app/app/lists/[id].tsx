@@ -13,6 +13,7 @@ import { CenteredModal } from "../../src/components/CenteredModal";
 import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
 import { Footer } from "../../src/components/Footer";
+import { SkipLink, SkipTarget } from "../../src/components/SkipLink";
 import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
 import { shareFile } from "../../src/backupFiles";
 import { shelfSlug } from "../../src/csv";
@@ -235,7 +236,9 @@ export default function ListDetail() {
               <EmptyState message="This list is empty. Save a book from its page to add it here." actionLabel="Search for a book" onAction={() => router.push("/")} />
             )
           ) : (
-            list.members.map((member) => {
+            <>
+            {list.members.length > 1 && <SkipLink name="list-books" label="Skip list" />}
+            {list.members.map((member) => {
               const key = `${member.type}:${member.id}`;
               const coverUrl = badCovers.has(key) ? null : memberCoverUrl(member);
               return (
@@ -274,7 +277,9 @@ export default function ListDetail() {
                 </Pressable>
               </View>
               );
-            })
+            })}
+            {list.members.length > 1 && <SkipTarget name="list-books" />}
+            </>
           )}
           <Button variant="pill" onPress={confirmDelete} style={styles.deleteButton} textStyle={styles.removeText}>
             Delete list

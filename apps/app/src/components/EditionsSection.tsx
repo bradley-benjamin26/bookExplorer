@@ -6,6 +6,7 @@ import { collapseSelfPublished } from "../editions";
 import { routes } from "../navigation";
 import { useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
+import { SkipLink, SkipTarget } from "./SkipLink";
 
 function EditionCard({ edition }: { edition: Edition }) {
   const styles = useThemedStyles(createStyles);
@@ -63,6 +64,7 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
   return (
     <View style={[styles.section, highlighted && styles.sectionHighlighted]}>
       <Text style={styles.sectionTitle} accessibilityRole="header">Find Your Edition ({editions.length})</Text>
+      {editions.length > 1 && <SkipLink name="editions" label="Skip editions" />}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
         {visible.map((edition, i) => (
           <EditionCard key={`${edition.openLibraryEditionId || edition.isbn}-${i}`} edition={edition} />
@@ -83,6 +85,7 @@ export function EditionsSection({ editions, highlighted }: { editions: Edition[]
           </Pressable>
         )}
       </ScrollView>
+      {editions.length > 1 && <SkipTarget name="editions" />}
     </View>
   );
 }

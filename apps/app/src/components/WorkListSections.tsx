@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { fetchSeries } from "../api/client";
 import { routes } from "../navigation";
 import { useThemedStyles, type Theme } from "../theme";
+import { SkipLink, SkipTarget } from "./SkipLink";
 import { WorkListRow } from "./WorkListRow";
 
 /** "More by this author" (or the author page's own works) — a titled list of WorkListRows. */
@@ -15,9 +16,11 @@ export function MoreByAuthor({ title, works }: { title: string; works?: WorkRef[
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
+      {works.length > 1 && <SkipLink name="more-by-author" label={`Skip ${title}`} />}
       {works.map((w) => (
         <WorkListRow key={w.openLibraryWorkId} work={w} onPress={() => router.push(routes.work(w.openLibraryWorkId))} />
       ))}
+      {works.length > 1 && <SkipTarget name="more-by-author" />}
     </View>
   );
 }
@@ -35,6 +38,7 @@ export function SeriesSection({ seriesQid, currentWorkId }: { seriesQid?: string
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle} accessibilityRole="header">{`Series: ${data.name}`}</Text>
+      {data.members.length > 1 && <SkipLink name="series" label="Skip series" />}
       {data.members.map((m) => {
         const current = m.openLibraryWorkId === currentWorkId;
         const id = m.openLibraryWorkId;
@@ -47,6 +51,7 @@ export function SeriesSection({ seriesQid, currentWorkId }: { seriesQid?: string
           />
         );
       })}
+      {data.members.length > 1 && <SkipTarget name="series" />}
     </View>
   );
 }

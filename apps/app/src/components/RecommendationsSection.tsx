@@ -21,6 +21,7 @@ import {
 import { getSnapshot, snapshotForList, type Snapshot } from "../storage/snapshot";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
+import { SkipLink, SkipTarget } from "./SkipLink";
 import { WorkListRow } from "./WorkListRow";
 
 // Subject listings and author graphs change rarely; reuse a day-old copy rather than refetch on every visit.
@@ -115,6 +116,7 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
 
   return (
     <View>
+      {recommendations.length > 1 && <SkipLink name="recommendations" label="Skip recommendations" />}
       {[...groups].map(([key, { heading, recs }], index) => {
         const expanded = toggled[key] ?? index === 0;
         const Chevron = expanded ? ChevronDown : ChevronRight;
@@ -145,6 +147,7 @@ export function RecommendationsSection({ refreshKey, listId }: { refreshKey: unk
           </View>
         );
       })}
+      {recommendations.length > 1 && <SkipTarget name="recommendations" />}
     </View>
   );
 }
