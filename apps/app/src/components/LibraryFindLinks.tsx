@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { ChevronDown, ChevronRight } from "lucide-react-native";
 import { ExternalLinkIcon } from "./FindLinkRow";
+import { LibraryAvailability } from "./LibraryAvailability";
 import { useEffect, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { routes } from "../navigation";
@@ -22,6 +23,7 @@ import { titleRef } from "../webTitle";
  * would be a wall of near-identical rows once someone has, say, a public
  * library and a school library both configured.
  */
+// shortcut: one ISBN per lookup, so a library holding only another edition reads as not found; try the work's other edition ISBNs if that shows up.
 export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title: string }) {
   const router = useRouter();
   const theme = useTheme();
@@ -68,6 +70,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       <>
         {isbn && library.isbnUrl && linkRow("isbn", `Find at ${library.name} (ISBN)`, buildLibraryIsbnSearchUrl(library.isbnUrl, isbn))}
         {library.titleUrl && linkRow("title", `Find at ${library.name} (title)`, buildLibraryTitleSearchUrl(library.titleUrl, title))}
+        {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} isbn={isbn} />}
       </>
     );
   }
@@ -111,6 +114,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
                   linkRow(`${library.id}-title`, "By title", buildLibraryTitleSearchUrl(library.titleUrl, title))}
               </View>
             )}
+            {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} isbn={isbn} />}
           </View>
         );
       })}

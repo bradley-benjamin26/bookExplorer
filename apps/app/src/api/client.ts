@@ -14,6 +14,7 @@ import {
   HardcoverListBooksSchema,
   HardcoverListSummarySchema,
   HardcoverProgressSchema,
+  LibraryAvailabilitySchema,
   OpenLibraryAccountSchema,
   OpenLibraryAddResultSchema,
   OpenLibraryListSchema,
@@ -32,6 +33,7 @@ import {
   type Graph,
   type Series,
   type GraphNode,
+  type LibraryAvailability,
   type OpenLibraryAddResult,
   type OpenLibraryMember,
   type PathResult,
@@ -166,6 +168,10 @@ export function fetchHardcoverProgress(type: "book" | "work", id: string) {
 
 export function fetchSupportedLibraries(): Promise<SupportedLibrary[]> {
   return getJson("/api/libraries", z.array(SupportedLibrarySchema));
+}
+
+export function fetchLibraryAvailability(libraryId: string, isbn: string, signal?: AbortSignal): Promise<LibraryAvailability> {
+  return getJson(`/api/libraries/${encodeURIComponent(libraryId)}/availability?${new URLSearchParams({ isbn })}`, LibraryAvailabilitySchema, signal);
 }
 
 export function fetchBookByIsbn(isbn: string): Promise<Book> {
