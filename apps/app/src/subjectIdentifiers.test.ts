@@ -5,7 +5,7 @@ import { subjectIdentifiers } from "./subjectIdentifiers";
 describe("subjectIdentifiers", () => {
   it("lists Open Library, Library of Congress and Wikidata in order", () => {
     expect(
-      subjectIdentifiers({ slug: "fairy_tales", wikidataId: "Q12345", lcshUri: "http://id.loc.gov/authorities/subjects/sh85101653" })
+      subjectIdentifiers({ slug: "fairy_tales", workCount: 5, wikidataId: "Q12345", lcshUri: "http://id.loc.gov/authorities/subjects/sh85101653" })
     ).toEqual([
       { source: "Open Library", id: "fairy_tales", url: "https://openlibrary.org/subjects/fairy_tales" },
       { source: "Library of Congress", id: "sh85101653", url: "http://id.loc.gov/authorities/subjects/sh85101653" },
@@ -14,7 +14,11 @@ describe("subjectIdentifiers", () => {
   });
 
   it("omits null sources", () => {
-    expect(subjectIdentifiers({ slug: "x", wikidataId: null, lcshUri: null }).map((r) => r.source)).toEqual(["Open Library"]);
+    expect(subjectIdentifiers({ slug: "x", workCount: 1, wikidataId: null, lcshUri: null }).map((r) => r.source)).toEqual(["Open Library"]);
+  });
+
+  it("omits Open Library when it has no works for the slug", () => {
+    expect(subjectIdentifiers({ slug: "x", workCount: 0, wikidataId: "Q1", lcshUri: null }).map((r) => r.source)).toEqual(["Wikidata"]);
   });
 });
 

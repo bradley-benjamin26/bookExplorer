@@ -78,9 +78,10 @@ function influenceNodeTypeAndId(r: { openLibraryId: string | null; wikidataId: s
   return { type: "author", id: authorNodeId(r.openLibraryId, r.wikidataId) };
 }
 
-export async function buildAuthorGraph(openLibraryId: string): Promise<Graph | null> {
+/** `extra` raises the caps on books/subjects ("Load more"); the result's `more` names the kinds still hidden. */
+export async function buildAuthorGraph(openLibraryId: string, extra = 0): Promise<Graph | null> {
   const author = await getAuthorDetail(openLibraryId);
-  return author && authorGraph(author);
+  return author && authorGraph(author, extra);
 }
 
 /** Path search's author graph: the same links from a lighter lookup (see getAuthorLinks). */
@@ -89,7 +90,7 @@ export async function buildAuthorLinksGraph(openLibraryId: string): Promise<Grap
   return author && authorGraph(author);
 }
 
-async function authorGraph(author: AuthorLinks): Promise<Graph> {
+async function authorGraph(author: AuthorLinks, extra = 0): Promise<Graph> {
   const centerId = `author:${author.openLibraryId}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "author", label: author.name, navigable: true }];
   const edges: GraphEdge[] = [];
@@ -109,7 +110,7 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
       nodes.push({ id: nodeId, type: "work", label: r.label, navigable: !!r.openLibraryId });
       edges.push({ source: centerId, target: nodeId, relation: "notableWork" });
     } else if (r.relation === "movement") {
-      const nodeId = `subject:${slugifySubject(r.label)}`;
+      const nodeId = `subject:${r.openLibrarySubject ?? slugifySubject(r.label)}`;
       nodes.push({ id: nodeId, type: "subject", label: r.label, navigable: true });
       edges.push({ source: centerId, target: nodeId, relation: "movement" });
     } else if (r.relation === "award") {
@@ -120,9 +121,12 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
   }
 
   // Open Library's full bibliography; Wikidata P800 notable works are usually a curated handful.
-  const ownWorks = await authorWorksCache.wrap(author.openLibraryId, () =>
-    openLibrary.getAuthorWorks(author.openLibraryId, MAX_AUTHOR_WORKS)
+  // One past the cap, to learn whether there are more to load.
+  const worksCap = MAX_AUTHOR_WORKS + extra;
+  const fetchedWorks = await authorWorksCache.wrap(`${author.openLibraryId}:${worksCap}`, () =>
+    openLibrary.getAuthorWorks(author.openLibraryId, worksCap + 1)
   );
+  const ownWorks = fetchedWorks.slice(0, worksCap);
   for (const w of ownWorks) {
     const nodeId = `work:${w.workId}`;
     nodes.push({ id: nodeId, type: "work", label: w.title, navigable: true });
@@ -136,7 +140,7 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
       try {
         const match = await pseudonymAuthorCache.wrap(pseudonym, () => openLibrary.searchAuthorByName(pseudonym));
         if (!match) return [];
-        return await authorWorksCache.wrap(match.openLibraryId, () =>
+        return await authorWorksCache.wrap(`${match.openLibraryId}:${MAX_PSEUDONYM_WORKS}`, () =>
           openLibrary.getAuthorWorks(match.openLibraryId, MAX_PSEUDONYM_WORKS)
         );
       } catch (err) {
@@ -154,26 +158,34 @@ async function authorGraph(author: AuthorLinks): Promise<Graph> {
     }
   }
 
-  return { centerId, ...cleanGraph(nodes, edges) };
+  return { centerId, ...cleanGraph(nodes, edges), ...(fetchedWorks.length > worksCap && { more: ["work" as const] }) };
 }
 
-export async function buildSubjectGraph(slug: string): Promise<Graph | null> {
-  const subject = await getSubjectDetail(slug);
-  return subject && subjectGraph(subject);
+export async function buildSubjectGraph(slug: string, extra = 0): Promise<Graph | null> {
+  let subject = await getSubjectDetail(slug);
+  if (!subject) return null;
+  const cap = MAX_SUBJECT_BOOKS + extra;
+  // shortcut: the detail lookup only holds ~20 books and the larger fetch isn't cached; add a cache if "Load more" gets heavy.
+  if (cap > subject.books.length && subject.workCount > subject.books.length) {
+    const wider = await openLibrary.getSubject(subject.slug, cap);
+    // A copy: `subject` is the cached object.
+    if (wider) subject = { ...subject, books: wider.works.map((w) => ({ openLibraryWorkId: w.workId, title: w.title, authors: w.authors, coverUrl: w.coverUrl })) };
+  }
+  return subjectGraph(subject, cap);
 }
 
 /** Path search only: a subject's books and its work count, without the slow related-concept lookups. */
 export async function buildSubjectBooksGraph(slug: string): Promise<(Graph & { workCount: number }) | null> {
   const subject = await getSubjectBooks(slug);
-  return subject && { ...subjectGraph(subject), workCount: subject.workCount };
+  return subject && { ...subjectGraph(subject, MAX_SUBJECT_BOOKS), workCount: subject.workCount };
 }
 
-function subjectGraph(subject: Subject): Graph {
+function subjectGraph(subject: Subject, cap: number): Graph {
   const centerId = `subject:${subject.slug}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "subject", label: subject.name, navigable: true }];
   const edges: GraphEdge[] = [];
 
-  for (const book of subject.books.slice(0, MAX_SUBJECT_BOOKS)) {
+  for (const book of subject.books.slice(0, cap)) {
     const nodeId = `work:${book.openLibraryWorkId}`;
     nodes.push({ id: nodeId, type: "work", label: book.title, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "hasBook" });
@@ -190,12 +202,13 @@ function subjectGraph(subject: Subject): Graph {
     );
   }
 
-  return { centerId, ...cleanGraph(nodes, edges) };
+  const more = subject.workCount > cap ? { more: ["work" as const] } : {};
+  return { centerId, ...cleanGraph(nodes, edges), ...more };
 }
 
-export async function buildWorkGraph(workId: string): Promise<Graph | null> {
+export async function buildWorkGraph(workId: string, extra = 0): Promise<Graph | null> {
   const work = await getWorkDetail(workId);
-  return work && workGraph(work);
+  return work && workGraph(work, extra);
 }
 
 /** Path search's work graph: the same links from a lighter lookup (see getWorkLinks). */
@@ -204,7 +217,7 @@ export async function buildWorkLinksGraph(workId: string): Promise<Graph | null>
   return work && workGraph(work);
 }
 
-function workGraph(work: WorkLinks): Graph {
+function workGraph(work: WorkLinks, extra = 0): Graph {
   const centerId = `work:${work.openLibraryWorkId}`;
   const nodes: GraphNode[] = [{ id: centerId, type: "work", label: work.title, navigable: true }];
   const edges: GraphEdge[] = [];
@@ -234,7 +247,7 @@ function workGraph(work: WorkLinks): Graph {
     }
   }
 
-  for (const subject of plainSubjects.slice(0, MAX_WORK_SUBJECTS)) {
+  for (const subject of plainSubjects.slice(0, MAX_WORK_SUBJECTS + extra)) {
     const nodeId = `subject:${subject.slug ?? slugifySubject(subject.label)}`;
     nodes.push({ id: nodeId, type: "subject", label: subject.label, navigable: true });
     edges.push({ source: centerId, target: nodeId, relation: "subject" });
@@ -256,7 +269,8 @@ function workGraph(work: WorkLinks): Graph {
     edges.push({ source: centerId, target: editionsNodeId, relation: "editions" });
   }
 
-  return { centerId, ...cleanGraph(nodes, edges) };
+  const more = plainSubjects.length > MAX_WORK_SUBJECTS + extra ? { more: ["subject" as const] } : {};
+  return { centerId, ...cleanGraph(nodes, edges), ...more };
 }
 
 export async function buildAwardGraph(slug: string, label?: string): Promise<Graph> {

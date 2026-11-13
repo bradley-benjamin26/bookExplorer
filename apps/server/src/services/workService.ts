@@ -108,7 +108,6 @@ export function getWorkDetail(workId: string, hardcoverAuth?: string | null): Pr
       ]),
       hardcoverSlug: hc?.slug ?? null,
       rating: blendHardcoverAndOpenLibraryRating(hc, olRatings),
-      reviews: hc?.reviews ?? [],
       ...(series && { series }),
       ...(moreByAuthor?.length && { moreByAuthor }),
     };

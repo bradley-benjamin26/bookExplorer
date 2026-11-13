@@ -22,16 +22,6 @@ export const RatingSchema = z.object({
 });
 export type Rating = z.infer<typeof RatingSchema>;
 
-// A single reader's review, from Hardcover — the only one of this app's
-// sources with actual review text rather than just an aggregate rating.
-export const ReviewSchema = z.object({
-  rating: z.number().nullable(),
-  text: z.string(),
-  hasSpoilers: z.boolean(),
-  reviewerName: z.string(),
-});
-export type Review = z.infer<typeof ReviewSchema>;
-
 // A subject or genre term and every source that asserted it, so the client can
 // badge where each one came from. Declared above BookSchema/WorkSchema, which
 // reference it at module load.
@@ -115,7 +105,6 @@ export const BookSchema = z.object({
   // catalogued this edition, so it's not a controlled/normalized value.
   format: z.string().nullable(),
   rating: RatingSchema.nullable(),
-  reviews: z.array(ReviewSchema),
   loc: LocCatalogSchema.nullable().optional(),
 });
 export type Book = z.infer<typeof BookSchema>;
@@ -136,6 +125,8 @@ export const AuthorRelationSchema = z.object({
   wikidataId: z.string(),
   label: z.string(),
   openLibraryId: z.string().nullable(),
+  // Open Library subject slug from Wikidata P3847 (movements); optional because older cached entries lack it.
+  openLibrarySubject: z.string().nullable().optional(),
 });
 export type AuthorRelation = z.infer<typeof AuthorRelationSchema>;
 
@@ -192,7 +183,6 @@ export const WorkSchema = WorkRefSchema.extend({
   editions: z.array(EditionSchema),
   rating: RatingSchema.nullable(),
   hardcoverSlug: z.string().nullable().optional(),
-  reviews: z.array(ReviewSchema),
   // Optional enrichments (Wikidata P179/P1545, Open Library author works);
   // absent when the work has none or that lookup failed. `position` is text
   // because ordinals aren't always integers ("2.5", "A").
@@ -297,6 +287,8 @@ export const GraphSchema = z.object({
   centerId: z.string(),
   nodes: z.array(GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
+  // Node kinds with more results than are drawn; the app offers "Load more" for each.
+  more: z.array(z.enum(["work", "subject"])).optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;
 

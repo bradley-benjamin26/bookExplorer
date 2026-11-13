@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareOrdinals, fetchSeries, fetchWorkSeries, fetchPseudonyms, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
+import { compareOrdinals, dedupeAwards, fetchSeries, fetchWorkSeries, fetchPseudonyms, searchAuthorQid, searchConceptQid, searchWorkQid } from "./wikidata.js";
 
 describe("wbSearchEntities error bodies", () => {
   afterEach(() => {
@@ -215,5 +215,13 @@ describe("series lookups", () => {
   it("returns null for a malformed qid without calling out", async () => {
     stubWikidata({});
     expect(await fetchSeries("nope")).toBeNull();
+  });
+});
+
+describe("dedupeAwards", () => {
+  it("keeps one relation per award family", () => {
+    const award = (label: string, wikidataId: string) => ({ relation: "award" as const, wikidataId, label, openLibraryId: null });
+    const out = dedupeAwards([award("Hugo Award (1966)", "Q1"), award("Hugo Award for Best Novella", "Q2"), award("Nebula Award", "Q3")]);
+    expect(out.map((r) => r.wikidataId)).toEqual(["Q1", "Q3"]);
   });
 });

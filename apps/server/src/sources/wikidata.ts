@@ -1,4 +1,4 @@
-import type { AuthorRelation, Series, SeriesMember, SubjectConcept } from "@book-explorer/shared";
+import { awardSlug, type AuthorRelation, type Series, type SeriesMember, type SubjectConcept } from "@book-explorer/shared";
 import { fetchWithTimeout } from "../httpClient.js";
 import { USER_AGENT } from "./openLibrary.js";
 import { isWikidataQid } from "../validation.js";
@@ -240,6 +240,8 @@ async function searchReverseStatementQids(property: string, qid: string, limit =
 interface ResolvedItem {
   label: string;
   openLibraryId: string | null;
+  /** Open Library subject slug (P3847), set on items such as literary movements. */
+  openLibrarySubject: string | null;
 }
 
 /**
@@ -274,15 +276,15 @@ async function resolveItems(qids: string[]): Promise<Map<string, ResolvedItem>> 
   // time, and moves from the latter to the former as soon as a real label
   // for it turns up.
   const resolved = new Map<string, ResolvedItem>();
-  const unresolved = new Map<string, { openLibraryId: string | null }>();
+  const unresolved = new Map<string, Omit<ResolvedItem, "label">>();
   for (const qid of unique) {
     const entity = entities[qid];
-    const openLibraryId = claimStrings(entity, "P648")[0] ?? null;
+    const ids = { openLibraryId: claimStrings(entity, "P648")[0] ?? null, openLibrarySubject: claimStrings(entity, "P3847")[0] ?? null };
     const enLabel = entity?.labels?.en?.value;
     if (enLabel) {
-      resolved.set(qid, { label: enLabel, openLibraryId });
+      resolved.set(qid, { label: enLabel, ...ids });
     } else {
-      unresolved.set(qid, { openLibraryId });
+      unresolved.set(qid, ids);
     }
   }
   if (unresolved.size === 0) return resolved;
@@ -306,7 +308,7 @@ async function resolveItems(qids: string[]): Promise<Map<string, ResolvedItem>> 
   const nativeEntities = await wbGetEntities([...codeByItem.keys()], "labels", neededCodes);
   for (const [qid, code] of codeByItem) {
     const nativeLabel = nativeEntities[qid]?.labels?.[code]?.value;
-    if (nativeLabel) resolved.set(qid, { label: nativeLabel, openLibraryId: unresolved.get(qid)!.openLibraryId });
+    if (nativeLabel) resolved.set(qid, { label: nativeLabel, ...unresolved.get(qid)! });
   }
 
   return resolved;
@@ -319,7 +321,7 @@ function toAuthorRelations(
 ): AuthorRelation[] {
   return qids.flatMap((qid) => {
     const item = resolved.get(qid);
-    return item ? [{ relation, wikidataId: qid, label: item.label, openLibraryId: item.openLibraryId }] : [];
+    return item ? [{ relation, wikidataId: qid, label: item.label, openLibraryId: item.openLibraryId, openLibrarySubject: item.openLibrarySubject }] : [];
   });
 }
 
@@ -331,6 +333,15 @@ function toConceptRelations(
   return qids.flatMap((qid) => {
     const item = resolved.get(qid);
     return item ? [{ relation, wikidataId: qid, label: item.label, sources: ["wikidata" as const] }] : [];
+  });
+}
+
+/** One relation per award family: Wikidata lists "Hugo Award (1966)" and "Hugo Award for Best Novella" as separate items. */
+export function dedupeAwards(relations: AuthorRelation[]): AuthorRelation[] {
+  const seen = new Set<string>();
+  return relations.filter((r) => {
+    const slug = awardSlug(r.label);
+    return !seen.has(slug) && !!seen.add(slug);
   });
 }
 
@@ -356,7 +367,7 @@ export async function fetchAuthorRelations(qid: string): Promise<AuthorRelation[
     ...toAuthorRelations(influencedQids, "influenced", resolved),
     ...toAuthorRelations(notableWorkQids, "notableWork", resolved),
     ...toAuthorRelations(movementQids, "movement", resolved),
-    ...toAuthorRelations(awardQids, "award", resolved),
+    ...dedupeAwards(toAuthorRelations(awardQids, "award", resolved)),
   ];
 }
 

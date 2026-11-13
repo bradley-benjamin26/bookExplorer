@@ -79,7 +79,7 @@ export default function HardcoverAccount() {
   else if (signedOut)
     body = (
       <>
-        <Text style={styles.helpText}>Use your own Hardcover account for ratings and reviews, sync lists, and see your reading progress.</Text>
+        <Text style={styles.helpText}>Use your own Hardcover account for ratings, sync lists, and see your reading progress.</Text>
         <Button variant="primary" onPress={connect}>Connect Hardcover</Button>
       </>
     );

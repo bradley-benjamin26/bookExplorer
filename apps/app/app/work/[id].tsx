@@ -17,7 +17,6 @@ import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop"
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { HardcoverProgress } from "../../src/components/HardcoverProgress";
-import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { MoreByAuthor, SeriesSection } from "../../src/components/WorkListSections";
 import { WorkSaveButton } from "../../src/components/WorkSaveButton";
@@ -223,7 +222,6 @@ export default function WorkDetail() {
         <FindLinkRow label="View on Hardcover" url={hardcoverUrl(data.hardcoverSlug, data.title)} />
       </View>
 
-      <ReviewsSection reviews={data.reviews} />
       <Footer />
     </ScrollView>
   );

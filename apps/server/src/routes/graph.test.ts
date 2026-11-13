@@ -27,3 +27,16 @@ describe("GET /api/graph/:type/:id", () => {
     await app.close();
   });
 });
+
+describe("GET /api/graph/subject/:id?extra=", () => {
+  it("passes a clamped extra to the builder", async () => {
+    vi.mocked(buildSubjectGraph).mockResolvedValue({ centerId: "subject:x", nodes: [], edges: [] });
+    const app = Fastify();
+    await app.register(graphRoutes);
+    for (const [q, want] of [["10", 10], ["9999", 100], ["-5", 0], ["abc", 0]] as const) {
+      await app.inject({ method: "GET", url: `/api/graph/subject/fantasy?extra=${q}` });
+      expect(buildSubjectGraph).toHaveBeenLastCalledWith("fantasy", want);
+    }
+    await app.close();
+  });
+});

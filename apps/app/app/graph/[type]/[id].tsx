@@ -66,6 +66,9 @@ function parseNodeId(id: string): Center {
   return { type: type as GraphNode["type"], id: rest.join(":") };
 }
 
+// How many more books/subjects each "Load more" press adds.
+const LOAD_MORE_STEP = 10;
+
 export default function GraphExplorer() {
   const { type, id, hideTypes, hideRelations, pathTo, pathIndex } = useLocalSearchParams<{
     type: string;
@@ -109,8 +112,13 @@ export default function GraphExplorer() {
   // Tapping a node re-centres to a normal graph; stepping back returns here.
   const showPath = !!pathTo && history.length === 0 && center?.type === type && center?.id === id;
   const pathFrom = `${type}:${id}`;
-  const { data, isLoading, isError, error, dataUpdatedAt } = useQuery({
-    queryKey: showPath ? ["pathGraph", pathFrom, pathTo, pathIndex] : ["graph", center?.type, center?.id],
+  // "Load more" raises the server's caps by this much per center; kept per center so stepping back keeps it.
+  const [extras, setExtras] = useState<Record<string, number>>({});
+  const extra = center ? extras[`${center.type}:${center.id}`] ?? 0 : 0;
+  const { data, isLoading, isError, error, dataUpdatedAt, isPlaceholderData } = useQuery({
+    queryKey: showPath ? ["pathGraph", pathFrom, pathTo, pathIndex] : ["graph", center?.type, center?.id, extra],
+    // Keep the drawn graph while a bigger one loads.
+    placeholderData: extra && !showPath ? (prev) => prev : undefined,
     // Never actually "genre" here — routes.graph() (the only way center gets
     // set from outside) and handleNodePress below (the only way it gets set
     // from within) both only ever produce author/work/subject centers, but
@@ -125,7 +133,7 @@ export default function GraphExplorer() {
               staleTime: Infinity,
             })
             .then((result) => pathAsGraph(result, Number(pathIndex) || 0))
-      : () => fetchGraph(center!.type as GraphCenterType, center!.id),
+      : () => fetchGraph(center!.type as GraphCenterType, center!.id, extra),
     retry: showPath ? false : 3,
     enabled: !!center,
   });
@@ -795,6 +803,17 @@ export default function GraphExplorer() {
         </View>
       </GestureDetector>
       )}
+      {!showPath && center && (data.more ?? []).map((kind) => (
+        <Button
+          key={kind}
+          variant="pill"
+          disabled={isPlaceholderData}
+          onPress={() => setExtras((e) => ({ ...e, [`${center.type}:${center.id}`]: extra + LOAD_MORE_STEP }))}
+          style={{ alignSelf: "center", marginVertical: 8 }}
+        >
+          {`Load more ${kind === "work" ? "books" : "subjects"}`}
+        </Button>
+      ))}
       <Footer />
     </ScrollView>
   );

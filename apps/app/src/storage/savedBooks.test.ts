@@ -23,7 +23,6 @@ const book: Book = {
   wikidataId: null,
   format: null,
   rating: null,
-  reviews: [],
 };
 
 describe("savedBooks", () => {
