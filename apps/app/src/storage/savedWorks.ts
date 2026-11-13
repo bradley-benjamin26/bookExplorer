@@ -3,6 +3,7 @@ import type { Work } from "@book-explorer/shared";
 import { withoutContent } from "./savedBooks";
 import { ensureSaved, removeSaved } from "./savedItems";
 import { ensureOnAList } from "./savedLists";
+import { readAllRecords } from "./readAll";
 import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -135,12 +136,8 @@ export async function unsaveWork(workId: string): Promise<void> {
 }
 
 /** Every stored record, tombstones included — for the snapshot. */
-export async function getAllSavedWorks(): Promise<SavedWorkRecord[]> {
-  const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY_PREFIX));
-  const records = await Promise.all(
-    keys.map((k) => k.slice(KEY_PREFIX.length)).map((id) => enqueueWrite(storageKey(id), () => readRecord(id)))
-  );
-  return records.filter((r): r is SavedWorkRecord => r !== null);
+export function getAllSavedWorks(): Promise<SavedWorkRecord[]> {
+  return readAllRecords<SavedWorkRecord>(KEY_PREFIX);
 }
 
 /** Replaces every stored record with the given ones (snapshot import). */

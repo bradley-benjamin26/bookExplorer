@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Book } from "@book-explorer/shared";
 import { ensureSaved, removeSaved } from "./savedItems";
 import { ensureOnAList } from "./savedLists";
+import { readAllRecords } from "./readAll";
 import { stamp, type Versioned } from "./schema";
 import { enqueueWrite } from "./writeQueue";
 
@@ -188,14 +189,8 @@ export async function unsaveBook(isbn: string): Promise<void> {
 }
 
 /** Every stored record, tombstones included — for the snapshot. */
-export async function getAllSavedBooks(): Promise<SavedBookRecord[]> {
-  const keys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY_PREFIX));
-  const records = await Promise.all(keys.map((k) => getSavedBookRaw(k.slice(KEY_PREFIX.length))));
-  return records.filter((r): r is SavedBookRecord => r !== null);
-}
-
-function getSavedBookRaw(isbn: string): Promise<SavedBookRecord | null> {
-  return enqueueWrite(storageKey(isbn), () => readRecord(isbn));
+export function getAllSavedBooks(): Promise<SavedBookRecord[]> {
+  return readAllRecords<SavedBookRecord>(KEY_PREFIX);
 }
 
 /** Replaces every stored record with the given ones (snapshot import). */
