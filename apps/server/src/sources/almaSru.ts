@@ -17,7 +17,7 @@ export const ALMA_LIBRARIES: readonly AlmaLibrary[] = [
     name: "University of Maryland Libraries",
     // Documented at https://opendata.lib.umd.edu/services/umd-discover/
     sruUrl: "https://usmai-umcp.alma.exlibrisgroup.com/view/sru/01USMAI_UMCP",
-    recordUrl: (mms) => `https://usmai-umcp.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma${mms}&vid=01USMAI_UMCP:DEFAULT`,
+    recordUrl: (mms) => `https://usmai-umcp.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma${mms}&vid=01USMAI_UMCP:UMCP`,
   },
 ];
 
