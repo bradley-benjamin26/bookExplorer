@@ -26,7 +26,7 @@ describe("GET /api/libraries", () => {
     body.forEach((l: unknown) => SupportedLibrarySchema.parse(l));
     expect(res.body).not.toMatch(/host|port|database|catalog\.mbln/);
     expect(body.find((l: { id: string }) => l.id === "mbln").level).toBe("availability");
-    expect(body.find((l: { id: string }) => l.id === "sfpl").level).toBe("catalog");
+    expect(body.find((l: { id: string }) => l.id === "kcmo").level).toBe("availability");
   });
 });
 

@@ -223,7 +223,7 @@ export default function Connection() {
                   );
                 })}
                 <Button
-                  variant={i === 0 ? "primary" : "pill"}
+                  variant="primary"
                   onPress={() => router.push(routes.graph(fromType as GraphNode["type"], fromId, { pathTo: to, pathIndex: String(i) }))}
                   style={styles.action}
                   accessibilityLabel={`Show ${name.toLowerCase()} on the graph`}

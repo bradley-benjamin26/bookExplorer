@@ -158,9 +158,14 @@ export default function Home() {
 
         {recent.length > 0 && (
           <View style={styles.recentSection}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              Recently looked at
-            </Text>
+            <View style={styles.recentHeader}>
+              <Text style={[styles.sectionTitle, styles.recentTitle]} accessibilityRole="header">
+                Recently looked at
+              </Text>
+              <Button variant="pill" onPress={clearHistory} accessibilityLabel="Clear recently looked at history">
+                Clear history
+              </Button>
+            </View>
             <View style={styles.filterRow}>
               {filters.map((f) => (
                 <Button key={f.value} variant="chip" active={f.value === filter} onPress={() => setFilter(f.value)}>
@@ -169,9 +174,6 @@ export default function Home() {
               ))}
             </View>
             {shown.map(renderRecent)}
-            <Button variant="pill" onPress={clearHistory} accessibilityLabel="Clear recently looked at history">
-              Clear history
-            </Button>
           </View>
         )}
 
@@ -224,6 +226,8 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     },
     filterRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm },
     recentSection: { marginTop: spacing.xxl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
+    recentHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.sm },
+    recentTitle: { flex: 1, marginBottom: 0 },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginBottom: spacing.sm },
     recentItem: {
       flexDirection: "row",

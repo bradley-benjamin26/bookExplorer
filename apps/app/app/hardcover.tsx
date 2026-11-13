@@ -17,7 +17,8 @@ import { useThemedStyles, type Theme } from "../src/theme";
 const UNAVAILABLE = "Hardcover sign-in isn't available on this server.";
 const status = (e: unknown) => (e instanceof ApiError ? e.status : 0);
 
-export default function HardcoverAccount() {
+/** The account controls, shared by this page and the Accounts popup; `onNavigate` closes the popup before an import opens a list. */
+export function HardcoverAccountPanel({ onNavigate }: { onNavigate?: () => void }) {
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   // Signed out is decided locally; the server is only asked to confirm a token we hold.
@@ -43,6 +44,7 @@ export default function HardcoverAccount() {
       const { list, skipped: s } = await importList(id);
       void prefetchMissingSaved(queryClient);
       await queryClient.invalidateQueries({ queryKey: ["hardcover"] });
+      onNavigate?.();
       router.push({ pathname: "/lists/[id]", params: { id: list.id, ...(s.length ? { skipped: JSON.stringify(s) } : {}) } });
     } catch (err) {
       setError((err as Error).message);
@@ -96,7 +98,7 @@ export default function HardcoverAccount() {
             <View key={l.id} style={styles.row}>
               <Text style={styles.rowText}>{l.name} · {l.booksCount} books</Text>
               {mine ? (
-                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))}>Imported</Button>
+                <Button variant="pill" onPress={() => { onNavigate?.(); router.push(routes.list(mine.id)); }}>Imported</Button>
               ) : (
                 <Button variant="pill" disabled={busy} onPress={() => doImport(l.id)}>Import</Button>
               )}
@@ -109,9 +111,18 @@ export default function HardcoverAccount() {
   else body = <Text style={styles.helpText}>Loading…</Text>;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
       {body}
       {error ? <Text style={styles.errorText} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text> : null}
+    </>
+  );
+}
+
+export default function HardcoverAccount() {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <HardcoverAccountPanel />
       <Footer />
     </ScrollView>
   );

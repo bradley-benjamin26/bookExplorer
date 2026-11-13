@@ -28,23 +28,23 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const [libraries, setLibraries] = useState<Library[]>([]);
+  const [allLibraries, setAllLibraries] = useState<Library[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    getConfiguredLibraries().then(setLibraries);
+    getConfiguredLibraries().then(setAllLibraries);
   }, []);
 
-  if (libraries.length === 0) {
+  if (allLibraries.length === 0) {
     return (
       <Pressable
         ref={titleRef("Add your library in Settings")}
         style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [styles.findRow, rowFeedback(theme.colors, { pressed, hovered })]}
         onPress={() => router.push(routes.settings())}
         accessibilityRole="button"
-        accessibilityLabel="Add your library in My Library, then Settings, to see it here."
+        accessibilityLabel="Add your library in Settings to see it here."
       >
-        <Text style={styles.findRowHint}>Add your library in My Library → Settings to see it here.</Text>
+        <Text style={styles.findRowHint}>Add your library in Settings to see it here.</Text>
       </Pressable>
     );
   }
@@ -64,13 +64,22 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
     </Pressable>
   );
 
+  // Supported (Z39.50) libraries show availability only; the rest get catalog links.
+  const supportedLibraries = allLibraries.filter((l) => l.z3950Id);
+  const libraries = allLibraries.filter((l) => !l.z3950Id);
+  const availability = supportedLibraries.map((l) => (
+    <LibraryAvailability key={l.id} libraryId={l.z3950Id as string} name={l.name} isbn={isbn} />
+  ));
+
+  if (libraries.length === 0) return <>{availability}</>;
+
   if (libraries.length === 1) {
     const library = libraries[0];
     return (
       <>
         {isbn && library.isbnUrl && linkRow("isbn", `Find at ${library.name} (ISBN)`, buildLibraryIsbnSearchUrl(library.isbnUrl, isbn))}
         {library.titleUrl && linkRow("title", `Find at ${library.name} (title)`, buildLibraryTitleSearchUrl(library.titleUrl, title))}
-        {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} name={library.name} isbn={isbn} />}
+        {availability}
       </>
     );
   }
@@ -114,10 +123,10 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
                   linkRow(`${library.id}-title`, "By title", buildLibraryTitleSearchUrl(library.titleUrl, title))}
               </View>
             )}
-            {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} name={library.name} isbn={isbn} />}
           </View>
         );
       })}
+      {availability}
     </>
   );
 }

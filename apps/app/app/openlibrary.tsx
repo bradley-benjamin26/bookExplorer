@@ -18,7 +18,8 @@ const UNAVAILABLE = "Open Library sign-in isn't available on this server.";
 const KEYS_URL = "https://archive.org/account/s3.php";
 const status = (e: unknown) => (e instanceof ApiError ? e.status : 0);
 
-export default function OpenLibraryAccount() {
+/** The account controls, shared by this page and the Accounts popup; `onNavigate` closes the popup before an import opens a list. */
+export function OpenLibraryAccountPanel({ onNavigate }: { onNavigate?: () => void }) {
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   // Signed out is decided locally; the server is only asked to confirm a token we hold.
@@ -59,6 +60,7 @@ export default function OpenLibraryAccount() {
       const { list, skipped: s } = await importOpenLibraryList(id);
       void prefetchMissingSaved(queryClient);
       await queryClient.invalidateQueries({ queryKey: ["openlibrary"] });
+      onNavigate?.();
       router.push({ pathname: "/lists/[id]", params: { id: list.id, ...(s.length ? { skipped: JSON.stringify(s), from: "openlibrary" } : {}) } });
     } catch (err) {
       setError((err as Error).message);
@@ -147,7 +149,7 @@ export default function OpenLibraryAccount() {
             <View key={l.id} style={styles.row}>
               <Text style={styles.rowText}>{l.name} · {l.seedCount} items</Text>
               {mine ? (
-                <Button variant="pill" onPress={() => router.push(routes.list(mine.id))} accessibilityLabel={`Open imported list ${l.name}`}>Imported</Button>
+                <Button variant="pill" onPress={() => { onNavigate?.(); router.push(routes.list(mine.id)); }} accessibilityLabel={`Open imported list ${l.name}`}>Imported</Button>
               ) : (
                 <Button variant="pill" disabled={importing !== null} onPress={() => doImport(l.id)} accessibilityLabel={`Import ${l.name}`}>
                   {importing === l.id ? "Importing…" : "Import"}
@@ -162,9 +164,18 @@ export default function OpenLibraryAccount() {
   else body = <Text style={styles.helpText}>Loading…</Text>;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
       {body}
       {error ? <Text style={styles.errorText} accessibilityRole="alert" accessibilityLiveRegion="polite">{error}</Text> : null}
+    </>
+  );
+}
+
+export default function OpenLibraryAccount() {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <OpenLibraryAccountPanel />
       <Footer />
     </ScrollView>
   );
