@@ -93,7 +93,7 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
       borderWidth: 1,
       borderColor: colors.pillBorder,
     },
-    pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    pillActive: { backgroundColor: colors.pillActiveBackground, borderColor: colors.pillActiveBackground },
     pillActiveText: { color: colors.primaryText },
     starRow: { flexDirection: "row", alignItems: "center", gap: 6 },
     pillText: { fontSize: 14, fontFamily: fonts.bodySemiBold, color: colors.ink },
@@ -101,6 +101,6 @@ function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
     // Keyboard/external-switch focus ring (RN Web passes `focused` as a third
     // Pressable style-callback arg; native platforms ignore this since
     // `focused` stays false there).
-    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
+    focused: { outlineWidth: 3, outlineOffset: 2, outlineColor: colors.focus, outlineStyle: "solid" },
   });
 }

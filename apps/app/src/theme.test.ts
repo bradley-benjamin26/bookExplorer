@@ -67,7 +67,7 @@ describe.each([
     ["graphGenre vs paper", c.graphGenre, c.paper, 3],
     ["graphGenre vs card", c.graphGenre, c.card, 3],
     ["marginalia on paper", c.marginalia, c.paper, 4.5],
-    ["selected text on pillActiveBackground", _name === "light" ? c.ink : c.primaryText, c.pillActiveBackground, 4.5],
+    ["selected text on pillActiveBackground", c.primaryText, c.pillActiveBackground, 4.5],
   ])("%s", (_label, fg, bg, min) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(min);
   });

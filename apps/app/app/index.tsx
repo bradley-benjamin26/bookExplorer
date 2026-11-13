@@ -181,7 +181,7 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
     intro: { marginTop: spacing.md, gap: spacing.lg },
     introText: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, lineHeight: 28, color: colors.ink },
     pressed: { opacity: 0.6 },
-    focused: { outlineWidth: 2, outlineColor: colors.cover, outlineStyle: "solid" },
+    focused: { outlineWidth: 3, outlineOffset: 2, outlineColor: colors.focus, outlineStyle: "solid" },
     scanButton: {
       flexDirection: "row",
       alignItems: "center",

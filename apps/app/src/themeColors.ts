@@ -69,7 +69,7 @@ export const lightColors: ThemeColors = {
   chipTextGenre: "#6A3F75",
   chipBackgroundSubject: "#DDE8D9",
   chipTextSubject: "#3F5A3C",
-  pillActiveBackground: "#DCE7DA",
+  pillActiveBackground: "#375663",
   pillBorder: "#718477",
   primary: "#B94E25",
   primaryText: "#FFFFFF",

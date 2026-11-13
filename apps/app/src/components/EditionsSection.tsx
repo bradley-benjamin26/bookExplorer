@@ -91,11 +91,10 @@ function createStyles({ colors, cardStyle, spacing, radii, fonts, typeScale }: T
   return StyleSheet.create({
     section: { marginTop: spacing.xxl, width: "100%" },
     // Landed on from the "Editions" graph node (see the graph screen's
-    // handleNodePress) — reuses the same yellow the app already uses for a
-    // toggled-on pill button, rather than introducing a new highlight color
-    // just for this one case.
+    // handleNodePress) — a quiet tint with a warning border; the toggled-on
+    // pill colour is now a dark slate and would hide the section's text.
     sectionHighlighted: {
-      backgroundColor: colors.pillActiveBackground,
+      backgroundColor: colors.chipBackground,
       borderWidth: 1,
       borderColor: colors.warning,
       borderRadius: radii.sm,
