@@ -14,4 +14,6 @@ describe("library rows", () => {
     expect(DISCOVERY_ROWS.map((r) => r.id)).toEqual(["recommendations", "connection"]);
     expect([...ACCOUNT_ROWS, ...DISCOVERY_ROWS]).toEqual([...LIBRARY_PRIMARY]);
   });
+  it("lists accounts before discovery in the combined order", () =>
+    expect([...ACCOUNT_ROWS, ...DISCOVERY_ROWS].map((r) => r.id)).toEqual(["hardcover", "openlibrary", "recommendations", "connection"]));
 });

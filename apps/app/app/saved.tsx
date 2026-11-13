@@ -62,6 +62,11 @@ export default function Saved() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading} accessibilityRole="header">
+        Accounts
+      </Text>
+      {ACCOUNT_ROWS.map(navRow)}
+
+      <Text style={styles.heading} accessibilityRole="header">
         Your lists
       </Text>
       {error ? (
@@ -105,11 +110,6 @@ export default function Saved() {
       </PressableRow>
 
       <View style={styles.group}>{DISCOVERY_ROWS.map(navRow)}</View>
-
-      <Text style={styles.tools} accessibilityRole="header">
-        Accounts
-      </Text>
-      {ACCOUNT_ROWS.map(navRow)}
 
       <Text style={styles.tools} accessibilityRole="header">
         Tools
