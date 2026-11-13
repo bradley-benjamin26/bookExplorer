@@ -10,3 +10,7 @@ export const LIBRARY_TOOLS = [
   { id: "backup", label: "Import & export" },
   { id: "settings", label: "Settings" },
 ] as const;
+
+// My Library leads with the reader's own lists; accounts sit below them.
+export const ACCOUNT_ROWS = LIBRARY_PRIMARY.slice(0, 2);
+export const DISCOVERY_ROWS = LIBRARY_PRIMARY.slice(2);

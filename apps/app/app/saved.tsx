@@ -8,7 +8,7 @@ import { CoverStack } from "../src/components/CoverStack";
 import { Footer } from "../src/components/Footer";
 import { HardcoverLogo } from "../src/components/HardcoverLogo";
 import { PressableRow } from "../src/components/PressableRow";
-import { LIBRARY_PRIMARY, LIBRARY_TOOLS } from "../src/libraryRows";
+import { ACCOUNT_ROWS, DISCOVERY_ROWS, LIBRARY_PRIMARY, LIBRARY_TOOLS } from "../src/libraryRows";
 import { listCoverUrls } from "../src/listCovers";
 import { routes } from "../src/navigation";
 import { getLists, type SavedList } from "../src/storage/savedLists";
@@ -61,9 +61,6 @@ export default function Saved() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {navRow(LIBRARY_PRIMARY[0])}
-      {navRow(LIBRARY_PRIMARY[1])}
-
       <Text style={styles.heading} accessibilityRole="header">
         Your lists
       </Text>
@@ -107,7 +104,12 @@ export default function Saved() {
         <Text style={styles.rowText}>See all lists</Text>
       </PressableRow>
 
-      <View style={styles.group}>{LIBRARY_PRIMARY.slice(2).map(navRow)}</View>
+      <View style={styles.group}>{DISCOVERY_ROWS.map(navRow)}</View>
+
+      <Text style={styles.tools} accessibilityRole="header">
+        Accounts
+      </Text>
+      {ACCOUNT_ROWS.map(navRow)}
 
       <Text style={styles.tools} accessibilityRole="header">
         Tools
@@ -123,7 +125,7 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
-    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.xl, marginBottom: spacing.sm },
+    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.md, marginBottom: spacing.sm },
     // Quiet: tools are not the point of this page.
     tools: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xl, marginBottom: spacing.xs },
     group: { marginTop: spacing.md },
