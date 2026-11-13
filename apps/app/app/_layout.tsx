@@ -1,9 +1,9 @@
 // Per-weight paths: the package root pulls in every weight, which bundles ~6 MB of unused fonts.
 import { Fraunces_500Medium } from "@expo-google-fonts/fraunces/500Medium";
 import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
-import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
-import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
-import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { HankenGrotesk_400Regular } from "@expo-google-fonts/hanken-grotesk/400Regular";
+import { HankenGrotesk_500Medium } from "@expo-google-fonts/hanken-grotesk/500Medium";
+import { HankenGrotesk_600SemiBold } from "@expo-google-fonts/hanken-grotesk/600SemiBold";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useFonts } from "expo-font";
@@ -37,9 +37,9 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Fraunces_500Medium,
     Fraunces_600SemiBold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
   });
 
   // Held back until stored data is upgraded, so no screen writes mid-migration; a failure must not blank the app,

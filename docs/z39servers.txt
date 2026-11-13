@@ -1,0 +1,84 @@
+Host: www.more.lib.wi.us
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: merlin.nwls.lib.wi.us
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: catalog.oaklandlibrary.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: www.saclibrarycatalog.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: sflib1.sfpl.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: opac.tulsalibrary.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: ipac3.vpl.ca
+Port: 210
+Database: DEFAULT
+Status: active
+
+Host: alam1.aclibrary.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: www.ci.austin.tx.us
+Port: 210
+Database: UNICORN
+Status: active
+
+Host: catalog.brooklynpubliclibrary.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: vera.cals.lib.ar.us
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: viking.sirsi.net
+Port: 2200
+Database: UNICORN
+Status: active
+
+Host: prospector.coalliance.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: catalog.ecpl.org
+Port: 210
+Database: INNOPAC
+Status: active
+
+Host: pac.nwrls.lib.fl.us
+Port: 5666
+Database: LSPacZ
+Status: active
+
+Host: kcmo.sirsi.net
+Port: 2500
+Database: UNICORN
+Status: active
+
+Host: catalog.mbln.org
+Port: 210
+Database: pac
+Status: active
