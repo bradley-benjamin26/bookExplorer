@@ -17,6 +17,15 @@ describe("parseRecord", () => {
     expect(copies[0]).toMatchObject({ branch: "BPL- West End Branch Library", callNumber: "AUSTEN J", dueDate: null });
   });
 
+  it("normalises due dates to ISO", () => {
+    const due = parseRecord(fx("mbln"), "polaris852").copies.flatMap((c) => (c.dueDate ? [c.dueDate] : []));
+    expect(due.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))).toBe(true);
+    expect([...due].sort()[0]).toBe("2026-11-23");
+    expect(due).toContain("2026-12-04");
+    expect(parseRecord("852    $a X $r Out $u Dec  4 2026 \n", "polaris852").copies[0].dueDate).toBe("2026-12-04");
+    expect(parseRecord("852    $a X $r Out $u garbage\n", "polaris852").copies[0].dueDate).toBeNull();
+  });
+
   it("parses Sirsi 926 ON-SHELF as available", () => {
     const { copies } = parseRecord(fx("kcmo"), "sirsi926");
     expect(copies).toHaveLength(4);
@@ -26,7 +35,7 @@ describe("parseRecord", () => {
 
   it("maps Sirsi CHECKEDOUT with a due date; HOLDS is unknown", () => {
     const { copies } = parseRecord(fx("kcmo-checkedout"), "sirsi926");
-    expect(copies.find((c) => c.branch === "KC-WALDO")).toMatchObject({ status: "checkedOut", dueDate: "11/16/2026" });
+    expect(copies.find((c) => c.branch === "KC-WALDO")).toMatchObject({ status: "checkedOut", dueDate: "2026-11-16" });
     expect(copies.find((c) => c.branch === "KC-TRAILS")?.status).toBe("unknown");
   });
 
