@@ -434,13 +434,13 @@ export default function GraphExplorer() {
           describe={(mode) => (mode === "List" ? { label: "Show nodes as a list", tooltip: "Show as a list" } : { label: "Show graph", tooltip: "Show as a graph" })}
         />
         <View style={styles.toolbarActions}>
-        <Button variant="pill" style={{ minHeight: TOOLBAR_CONTROL_HEIGHT }} onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
+        <Button variant="pill" style={{ minHeight: TOOLBAR_CONTROL_HEIGHT, justifyContent: "center" }} onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
           href={routes.graph(center.type, center.id, filterToParams(filter))}
-          style={{ minHeight: TOOLBAR_CONTROL_HEIGHT }}
+          style={{ minHeight: TOOLBAR_CONTROL_HEIGHT, justifyContent: "center" }}
           align="right"
         />
         </View>
