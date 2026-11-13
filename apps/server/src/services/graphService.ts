@@ -1,6 +1,6 @@
 import { UpstreamUnavailableError } from "../httpClient.js";
 import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
-import { awardFamily, normalizeTitle, slugifySubject } from "@book-explorer/shared";
+import { awardDisplayName, awardSlug, normalizeTitle, slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
@@ -63,9 +63,7 @@ export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: Gra
 }
 
 function awardNode(label: string): GraphNode {
-  // Open Library tags arrive lowercase; title-case so the label reads the same whichever source is seen first.
-  const family = awardFamily(label).replace(/(^|\s)\S/g, (m) => m.toUpperCase());
-  return { id: `award:${slugifySubject(family)}`, type: "award", label: family, navigable: false };
+  return { id: `award:${awardSlug(label)}`, type: "award", label: awardDisplayName(label), navigable: false };
 }
 
 function authorNodeId(openLibraryId: string | null, wikidataId: string): string {
