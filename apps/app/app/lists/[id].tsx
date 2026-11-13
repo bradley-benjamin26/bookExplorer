@@ -23,6 +23,7 @@ import { getSessionToken } from "../../src/hardcoverSession";
 import { copyToOpenLibrary, syncWithOpenLibrary } from "../../src/openLibraryLists";
 import { getOpenLibrarySessionToken } from "../../src/openLibrarySession";
 import { memberHref, routes } from "../../src/navigation";
+import { listServiceLabels } from "../../src/listServiceLabels";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
 import { getList, getLists, linkList, linkOpenLibraryList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -154,15 +155,17 @@ export default function ListDetail() {
     }
     load();
   };
-  const syncButtons = (service: Service, linked: boolean) =>
-    linked ? (
+  const syncButtons = (service: Service, linked: boolean) => {
+    const labels = listServiceLabels(service);
+    return linked ? (
       <>
-        <Button variant="pill" disabled={busy} onPress={() => sync(service)}>{active === service ? "Syncing…" : `Sync with ${service}`}</Button>
-        <Button variant="pill" disabled={busy} onPress={() => unlink(service)} accessibilityLabel={`Unlink from ${service}`}>Unlink</Button>
+        <Button variant="pill" disabled={busy} onPress={() => sync(service)}>{active === service ? "Syncing…" : labels.sync}</Button>
+        <Button variant="pill" disabled={busy} onPress={() => unlink(service)} accessibilityLabel={labels.unlink}>{labels.unlink}</Button>
       </>
     ) : (
-      <Button variant="pill" disabled={busy} onPress={() => copy(service)}>{(active === service && progress) || `Copy to ${service}`}</Button>
+      <Button variant="pill" disabled={busy} onPress={() => copy(service)}>{(active === service && progress) || labels.copy}</Button>
     );
+  };
 
   const doDelete = async () => {
     setError("");
