@@ -26,7 +26,7 @@ const cross = (a: [number, number], b: [number, number], c: [number, number], e:
   orient(a, b, c) !== orient(a, b, e) && orient(c, e, a) !== orient(c, e, b);
 
 describe("threadGeometry", () => {
-  const g = threadGeometry(320, 28, 4);
+  const g = threadGeometry(320, 28, 4, 8, [{ gap: 2 }]);
 
   it("puts the stops left to right inside the window, on a path that reaches each one", () => {
     expect(g.points).toHaveLength(4);
@@ -81,7 +81,7 @@ describe("threadGeometry", () => {
   });
 
   it("is deterministic", () => {
-    expect(threadGeometry(320, 28, 4).d).toBe(g.d);
+    expect(threadGeometry(320, 28, 4, 8, [{ gap: 2 }]).d).toBe(g.d);
   });
 
   it("takes several loops of different sizes, like the header thread", () => {
@@ -109,8 +109,9 @@ describe("threadGeometry", () => {
     expect(distinct).toBe(3);
   });
 
-  it("draws the default single loop when no loops are given", () => {
-    expect(threadGeometry(320, 28, 4, 8, undefined).d).toBe(g.d);
+  it("draws no loop when none are asked for", () => {
+    expect(threadGeometry(320, 28, 4, 8, undefined).d).toBe(threadGeometry(320, 28, 4, 8, []).d);
+    expect(threadGeometry(320, 28, 4).d).not.toBe(g.d);
   });
 
   it("can be drawn tidy: every stop on one baseline, identical loops between them", () => {
@@ -155,5 +156,8 @@ describe("threadGeometry", () => {
     expect(top).toBeGreaterThanOrEqual(-0.5);
     expect(bottom).toBeLessThanOrEqual(26.5);
   });
-});
 
+  it("can start away from the left edge, e.g. at a spool", () => {
+    expect(threadGeometry(320, 28, 4, 40, undefined, { start: 20 }).d).toMatch(/^M20 /);
+  });
+});

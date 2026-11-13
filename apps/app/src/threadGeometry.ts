@@ -46,7 +46,7 @@ export interface ThreadLoop {
 }
 
 /** A thread running left to right through `stops` evenly spaced stops (first at `inset`, last at `width - inset`),
- * wandering up and down, with round loops where the line crosses itself: by default one, in the middle gap.
+ * wandering up and down, with round loops where the line crosses itself when `loops` asks for them (none by default).
  * Every part of the curve stays inside the `width` x `height` box. */
 export function threadGeometry(
   width: number,
@@ -55,19 +55,19 @@ export function threadGeometry(
   inset = 8,
   loops?: ThreadLoop[],
   /** `wander`: how far stops drift above/below the baseline, as a fraction of height (default 0.15; 0 keeps them level).
-   * `baseline`: the line's y (default the middle). Loops always rise from the line toward the top. */
-  style: { wander?: number; baseline?: number } = {}
+   * `baseline`: the line's y (default the middle). Loops always rise from the line toward the top. */  style: { wander?: number; baseline?: number; start?: number } = {}
 ): ThreadGeometry {
   const mid = style.baseline ?? height / 2;
   const wander = height * (style.wander ?? 0.15);
   const span = width - 2 * inset;
   const waypoints: Pt[] = [
-    [0, mid],
+    // `start`: where the thread begins (default the left edge), e.g. at a spool.
+    [style.start ?? 0, mid],
     ...Array.from({ length: stops }, (_, i): Pt => [stops > 1 ? inset + (span * i) / (stops - 1) : width / 2, mid + (i % 2 ? wander : -wander)]),
     [width, mid],
   ];
   const gaps = waypoints.length - 1;
-  const loopList = loops ?? [{ gap: Math.floor(gaps / 2) }];
+  const loopList = loops ?? [];
 
   const curves: Cubic[] = [];
   // Index in `curves` of the cubic that ends at each waypoint after the first.

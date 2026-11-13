@@ -8,7 +8,7 @@ export function EmptyState({ message, actionLabel, onAction }: { message: string
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.card}>
-      <ThreadMotif labelled={false} />
+      <ThreadMotif />
       <Text style={styles.message}>{message}</Text>
       {actionLabel && onAction && (
         <Button variant="pill" onPress={onAction} style={styles.action}>
