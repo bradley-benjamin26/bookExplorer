@@ -15,7 +15,7 @@ const lib = (id: string, name: string, host: string, port: number, database: str
 // Display names are guesses from hostnames and are unconfirmed.
 export const Z3950_LIBRARIES: readonly Z3950Library[] = [
   lib("mbln", "Metropolitan Boston Library Network", "catalog.mbln.org", 210, "pac", "polaris852"),
-  lib("kcmo", "Kansas City", "kcmo.sirsi.net", 2500, "UNICORN"),
+  lib("kcmo", "Kansas City", "kcmo.sirsi.net", 2500, "UNICORN", "sirsi926"),
   lib("nwrls", "Northwest Regional Library System FL", "pac.nwrls.lib.fl.us", 5666, "LSPacZ"),
   lib("more", "MORE Libraries WI", "www.more.lib.wi.us", 210, "INNOPAC"),
   lib("oakland", "Oakland Public Library", "catalog.oaklandlibrary.org", 210, "INNOPAC"),

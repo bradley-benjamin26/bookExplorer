@@ -1,0 +1,60 @@
+Connecting...OK.
+Sent initrequest.
+Connection accepted by v3 target.
+ID     : Unicorn 4.1.1 Bath
+Name   : SIRSI Corporation
+Version: 3.0
+Options: search present delSet scan sort namedResultSets
+Elapsed: 0.276495
+Sent searchRequest.
+Received SearchResponse.
+Search was a success.
+Number of hits: 1, setno 1
+records returned: 0
+Elapsed: 0.079949
+Sent presentRequest (1+1).
+Records: 1
+[UNICORN]Record type: USmarc
+01746cam  2200481 a 4500
+005 20180109114056.0
+008 030306r20031813enk      b    000 1 eng  
+010    $a   2003265779
+020    $a 0141439513
+035    $a (Sirsi) i9780141439518
+035 00 $i LCMARC/BBV-6648/HHQ_CHRISTY
+040    $a DLC $c DLC $d DLC
+043    $a e-uk-en
+049    $a MQT
+050 00 $a PR4034 $b .P7 2003b
+050 04 $a PR4034 $b .P7 2003
+082 00 $a 823/.7 $2 22
+092    $a F AUS
+100 1  $a Austen, Jane, $d 1775-1817.
+245 10 $a Pride and prejudice / $c Jane Austen ; edited wih an introduction and notes by Vivien Jones ; with the original Penguin Classics introduction by Tony Tanner.
+260    $a London ; $a New York : $b Penguin Books, $c 2003.
+300    $a xlii, 435 p. ; $c 20 cm.
+490 1  $a Penguin classics
+504    $a Includes bibliographical references.
+521 2  $a Adult $b Follett Library Resources
+526 0  $a Accelerated Reader $b Grades 9-12 $c 12 $d 27 $x SD $z Quiz 714 $z English fiction, vocabulary quiz available, literary skills quiz available.
+595    $a Accelerated Reader $l 120 $p 10270
+596    $a 9 34 65 66
+650  0 $a Social classes $v Fiction.
+650  0 $a Young women $v Fiction.
+650  0 $a Prejudices $v Fiction.
+650  0 $a Courtship $v Fiction.
+650  0 $a Sisters $v Fiction.
+651  0 $a England $v Fiction.
+655  0 $a Domestic fiction.
+655  0 $a Romance fiction
+700 1  $a Jones, Vivien, $d 1952-
+830  0 $a Penguin classics.
+949    $a FICTION AUSTEN $w ASIS $i 0000185571031 $h KC-ABF-PL $p $9.00
+926    $a STTERESA $b ON-SHELF $c FIC AUS $d BOOK $f 1
+926    $a SCH1340 $b ON-SHELF $c CLA F AUS 2003 $d BOOK $f 1
+926    $a SCH1400 $b ON-SHELF $c F AUS $d BOOK $f 1
+926    $a SCH1400 $b ON-SHELF $c F AUS $d BOOK $f 2
+
+nextResultSetPosition = 2
+Elapsed: 0.088139
+See you later, alligator.

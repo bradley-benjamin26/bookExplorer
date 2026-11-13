@@ -1,0 +1,81 @@
+Connecting...OK.
+Sent initrequest.
+Connection accepted by v3 target.
+ID     : 12
+Name   : Polaris Integrated Library System
+Version: 7.7.45123.0
+Options: search present delSet triggerResourceCtrl scan sort concurrentOperations namedResultSets
+Elapsed: 0.218984
+Sent searchRequest.
+Received SearchResponse.
+Search was a success.
+Number of hits: 1, setno 1
+records returned: 0
+Elapsed: 0.021359
+Sent presentRequest (1+1).
+Records: 1
+[PAC]Record type: USmarc
+05232cam a2200733Ii 4500
+001 7540077
+005 20240731102910.0
+008 061003r20141813enk      b    000 1 eng  
+010    $a   2003265779
+020    $a 9780141439518 $q (paperback)
+020    $a 0141439513 $q (paperback)
+035    $a 7409998
+035    $a (OCoLC)ocn930258818
+035    $a (OCoLC)930258818
+035    $a (OCoLC)930258818
+040    $a DLC $b eng $e rda $c CUD $d OCLCF $d OCLCO $d OCLCQ $d OCL $d JOY $d ATSAE $d CSAIL $d OCL $d TME $d OCLCO $d FIC $d WUO $d OCLCO $d TL7 $d AUHCL $d OCLCA
+043    $a e-uk-en $a e-uk---
+050 00 $a PR4034 $b .P7 2014
+082 00 $a 823.7 $2 21
+099    $a AUSTEN J
+100 1  $a Austen, Jane, $d 1775-1817, $e author.
+245 10 $a Pride and prejudice / $c Jane Austen ; edited with an introduction and notes by Vivien Jones.
+250    $a Revised edition.
+264  1 $a London : $b Penguin Books, $c 2014.
+264  4 $3 New chronology & further reading $c ©2003
+300    $a xl, 400 pages ; $c 20 cm.
+336    $a text $b txt $2 rdacontent
+337    $a unmediated $b n $2 rdamedia
+338    $a volume $b nc $2 rdacarrier
+490 1  $a Penguin classics
+500    $a "Published in Penguin Classics 1996. Reissued with new chronology and updated further reading 2003. This revised edition published 2014."--Title page verso.
+504    $a Includes bibliographical references (xxxv-xxxvii).
+520    $a "Few have failed to be charmed by the witty and independent spirit of Elizabeth Bennet in [this] Austen's beloved classic. When Elizabeth Bennet first meets eligible bachelor Fitzwilliam Darcy, she thinks him arrogant and conceited; he is indifferent to her good looks and lively mind. When she later discovers that Darcy has involved himself in the troubled relationship between his friend Bingley and her beloved sister Jane, she is determined to dislike him more than ever. In the sparkling comedy of manners that follows, Jane Austen shows us the folly of judging by first impressions and superbly evokes the friendships, gossip and snobberies of provincial middle-class life. This Penguin Classics edition, based on Austen's first edition, contains the original Penguin Classics introduction by Tony Tanner and an updated introduction and notes by Viven Jones."--Amazon.com.
+650  0 $a Young women $z England $x History $y 19th century $v Fiction.
+650  0 $a Upper class $z England $x History $y 19th century $v Fiction.
+650  0 $a Marriage $z England $x History $y 19th century $v Fiction.
+650  0 $a Prejudices $v Fiction.
+650  0 $a Social classes $v Fiction.
+650  0 $a Upper class $v Fiction.
+650  0 $a Courtship $v Fiction.
+650  0 $a Marriage $v Fiction.
+651  0 $a Great Britain $x Social life and customs $x History $y 19th century $v Fiction.
+655  0 $a Romance fiction.
+655  0 $a Historical fiction.
+655  7 $a Love stories. $2 gsafd
+700 1  $a Jones, Vivien, $d 1952- $e editor, $e writer of introduction.
+830  0 $a Penguin classics.
+962    $a OCLC Reclamation 2024
+852    $a BPL- West End Branch Library $b Fiction $e 469711-1 $h AUSTEN J $k FICTION $o 39 $p 39999109106813 $r Held $w Book $y 1 $1 Nov 13 2026  $7 True $9 0
+852    $a BPL- Codman Square Branch Library $b Fiction $e 469711-2 $h AUSTEN J $k FICTION $o 17 $p 39999109106805 $r In $w Book $y 1 $1 Nov  2 2026  $7 True $9 0
+852    $a BPL - Central $b Fiction $e 471046-1 $h AUSTEN J $k FICTION $o 3 $p 39999109111466 $r Out $u Nov 27 2026  $w Book $y 1 $1 Nov  2 2026  $7 True $9 0
+852    $a BPL - Central $b Fiction $e 471046-1 $h AUSTEN J $k FICTION $o 3 $p 39999109111474 $r Out $u Nov 25 2026  $w Book $y 1 $1 Nov  1 2026  $7 True $9 0
+852    $a BPL - Central $b Fiction $e 471046-1 $h AUSTEN J $k FICTION $o 3 $p 39999109111482 $r Out $u Dec  4 2026  $w Book $y 1 $1 Nov 10 2026  $7 True $9 0
+852    $a BPL- Honan-Allston Branch Library $b Fiction $e 471046-2 $h AUSTEN J $k FICTION $o 26 $p 39999109111490 $r In $w Book $y 1 $1 Oct 21 2026  $7 True $9 0
+852    $a BPL- Brighton Branch Library $b Fiction $e 473952-3 $h AUSTEN J $k FICTION $o 15 $p 39999109142438 $r In $w Book $y 1 $1 Oct 14 2026  $7 True $9 0
+852    $a BPL- Charlestown Branch Library $b Fiction $e 473952-4 $h AUSTEN J $k FICTION $o 16 $p 39999109142636 $r Out $u Dec  4 2026  $w Book $y 1 $1 Nov 13 2026  $7 True $9 0
+852    $a BPL- Chinatown Branch Library $b Fiction $e 473952-6 $h AUSTEN J $k FICTION $o 83 $p 39999109142453 $r In $w Book $y 1 $1 Oct 13 2026  $7 True $9 0
+852    $a BPL- Faneuil Branch Library $b Fiction $e 473952-9 $h AUSTEN J $k FICTION $o 23 $p 39999109142545 $r In $w Book $y 1 $1 Sep 14 2026  $7 True $9 0
+852    $a BPL- Parker Hill Branch Library $b Fiction $e 473952-16 $h AUSTEN J $k FICTION $o 34 $p 39999109142511 $r Held $w Book $y 1 $1 Nov 12 2026  $7 True $9 0
+852    $a BPL- Roslindale Branch Library $b Fiction $e 473952-17 $h AUSTEN J $k FICTION $o 35 $p 39999109142578 $r Out $u Nov 27 2026  $w Book $y 1 $1 Nov  3 2026  $7 True $9 0
+852    $a BPL- South Boston Branch Library $b Fiction $e 473952-19 $h AUSTEN J $k FICTION $o 36 $p 39999109142586 $r Out $u Nov 25 2026  $w Book $y 1 $1 Nov  4 2026  $7 True $9 0
+852    $a BPL- Uphams Corner Branch Library $b Fiction $e 473952-20 $h AUSTEN J $k FICTION $o 38 $p 39999109142610 $r Out $u Dec  4 2026  $w Book $y 1 $1 Nov 10 2026  $7 True $9 0
+852    $a BPL- West Roxbury Branch Library $b Fiction $e 473952-21 $h AUSTEN J $k FICTION $o 40 $p 39999109142461 $r Out $u Nov 23 2026  $w Book $y 1 $1 Nov  2 2026  $7 True $9 0
+999    $b AUSTEN J $c 0 $g 5 $h 15 $i 5 $j 15 $k 0 $s 0 $x AUSTEN J $z 0 $! 2
+
+nextResultSetPosition = 2
+Elapsed: 0.044996
+See you later, alligator.
