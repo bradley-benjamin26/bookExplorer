@@ -303,7 +303,7 @@ export type GraphPath = z.infer<typeof GraphPathSchema>;
 // `paths` is ordered most specific first.
 export const PathResultSchema = z.discriminatedUnion("found", [
   z.object({ found: z.literal(true), paths: z.array(GraphPathSchema).min(1) }),
-  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout", "upstreamUnavailable"]) }),
+  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout", "upstreamUnavailable", "incomplete"]) }),
 ]);
 export type PathResult = z.infer<typeof PathResultSchema>;
 

@@ -173,6 +173,40 @@ describe("findPath", () => {
     expect(pathIds(result)).toEqual(["author:A", "work:W1", "subject:s", "work:T"]);
   });
 
+  // Bad's links are only visible through Bad itself, so its failure hides them.
+  const hidingBad = (graph: Neighbours): Neighbours => async (id) => {
+    if (id === "work:Bad") throw new Error("upstream down");
+    const hood = await graph(id);
+    return hood && { ...hood, edges: hood.edges.filter((e) => e.source !== "work:Bad" && e.target !== "work:Bad") };
+  };
+
+  it("reports incomplete, not noPath, when an expansion failed and no path was found", async () => {
+    const graph = fixture([
+      ["author:A", "wrote", "work:Bad"],
+      ["author:A", "wrote", "work:W1"],
+      ["work:Bad", "wrote", "work:T"],
+    ]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await findPath("author:A", "work:T", (id) => (id === "author:A" ? graph(id) : hidingBad(graph)(id)), LIMITS);
+    warn.mockRestore();
+    expect(result).toEqual({ found: false, reason: "incomplete" });
+  });
+
+  it("reports incomplete instead of depthCap when an expansion also failed", async () => {
+    const graph = fixture([
+      ["work:1", "r", "work:2"],
+      ["work:2", "r", "work:3"],
+      ["work:3", "r", "work:4"],
+      ["work:4", "r", "work:5"],
+      ["work:5", "r", "work:6"],
+      ["work:1", "r", "work:Bad"],
+    ]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await findPath("work:1", "work:6", (id) => (id === "work:Bad" ? Promise.reject(new Error("upstream down")) : graph(id)), LIMITS);
+    warn.mockRestore();
+    expect(result).toEqual({ found: false, reason: "incomplete" });
+  });
+
   it("starts no queued expansions once the time budget has run out", async () => {
     const wide = fixture(
       Array.from({ length: 16 }, (_, i): [string, string, string] => [i % 2 ? "author:A" : "author:Z", "wrote", `work:${i}`])

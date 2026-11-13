@@ -66,7 +66,11 @@ export const PATH_NOT_FOUND_MESSAGES: Record<Extract<PathResult, { found: false 
   nodeCap: "The search grew too large before it found a connection.",
   timeout: "The search ran out of time before it found a connection. Trying again usually gets further.",
   upstreamUnavailable: "Book data is temporarily unavailable, so the search stopped. Try again in a few minutes.",
+  incomplete: "Some book data couldn't be loaded, so a connection may have been missed. Trying again usually helps.",
 };
+
+/** Whether running the same search again could turn up a different result. */
+export const pathRetryable = (reason: Extract<PathResult, { found: false }>["reason"]) => reason === "timeout" || reason === "incomplete";
 
 /** One path of a result (the best when `index` is out of range) as a graph centred on its start; throws the reason when none was found. */
 export function pathAsGraph(result: PathResult, index = 0): Graph {

@@ -9,7 +9,7 @@ import { AccordionSection } from "../src/components/AccordionSection";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { WorkListRow } from "../src/components/WorkListRow";
-import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathSteps } from "../src/graphLabels";
+import { NODE_LABELS, PATH_NOT_FOUND_MESSAGES, pathRetryable, pathSteps } from "../src/graphLabels";
 import { connectionStep, type Endpoint } from "../src/connectionSteps";
 import { nodeHref, routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
@@ -170,7 +170,7 @@ export default function Connection() {
       {!path.isFetching && !path.isError && path.data && !path.data.found && (
         <Text style={styles.hint} accessibilityLiveRegion="polite">{PATH_NOT_FOUND_MESSAGES[path.data.reason]}</Text>
       )}
-      {!path.isFetching && path.data && !path.data.found && path.data.reason === "timeout" && (
+      {!path.isFetching && path.data && !path.data.found && pathRetryable(path.data.reason) && (
         <Button variant="primary" onPress={() => path.refetch()} style={styles.action} accessibilityLabel="Try the search again">
           Try Again
         </Button>
