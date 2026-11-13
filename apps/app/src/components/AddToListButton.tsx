@@ -95,7 +95,7 @@ export function CreateListForm({
       {showHardcover && (
         <View style={styles.switchRow}>
           <Text style={styles.fieldLabel}>Also create on Hardcover</Text>
-          <Switch value={onHardcover} onValueChange={setOnHardcover} trackColor={{ true: theme.colors.cover }} thumbColor={theme.colors.paper} {...({ activeThumbColor: theme.colors.paper } as object)} accessibilityLabel="Also create on Hardcover" />
+          <Switch value={onHardcover} onValueChange={setOnHardcover} trackColor={{ false: theme.colors.inputBorder, true: theme.colors.cover }} thumbColor={theme.colors.text} {...({ activeThumbColor: theme.colors.paper } as object)} accessibilityLabel="Also create on Hardcover" />
         </View>
       )}
       {error ? (

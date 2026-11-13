@@ -199,9 +199,10 @@ function SwitchRow({ label, value, onChange }: { label: string; value: boolean; 
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: theme.colors.cover }}
-        // The paper colour against the rust track; web's default "on" thumb is a teal that clashes with it.
-        thumbColor={theme.colors.paper}
+        // Off: a visible track (inputBorder) with a high-contrast thumb — paper on a dark track vanishes in dark mode.
+        trackColor={{ false: theme.colors.inputBorder, true: theme.colors.cover }}
+        // On: paper against the rust track; web's default "on" thumb is a teal that clashes with it.
+        thumbColor={theme.colors.text}
         {...({ activeThumbColor: theme.colors.paper } as object)}
         accessibilityLabel={label}
       />
