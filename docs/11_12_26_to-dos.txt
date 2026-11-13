@@ -1,0 +1,18 @@
+1) Implement an Open Library authentication option using:
+https://openlibrary.org/dev/docs/restful_api
+similar to how users can log into their Hardcover account.
+
+2) Use https://openlibrary.org/dev/docs/api/lists to allow a user to create and add
+a list to openlibrary. The API does not appear to support editing a list. A user should be able to
+pull up an existing list of theirs (using their account), create an account in the app,
+and then send it to their account using the api.
+
+3) Implement https://d3js.org/d3-force so that nodes can be dragged and settle with an animation.
+Are there other possible improvements?
+
+4) Add alt text for images. Book cover alt text should read "Book cover of (name of book) by (author)"
+
+5) Implement ARIA landmarks/regions through the pages in the application/website.
+6) WAVE seems to find text underlined but it doesn't seem to be underlined visually. Not sure if there is an issue to fix there.
+7) implement null alt-text for spacer images
+8) The cover for a work should be an English edition's cover when one exists. If no English cover can be found, the existing logic is fine.

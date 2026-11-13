@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Shelf Thread — home prototype</title>
+  <style>
+    :root {
+      --paper: #edf3e8;
+      --sheet: #f8faf4;
+      --ink: #202b25;
+      --muted: #4c5c50;
+      --rust: #b94e25;
+      --rust-dark: #963b1b;
+      --line: #9daea0;
+      --blue: #375663;
+      --focus: #244e76;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #dce5d8;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:focus-visible, input:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+    [hidden] { display: none !important; }
+    .page {
+      min-height: 100vh;
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--paper);
+      box-shadow: 0 0 45px #35483814;
+    }
+    .prototype-label {
+      padding: 9px 24px;
+      color: #fff;
+      background: var(--blue);
+      font-size: 12px;
+      font-weight: 650;
+      text-align: center;
+      letter-spacing: .01em;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 28px 42px 25px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .brand-mark {
+      width: 35px;
+      height: 35px;
+      flex: 0 0 auto;
+      color: var(--rust);
+    }
+    .brand-name {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: -.04em;
+      line-height: 1;
+    }
+    .brand-subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .header-actions { display: flex; align-items: center; gap: 5px; }
+    .header-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 44px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .header-button:hover { background: #dce7da; }
+    .header-button svg { width: 19px; height: 19px; flex: none; }
+    main { padding: 49px 42px 56px; }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--rust-dark);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, .node-title {
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    h1 {
+      max-width: 510px;
+      margin: 0;
+      font-size: clamp(38px, 7vw, 58px);
+      font-weight: 500;
+      letter-spacing: -.045em;
+      line-height: 1.06;
+    }
+    .intro {
+      max-width: 460px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .actions { margin-top: 30px; }
+    .primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+      min-height: 54px;
+      padding: 0 24px;
+      border: 1px solid var(--rust);
+      border-radius: 7px;
+      background: var(--rust);
+      color: #fff;
+      font-weight: 700;
+    }
+    .primary:hover { background: var(--rust-dark); border-color: var(--rust-dark); }
+    .primary svg { width: 20px; height: 20px; }
+    .search {
+      display: flex;
+      align-items: stretch;
+      max-width: 500px;
+      margin-top: 18px;
+      border: 1px solid #718477;
+      border-radius: 7px;
+      background: var(--sheet);
+    }
+    .search:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .search input {
+      width: 100%;
+      min-width: 0;
+      padding: 14px 15px;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: 15px;
+    }
+    .search input::placeholder { color: #55665a; opacity: 1; }
+    .search button {
+      width: 52px;
+      flex: none;
+      border: 0;
+      border-radius: 0 6px 6px 0;
+      color: var(--blue);
+      background: transparent;
+    }
+    .search button:hover { background: #e4ede1; }
+    .search button svg { width: 21px; height: 21px; vertical-align: middle; }
+    .search-feedback { margin: 12px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+    .search-results { max-width: 500px; margin: 8px 0 0; padding: 0; list-style: none; }
+    .search-result {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 12px 3px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      text-align: left;
+    }
+    .search-result:hover { color: var(--rust-dark); }
+    .search-result span:last-child { color: var(--muted); }
+    .section-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px 20px;
+      margin-bottom: 15px;
+    }
+    .section-heading h2 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -.025em;
+    }
+    .section-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+    .thread-section {
+      margin-top: 58px;
+      padding-top: 28px;
+      border-top: 1px solid var(--line);
+    }
+    .thread-intro { max-width: 520px; margin: 0 0 23px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+    .thread {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+    .thread::before {
+      position: absolute;
+      top: 11px;
+      right: 16.66%;
+      left: 16.66%;
+      height: 1px;
+      background: #6a8071;
+      content: "";
+    }
+    .thread li { min-width: 0; }
+    .node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      min-height: 132px;
+      padding: 0 5px 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      text-align: center;
+    }
+    .node:hover { background: #e0eadf; }
+    .node-dot {
+      z-index: 1;
+      width: 23px;
+      height: 23px;
+      margin-bottom: 15px;
+      border: 5px solid var(--paper);
+      border-radius: 50%;
+      background: var(--rust-dark);
+      box-shadow: 0 0 0 1px var(--rust-dark);
+    }
+    .node.author .node-dot { background: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+    .node.subject .node-dot { background: #506d4d; box-shadow: 0 0 0 1px #506d4d; }
+    .node-kind { color: var(--muted); font-size: 12px; }
+    .node-title {
+      max-width: 165px;
+      margin-top: 6px;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+    .node-action { margin-top: 7px; color: var(--rust-dark); font-size: 12px; font-weight: 700; }
+    .sample-note { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .graph-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      margin-top: 14px;
+      color: var(--rust-dark);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .graph-link:hover { text-decoration: underline; }
+    .graph-link:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+    .recent { margin-top: 47px; padding-top: 28px; border-top: 1px solid var(--line); }
+    .recent-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 13px 0;
+      border: 0;
+      border-bottom: 1px solid #b9c9b9;
+      background: transparent;
+      text-align: left;
+    }
+    .recent-row:hover .recent-title { color: var(--rust-dark); }
+    .mini-cover {
+      display: grid;
+      width: 38px;
+      height: 52px;
+      flex: none;
+      place-items: center;
+      border-radius: 2px 4px 4px 2px;
+      color: #fff8e9;
+      background: var(--blue);
+      font-family: Georgia, serif;
+      font-size: 19px;
+    }
+    .recent-copy { flex: 1; }
+    .recent-title { display: block; font-family: Georgia, serif; font-size: 16px; font-weight: 700; }
+    .recent-meta { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .recent-arrow { color: var(--muted); font-size: 22px; }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 42px 30px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    footer button {
+      padding: 0;
+      border: 0;
+      color: var(--rust-dark);
+      background: transparent;
+      text-decoration: underline;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    dialog {
+      width: min(440px, calc(100% - 32px));
+      max-height: calc(100% - 32px);
+      padding: 28px;
+      border: 1px solid #7e9182;
+      border-radius: 9px;
+      color: var(--ink);
+      background: var(--sheet);
+      box-shadow: 0 18px 60px #10201540;
+    }
+    dialog::backdrop { background: #18251db3; }
+    dialog h2 { margin: 0; font-size: 27px; font-weight: 500; }
+    dialog p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .dialog-close {
+      min-height: 44px;
+      padding: 0 18px;
+      border: 1px solid var(--blue);
+      border-radius: 6px;
+      color: var(--blue);
+      background: transparent;
+      font-weight: 700;
+    }
+    .dialog-close:hover { background: #e4ede1; }
+    @media (max-width: 520px) {
+      .header { padding: 22px 22px 21px; }
+      .brand-name { font-size: 21px; }
+      .header-button { padding: 0 7px; }
+      .header-button .button-label { display: none; }
+      main { padding: 38px 24px 48px; }
+      .actions .primary { width: 100%; }
+      .thread-section { margin-top: 47px; }
+      .node-title { font-size: 15px; }
+      footer { padding: 20px 24px 26px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="prototype-label">Design prototype · Sample content, not your library</div>
+    <header class="header">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M5 8.5c4.5-2 8.5-1.6 13 1.2 4.5-2.8 8.5-3.2 13-1.2v18c-4.5-2-8.5-1.6-13 1.2-4.5-2.8-8.5-3.2-13-1.2zM18 10v17.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <circle cx="18" cy="10" r="2.3" fill="currentColor"/>
+        </svg>
+        <div>
+          <div class="brand-name">Shelf Thread</div>
+          <div class="brand-subtitle">A little further into books</div>
+        </div>
+      </div>
+      <nav class="header-actions" aria-label="Site">
+        <button class="header-button" type="button" data-dialog="about" aria-label="About this prototype">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9.5a2.3 2.3 0 1 1 3.2 2.1c-.8.4-1 .9-1 1.8M12 17h.01" stroke-linecap="round"/></svg>
+          <span class="button-label">About</span>
+        </button>
+        <button class="header-button" type="button" data-dialog="library" aria-label="My library">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 5v14M8 5v14M12 5v14M16 5l4 14" stroke-linecap="round"/></svg>
+          <span class="button-label">My library</span>
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <section aria-labelledby="welcome-title">
+        <p class="eyebrow">Find your next read</p>
+        <h1 id="welcome-title">Every book has a thread.</h1>
+        <p class="intro">Start with a book you love. Follow its connections to authors, subjects, and your next discovery.</p>
+        <div class="actions">
+          <button class="primary" type="button" data-dialog="scan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M11 8v8M14 9v6M17 8v8" stroke-linecap="round"/></svg>
+            Scan a book
+          </button>
+          <form class="search" id="search-form" role="search">
+            <input id="search-input" type="search" aria-label="Search sample books, authors, or subjects" placeholder="Search title, author, or ISBN" autocomplete="off">
+            <button type="submit" aria-label="Search sample content">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4" stroke-linecap="round"/></svg>
+            </button>
+          </form>
+          <p class="search-feedback" id="search-feedback" role="status" hidden></p>
+          <ul class="search-results" id="search-results" aria-label="Sample search results" hidden></ul>
+        </div>
+      </section>
+
+      <section class="thread-section" aria-labelledby="thread-title">
+        <div class="section-heading">
+          <h2 id="thread-title">See where a thread leads</h2>
+          <p>An imagined example</p>
+        </div>
+        <p class="thread-intro">A book leads to its author, and its author leads you somewhere new. Tap a stop to explore.</p>
+        <ol class="thread">
+          <li><button class="node book" type="button" data-dialog="book">
+            <span class="node-dot" aria-hidden="true"></span><span class="node-kind">A book</span>
+            <span class="node-title">The Map Room</span><span class="node-action">Explore book →</span>
+          </button></li>
+          <li><button class="node author" type="button" data-dialog="author">
+            <span class="node-dot" aria-hidden="true"></span><span class="node-kind">Its author</span>
+            <span class="node-title">Mara Vale</span><span class="node-action">Meet author →</span>
+          </button></li>
+          <li><button class="node subject" type="button" data-dialog="subject">
+            <span class="node-dot" aria-hidden="true"></span><span class="node-kind">A subject</span>
+            <span class="node-title">Imaginary places</span><span class="node-action">Explore subject →</span>
+          </button></li>
+        </ol>
+        <p class="sample-note">These fictional entries illustrate a possible connection; they are not real catalog records.</p>
+        <a class="graph-link" href="graph-prototype.html">Explore this thread as a graph →</a>
+      </section>
+
+      <section class="recent" aria-labelledby="recent-title">
+        <div class="section-heading">
+          <h2 id="recent-title">Recently looked at</h2>
+          <p>Sample history</p>
+        </div>
+        <button class="recent-row" type="button" data-dialog="book">
+          <span class="mini-cover" aria-hidden="true">M</span>
+          <span class="recent-copy"><span class="recent-title">The Map Room</span><span class="recent-meta">Book · Mara Vale</span></span>
+          <span class="recent-arrow" aria-hidden="true">›</span>
+        </button>
+      </section>
+    </main>
+    <footer>
+      <span>Shelf Thread · A reader's field notes</span>
+      <button type="button" data-dialog="about">About this prototype</button>
+    </footer>
+  </div>
+
+  <dialog id="detail-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+    <p class="eyebrow" id="dialog-kicker"></p>
+    <h2 id="dialog-title"></h2>
+    <p id="dialog-description"></p>
+    <form method="dialog"><button class="dialog-close" type="submit">Back to home</button></form>
+  </dialog>
+
+  <script>
+    const examples = {
+      book: {
+        kicker: "Sample book",
+        title: "The Map Room",
+        description: "An imagined book by Mara Vale. In the full app, this would open the book's page and its connections.",
+      },
+      author: {
+        kicker: "Sample author",
+        title: "Mara Vale",
+        description: "An imagined author of The Map Room. In the full app, this would open an author page.",
+      },
+      subject: {
+        kicker: "Sample subject",
+        title: "Imaginary places",
+        description: "A sample subject connected to this imagined book. In the full app, this would open related books.",
+      },
+      scan: {
+        kicker: "Prototype action",
+        title: "Scan a book",
+        description: "The real app opens the barcode scanner here. This standalone prototype does not access your camera.",
+      },
+      library: {
+        kicker: "Prototype action",
+        title: "My library",
+        description: "The real app opens your saved lists here. This standalone prototype does not access or change your library.",
+      },
+      about: {
+        kicker: "Design prototype",
+        title: "A different way to follow a thread",
+        description: "This is a standalone home-page concept with a sage-and-rust palette and an imagined example. Search works on the sample content only; nothing is connected to the app or a live catalog.",
+      },
+    };
+
+    const dialog = document.getElementById("detail-dialog");
+    const searchForm = document.getElementById("search-form");
+    const searchInput = document.getElementById("search-input");
+    const feedback = document.getElementById("search-feedback");
+    const results = document.getElementById("search-results");
+    let previousFocus;
+
+    function showDetail(key) {
+      const item = examples[key];
+      if (!item) return;
+      previousFocus = document.activeElement;
+      document.getElementById("dialog-kicker").textContent = item.kicker;
+      document.getElementById("dialog-title").textContent = item.title;
+      document.getElementById("dialog-description").textContent = item.description;
+      dialog.showModal();
+    }
+
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-dialog]");
+      if (trigger) showDetail(trigger.dataset.dialog);
+    });
+
+    dialog.addEventListener("close", () => {
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+    });
+
+    searchForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const query = searchInput.value.trim().toLowerCase();
+      results.replaceChildren();
+      feedback.hidden = false;
+      results.hidden = true;
+      if (!query) {
+        feedback.textContent = "Enter a title, author, or subject to search the sample content.";
+        return;
+      }
+      const matches = ["book", "author", "subject"].filter((key) => {
+        const item = examples[key];
+        return `${item.title} ${item.kicker} ${item.description}`.toLowerCase().includes(query);
+      });
+      if (!matches.length) {
+        feedback.textContent = "No sample results. Try “map”, “Mara”, or “imaginary”.";
+        return;
+      }
+      feedback.textContent = `${matches.length} sample ${matches.length === 1 ? "result" : "results"}`;
+      results.hidden = false;
+      for (const key of matches) {
+        const row = document.createElement("li");
+        const button = document.createElement("button");
+        const title = document.createElement("span");
+        const kind = document.createElement("span");
+        button.type = "button";
+        button.className = "search-result";
+        button.dataset.dialog = key;
+        title.textContent = examples[key].title;
+        kind.textContent = examples[key].kicker;
+        button.append(title, kind);
+        row.append(button);
+        results.append(row);
+      }
+    });
+  </script>
+</body>
+</html>

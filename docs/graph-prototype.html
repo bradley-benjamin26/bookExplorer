@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Shelf Thread — graph prototype</title>
+  <style>
+    :root {
+      --paper: #edf3e8;
+      --sheet: #f8faf4;
+      --ink: #202b25;
+      --muted: #4c5c50;
+      --rust: #b94e25;
+      --rust-dark: #963b1b;
+      --line: #9daea0;
+      --blue: #375663;
+      --focus: #244e76;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #dce5d8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { color: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+    [hidden] { display: none !important; }
+    .page {
+      min-height: 100vh;
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--paper);
+      box-shadow: 0 0 45px #35483814;
+    }
+    .prototype-label {
+      padding: 9px 24px;
+      color: #fff;
+      background: var(--blue);
+      font-size: 12px;
+      font-weight: 650;
+      text-align: center;
+      letter-spacing: .01em;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 28px 42px 25px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .brand-mark { width: 35px; height: 35px; flex: none; color: var(--rust); }
+    .brand-name {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 23px;
+      font-weight: 700;
+      letter-spacing: -.04em;
+      line-height: 1;
+    }
+    .brand-subtitle { margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .home-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--rust-dark);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .home-link:hover, .text-button:hover { text-decoration: underline; }
+    main { padding: 38px 42px 50px; }
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--rust-dark);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    h1, h2, .node-name, .list-title { font-family: Georgia, "Times New Roman", serif; }
+    h1 { margin: 0; font-size: clamp(32px, 5vw, 42px); font-weight: 500; letter-spacing: -.04em; line-height: 1.1; }
+    .intro { max-width: 540px; margin: 11px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .segmented { display: inline-flex; padding: 3px; border: 1px solid #879b8b; border-radius: 7px; background: #e2ebe0; }
+    .segmented button {
+      min-height: 38px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .segmented button[aria-pressed="true"] { color: #fff; background: var(--blue); }
+    .filter { position: relative; }
+    .filter summary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 15px;
+      border: 1px solid #718477;
+      border-radius: 6px;
+      background: var(--sheet);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      list-style: none;
+    }
+    .filter summary::-webkit-details-marker { display: none; }
+    .filter summary:hover { background: #e2ebe0; }
+    .filter-panel {
+      position: absolute;
+      z-index: 4;
+      right: 0;
+      width: 210px;
+      padding: 16px;
+      border: 1px solid #879b8b;
+      border-radius: 7px;
+      background: var(--sheet);
+      box-shadow: 0 8px 25px #202b2520;
+    }
+    .filter-panel p { margin: 0 0 10px; font-size: 13px; font-weight: 700; }
+    .filter-panel label { display: flex; align-items: center; gap: 9px; min-height: 37px; font-size: 14px; }
+    .filter-panel input { width: 18px; height: 18px; accent-color: var(--blue); }
+    .filter-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .trail {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+      min-height: 50px;
+      margin-top: 19px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .text-button {
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      color: var(--rust-dark);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .separator { color: #768a7a; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      margin: 0 0 17px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--node-color); }
+    .book { --node-color: #963b1b; }
+    .author { --node-color: #375663; }
+    .subject { --node-color: #506d4d; }
+    .graph-surface {
+      position: relative;
+      width: 100%;
+      height: 470px;
+      overflow: hidden;
+      border: 1px solid #b6c8b7;
+      border-radius: 8px;
+      background: var(--sheet);
+    }
+    .graph-surface::before {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(#8d9f8c 0.6px, transparent 0.6px);
+      background-size: 20px 20px;
+      opacity: .21;
+      content: "";
+      pointer-events: none;
+    }
+    .graph-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .graph-lines line { stroke: #9aab9a; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+    .graph-node {
+      position: absolute;
+      z-index: 1;
+      display: flex;
+      width: 150px;
+      min-height: 74px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 8px;
+      transform: translate(-50%, -50%);
+      border: 1px solid #b3c2b1;
+      border-radius: 7px;
+      background: var(--sheet);
+      box-shadow: 0 2px 6px #2037250d;
+      text-align: center;
+    }
+    .graph-node:hover { border-color: var(--node-color); background: #eef4ea; }
+    .graph-node.current { min-height: 90px; border: 2px solid var(--node-color); }
+    .graph-node .dot { width: 12px; height: 12px; margin-bottom: 5px; }
+    .graph-node.current .dot { width: 15px; height: 15px; }
+    .node-kind { color: var(--muted); font-size: 11px; }
+    .node-name { margin-top: 3px; font-size: 15px; font-weight: 700; line-height: 1.15; }
+    .current-label { margin-top: 3px; color: var(--rust-dark); font-size: 11px; font-weight: 700; }
+    .graph-empty { position: absolute; top: 62%; left: 10%; right: 10%; color: var(--muted); font-size: 13px; text-align: center; }
+    .list { margin: 0; padding: 0 20px; border: 1px solid #b6c8b7; border-radius: 8px; background: var(--sheet); list-style: none; }
+    .list-row { display: flex; align-items: center; gap: 12px; padding: 16px 0; border-bottom: 1px solid #c9d5c7; }
+    .list-row:last-child { border-bottom: 0; }
+    .list-copy { flex: 1; min-width: 0; }
+    .list-title { display: block; font-size: 16px; font-weight: 700; }
+    .list-meta { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .list-action {
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid #718477;
+      border-radius: 6px;
+      color: var(--blue);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .list-action:hover { background: #e2ebe0; }
+    .caption { margin: 13px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .note {
+      margin-top: 32px;
+      padding: 21px 0 0;
+      border-top: 1px solid var(--line);
+    }
+    .note h2 { margin: 0; font-size: 22px; font-weight: 500; }
+    .note p { max-width: 540px; margin: 9px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    footer { display: flex; justify-content: space-between; gap: 16px; padding: 22px 42px 30px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    footer a { color: var(--rust-dark); font-weight: 700; }
+    dialog { width: min(440px, calc(100% - 32px)); padding: 28px; border: 1px solid #7e9182; border-radius: 9px; color: var(--ink); background: var(--sheet); box-shadow: 0 18px 60px #10201540; }
+    dialog::backdrop { background: #18251db3; }
+    dialog h2 { margin: 0; font-size: 27px; font-weight: 500; }
+    dialog p:not(.eyebrow) { color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .dialog-close { min-height: 44px; padding: 0 18px; border: 1px solid var(--blue); border-radius: 6px; color: var(--blue); background: transparent; font-weight: 700; }
+    .dialog-close:hover { background: #e2ebe0; }
+    @media (max-width: 520px) {
+      .header { padding: 22px; }
+      .brand-name { font-size: 21px; }
+      main { padding: 32px 24px 42px; }
+      .graph-surface { height: 390px; }
+      .graph-node { width: 108px; min-height: 68px; padding: 7px 4px; }
+      .graph-node.current { min-height: 82px; width: 115px; }
+      .node-name { font-size: 13px; }
+      .list { padding: 0 12px; }
+      footer { padding: 20px 24px 26px; }
+    }
+    @media (max-width: 360px) {
+      .graph-node { width: 80px; }
+      .graph-node.current { width: 92px; }
+      .node-name { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="prototype-label">Design prototype · Fictional books and connections</div>
+    <header class="header">
+      <a class="brand" href="home-prototype.html" aria-label="Shelf Thread prototype home">
+        <svg class="brand-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M5 8.5c4.5-2 8.5-1.6 13 1.2 4.5-2.8 8.5-3.2 13-1.2v18c-4.5-2-8.5-1.6-13 1.2-4.5-2.8-8.5-3.2-13-1.2zM18 10v17.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          <circle cx="18" cy="10" r="2.3" fill="currentColor"/>
+        </svg>
+        <div><div class="brand-name">Shelf Thread</div><div class="brand-subtitle">A little further into books</div></div>
+      </a>
+      <a class="home-link" href="home-prototype.html">← Home</a>
+    </header>
+
+    <main>
+      <p class="eyebrow">Follow the thread</p>
+      <h1 id="page-title" tabindex="-1">Exploring The Map Room</h1>
+      <p class="intro">Each connection is a place to wander. Choose a neighboring item to center the map on it.</p>
+
+      <div class="toolbar">
+        <div class="segmented" role="group" aria-label="View connections as">
+          <button type="button" id="graph-button" aria-pressed="true">Graph</button>
+          <button type="button" id="list-button" aria-pressed="false">List</button>
+        </div>
+        <details class="filter">
+          <summary id="filter-summary">Filter</summary>
+          <div class="filter-panel">
+            <p>Show connections</p>
+            <label><input type="checkbox" value="book" checked> Books</label>
+            <label><input type="checkbox" value="author" checked> Authors</label>
+            <label><input type="checkbox" value="subject" checked> Subjects</label>
+            <div class="filter-note">The item at the center stays visible.</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="trail">
+        <button type="button" class="text-button" id="back-button" hidden>← Previous thread</button>
+        <span class="separator" id="trail-separator" hidden>·</span>
+        <span id="center-description" aria-live="polite">Centered on The Map Room</span>
+      </div>
+      <div class="legend" aria-label="Connection types">
+        <span class="book"><i class="dot" aria-hidden="true"></i>Book</span>
+        <span class="author"><i class="dot" aria-hidden="true"></i>Author</span>
+        <span class="subject"><i class="dot" aria-hidden="true"></i>Subject</span>
+      </div>
+
+      <div class="graph-surface" id="graph" aria-label="Map of sample connections"></div>
+      <ul class="list" id="list" aria-label="List of sample connections" hidden></ul>
+      <p class="caption" id="view-hint">Choose a connection to follow it. Select the center to see its sample details.</p>
+
+      <section class="note">
+        <h2>A small map, many directions</h2>
+        <p>These are imagined examples, not live catalog records. In the real app, a thread can reveal the authors, books, and subjects connected to your own discoveries.</p>
+      </section>
+    </main>
+    <footer><span>Shelf Thread · A reader's field notes</span><a href="home-prototype.html">Home prototype</a></footer>
+  </div>
+
+  <dialog id="detail-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description">
+    <p class="eyebrow" id="dialog-kicker"></p>
+    <h2 id="dialog-title"></h2>
+    <p id="dialog-description"></p>
+    <form method="dialog"><button class="dialog-close" type="submit">Back to the map</button></form>
+  </dialog>
+
+  <script>
+    const items = {
+      map: { title: "The Map Room", type: "book", description: "An imagined book by Mara Vale, set among imaginary places." },
+      mara: { title: "Mara Vale", type: "author", description: "An imagined author of The Map Room and The Atlas of Quiet Things." },
+      places: { title: "Imaginary places", type: "subject", description: "A sample subject connecting stories of imagined worlds." },
+      atlas: { title: "The Atlas of Quiet Things", type: "book", description: "An imagined book by Mara Vale, also connected to imaginary places." },
+      maps: { title: "Maps and memory", type: "subject", description: "A sample subject shared by The Map Room and The Atlas of Quiet Things." },
+    };
+    const edges = [
+      { a: "map", b: "mara", relation: "Written by Mara Vale" },
+      { a: "map", b: "places", relation: "About imaginary places" },
+      { a: "map", b: "maps", relation: "About maps and memory" },
+      { a: "mara", b: "atlas", relation: "Written by Mara Vale" },
+      { a: "atlas", b: "places", relation: "About imaginary places" },
+      { a: "atlas", b: "maps", relation: "About maps and memory" },
+    ];
+    const layouts = {
+      1: [{ x: 50, y: 17 }],
+      2: [{ x: 50, y: 17 }, { x: 50, y: 83 }],
+      3: [{ x: 50, y: 17 }, { x: 20, y: 80 }, { x: 80, y: 80 }],
+      4: [{ x: 50, y: 17 }, { x: 16, y: 50 }, { x: 84, y: 50 }, { x: 50, y: 83 }],
+    };
+    const graph = document.getElementById("graph");
+    const list = document.getElementById("list");
+    const dialog = document.getElementById("detail-dialog");
+    const graphButton = document.getElementById("graph-button");
+    const listButton = document.getElementById("list-button");
+    const backButton = document.getElementById("back-button");
+    const filterSummary = document.getElementById("filter-summary");
+    const filterInputs = [...document.querySelectorAll(".filter-panel input")];
+    let center = "map";
+    let history = [];
+    let mode = "graph";
+    let previousFocus;
+
+    function connections() {
+      const visibleTypes = new Set(filterInputs.filter((input) => input.checked).map((input) => input.value));
+      return edges.filter((edge) => edge.a === center || edge.b === center).map((edge) => ({
+        id: edge.a === center ? edge.b : edge.a,
+        relation: edge.relation,
+      })).filter(({ id }) => visibleTypes.has(items[id].type));
+    }
+
+    function openDetails(id) {
+      const item = items[id];
+      previousFocus = document.activeElement;
+      document.getElementById("dialog-kicker").textContent = `Sample ${item.type}`;
+      document.getElementById("dialog-title").textContent = item.title;
+      document.getElementById("dialog-description").textContent = `${item.description} This prototype is not connected to the live catalog.`;
+      dialog.showModal();
+    }
+
+    function select(id) {
+      if (id === center) {
+        openDetails(id);
+        return;
+      }
+      history.push(center);
+      center = id;
+      render();
+      document.getElementById("page-title").focus();
+    }
+
+    function makeNode(id, position, current) {
+      const item = items[id];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `graph-node ${item.type}${current ? " current" : ""}`;
+      button.style.left = `${position.x}%`;
+      button.style.top = `${position.y}%`;
+      button.setAttribute("aria-label", current
+        ? `${item.title}, ${item.type}, currently centered. Show sample details`
+        : `${item.title}, ${item.type}. Center graph here`);
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.setAttribute("aria-hidden", "true");
+      const kind = document.createElement("span");
+      kind.className = "node-kind";
+      kind.textContent = item.type[0].toUpperCase() + item.type.slice(1);
+      const name = document.createElement("span");
+      name.className = "node-name";
+      name.textContent = item.title;
+      button.append(dot, kind, name);
+      if (current) {
+        const label = document.createElement("span");
+        label.className = "current-label";
+        label.textContent = "You are here";
+        button.append(label);
+      }
+      button.addEventListener("click", () => select(id));
+      return button;
+    }
+
+    function render() {
+      const connected = connections();
+      const slots = layouts[connected.length] ?? [];
+      const item = items[center];
+      document.getElementById("page-title").textContent = `Exploring ${item.title}`;
+      document.getElementById("center-description").textContent = `Centered on ${item.title}`;
+      backButton.hidden = history.length === 0;
+      document.getElementById("trail-separator").hidden = history.length === 0;
+      const hiddenCount = filterInputs.filter((input) => !input.checked).length;
+      filterSummary.textContent = hiddenCount ? `Filter · ${hiddenCount} hidden` : "Filter";
+      graphButton.setAttribute("aria-pressed", String(mode === "graph"));
+      listButton.setAttribute("aria-pressed", String(mode === "list"));
+      graph.hidden = mode !== "graph";
+      list.hidden = mode !== "list";
+      document.getElementById("view-hint").textContent = mode === "graph"
+        ? "Choose a connection to follow it. Select the center to see its sample details."
+        : "Choose Center to follow a connection, or Details to open the centered item.";
+
+      graph.replaceChildren();
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "graph-lines");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("aria-hidden", "true");
+      connected.forEach((connection, index) => {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", "50");
+        line.setAttribute("y1", "50");
+        line.setAttribute("x2", String(slots[index].x));
+        line.setAttribute("y2", String(slots[index].y));
+        svg.append(line);
+      });
+      graph.append(svg, makeNode(center, { x: 50, y: 50 }, true));
+      connected.forEach(({ id }, index) => graph.append(makeNode(id, slots[index], false)));
+      if (!connected.length) {
+        const empty = document.createElement("p");
+        empty.className = "graph-empty";
+        empty.textContent = "No connections are visible. Change the filter to see more.";
+        graph.append(empty);
+      }
+
+      list.replaceChildren();
+      [{ id: center, relation: "Currently centered" }, ...connected].forEach(({ id, relation }) => {
+        const entry = items[id];
+        const row = document.createElement("li");
+        row.className = `list-row ${entry.type}`;
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        dot.setAttribute("aria-hidden", "true");
+        const copy = document.createElement("span");
+        copy.className = "list-copy";
+        const title = document.createElement("span");
+        title.className = "list-title";
+        title.textContent = entry.title;
+        const meta = document.createElement("span");
+        meta.className = "list-meta";
+        meta.textContent = `${entry.type[0].toUpperCase() + entry.type.slice(1)} · ${relation}`;
+        copy.append(title, meta);
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "list-action";
+        action.textContent = id === center ? "Details" : "Center";
+        action.setAttribute("aria-label", id === center ? `Show details for ${entry.title}` : `Center graph on ${entry.title}`);
+        action.addEventListener("click", () => select(id));
+        row.append(dot, copy, action);
+        list.append(row);
+      });
+      if (!connected.length) {
+        const empty = document.createElement("li");
+        empty.className = "list-row list-meta";
+        empty.textContent = "No connections are visible. Change the filter to see more.";
+        list.append(empty);
+      }
+    }
+
+    graphButton.addEventListener("click", () => { mode = "graph"; render(); });
+    listButton.addEventListener("click", () => { mode = "list"; render(); });
+    filterInputs.forEach((input) => input.addEventListener("change", render));
+    backButton.addEventListener("click", () => {
+      if (!history.length) return;
+      center = history.pop();
+      render();
+      document.getElementById("page-title").focus();
+    });
+    dialog.addEventListener("close", () => {
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+    });
+    render();
+  </script>
+</body>
+</html>
