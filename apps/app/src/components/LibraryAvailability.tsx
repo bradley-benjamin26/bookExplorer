@@ -5,7 +5,7 @@ import { availabilityLine } from "../libraryAvailability";
 import { useThemedStyles, type Theme } from "../theme";
 
 /** A quiet availability line; renders nothing while loading, on error, or when the book isn't found. */
-export function LibraryAvailability({ libraryId, isbn }: { libraryId: string; isbn?: string | null }) {
+export function LibraryAvailability({ libraryId, name, isbn }: { libraryId: string; name: string; isbn?: string | null }) {
   const styles = useThemedStyles(createStyles);
   const { data } = useQuery({
     queryKey: ["libraryAvailability", libraryId, isbn],
@@ -15,7 +15,7 @@ export function LibraryAvailability({ libraryId, isbn }: { libraryId: string; is
     retry: false,
   });
   const line = data ? availabilityLine(data) : null;
-  return line ? <Text style={styles.line}>{line}</Text> : null;
+  return line ? <Text style={styles.line}>{`${name}: ${line}`}</Text> : null;
 }
 
 function createStyles({ colors, spacing, fonts, typeScale }: Theme) {

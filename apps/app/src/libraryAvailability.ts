@@ -12,6 +12,7 @@ function shortDate(iso: string): string {
 export function availabilityLine(a: LibraryAvailability): string | null {
   if (!a.found) return null;
   if (a.level === "catalog") return "In the catalog";
+  if (a.copies.length === 0) return "In the catalog"; // no holdings lines is no evidence of "none on the shelf"
   const open = a.copies.filter((c) => c.status === "available").length;
   if (open > 0) return `${open} of ${a.copies.length} copies available`;
   const due = a.copies.flatMap((c) => (c.dueDate ? [c.dueDate] : [])).sort()[0];

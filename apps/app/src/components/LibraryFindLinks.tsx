@@ -70,7 +70,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
       <>
         {isbn && library.isbnUrl && linkRow("isbn", `Find at ${library.name} (ISBN)`, buildLibraryIsbnSearchUrl(library.isbnUrl, isbn))}
         {library.titleUrl && linkRow("title", `Find at ${library.name} (title)`, buildLibraryTitleSearchUrl(library.titleUrl, title))}
-        {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} isbn={isbn} />}
+        {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} name={library.name} isbn={isbn} />}
       </>
     );
   }
@@ -114,7 +114,7 @@ export function LibraryFindLinks({ isbn, title }: { isbn?: string | null; title:
                   linkRow(`${library.id}-title`, "By title", buildLibraryTitleSearchUrl(library.titleUrl, title))}
               </View>
             )}
-            {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} isbn={isbn} />}
+            {library.z3950Id && <LibraryAvailability libraryId={library.z3950Id} name={library.name} isbn={isbn} />}
           </View>
         );
       })}

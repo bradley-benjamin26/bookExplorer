@@ -134,11 +134,12 @@ describe("GET /api/path caching", () => {
     expect(findPath).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["timeout", "incomplete", "nodeCap", "upstreamUnavailable"] as const)("does not cache %s", async (reason, ) => {
+  const uncached = ["timeout", "incomplete", "nodeCap", "upstreamUnavailable"] as const;
+  it.each(uncached)("does not cache %s", async (reason, ) => {
     vi.mocked(findPath).mockClear();
     vi.mocked(findPath).mockResolvedValue({ found: false, reason });
-    await get(`work:OL4${reason.length}W`, "work:OL49W");
-    await get(`work:OL4${reason.length}W`, "work:OL49W");
+    await get(`work:OL4${uncached.indexOf(reason)}W`, "work:OL49W");
+    await get(`work:OL4${uncached.indexOf(reason)}W`, "work:OL49W");
     expect(findPath).toHaveBeenCalledTimes(2);
   });
 });

@@ -27,3 +27,6 @@ it("shows the earliest due date when none are available", () => {
 it("omits the due date when there is none", () => {
   expect(availabilityLine(avail([copy("checkedOut"), copy("unknown")]))).toBe("No copies on the shelf");
 });
+it("does not claim an empty shelf when there are no holdings lines", () => {
+  expect(availabilityLine(avail([]))).toBe("In the catalog");
+});
