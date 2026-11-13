@@ -7,7 +7,7 @@ vi.mock("../httpClient.js", async () => ({
   fetchWithTimeout: vi.fn(),
 }));
 const noMatch = { ok: true, json: async () => ({ data: { editions: [] } }) } as unknown as Response;
-const match = { ok: true, json: async () => ({ data: { editions: [{ book: { rating: 4, ratings_count: 10, user_books: [] } }] } }) } as unknown as Response;
+const match = { ok: true, json: async () => ({ data: { editions: [{ book: { rating: 4, ratings_count: 10 } }] } }) } as unknown as Response;
 const isbns = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
 beforeEach(() => {
@@ -31,7 +31,6 @@ it("still finds a match on the 5th ISBN", async () => {
 });
 
 const sentAuth = () => (vi.mocked(fetchWithTimeout).mock.calls[0][1]?.headers as Record<string, string>).Authorization;
-const sentQuery = () => JSON.parse(String(vi.mocked(fetchWithTimeout).mock.calls[0][1]?.body)).query as string;
 
 it("uses the caller's token over the server key", async () => {
   vi.stubEnv("HARDCOVER_API_KEY", "server");
@@ -64,12 +63,6 @@ it("skips Hardcover when neither is set", async () => {
   vi.stubEnv("HARDCOVER_API_KEY", "");
   expect(await lookupByIsbn("1")).toBeNull();
   expect(fetchWithTimeout).not.toHaveBeenCalled();
-});
-
-it("only asks for public reviews, since the result is cached for everyone", async () => {
-  vi.mocked(fetchWithTimeout).mockResolvedValue(match);
-  await lookupByIsbn("1");
-  expect(sentQuery()).toContain("privacy_setting_id: { _eq: 1 }");
 });
 
 it("maps a 429 response to HardcoverRateLimitError using Retry-After", async () => {
@@ -152,7 +145,7 @@ it("sends a no-retry call through plain fetch, so a timed-out mutation is never 
 });
 
 it("lookupByIsbn returns the book's slug", async () => {
-  const withSlug = { ok: true, json: async () => ({ data: { editions: [{ book: { slug: "dune", rating: 4, ratings_count: 10, user_books: [] } }] } }) } as unknown as Response;
+  const withSlug = { ok: true, json: async () => ({ data: { editions: [{ book: { slug: "dune", rating: 4, ratings_count: 10 } }] } }) } as unknown as Response;
   vi.mocked(fetchWithTimeout).mockResolvedValueOnce(withSlug);
   expect((await lookupByIsbn("1"))?.slug).toBe("dune");
   vi.mocked(fetchWithTimeout).mockResolvedValueOnce(match);

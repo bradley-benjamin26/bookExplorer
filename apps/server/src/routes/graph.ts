@@ -4,10 +4,13 @@ import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "
 
 const BUILDERS = {
   author: buildAuthorGraph,
-  award: buildAwardGraph,
+  award: (id: string, _extra?: number) => buildAwardGraph(id),
   subject: buildSubjectGraph,
   work: buildWorkGraph,
 } as const;
+
+// Bounds the OL fetch a client can trigger.
+const MAX_EXTRA = 100;
 
 type GraphType = keyof typeof BUILDERS;
 
@@ -35,7 +38,8 @@ export async function graphRoutes(app: FastifyInstance) {
       return { error: `"${id}" is not a valid ${type} id` };
     }
 
-    const graph = await BUILDERS[type](id);
+    const extra = Math.min(Math.max(Math.trunc(Number((req.query as { extra?: string }).extra)) || 0, 0), MAX_EXTRA);
+    const graph = await BUILDERS[type](id, extra);
 
     if (!graph) {
       reply.code(404);

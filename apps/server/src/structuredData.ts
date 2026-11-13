@@ -19,7 +19,7 @@ function compact(obj: JsonLd): JsonLd {
 const people = (authors: AuthorRef[], origin: string) =>
   authors.map((a) => ({ "@type": "Person", name: a.name, url: `${origin}/author/${a.openLibraryId}` }));
 
-// Ratings and reviews are deliberately left out: they come from Hardcover and
+// Ratings are deliberately left out: they come from Hardcover and
 // Open Library, not this site's users, which Google's review-snippet policy forbids marking up.
 function bookLike(d: Book | Work, url: string, description: string, origin: string): JsonLd {
   return {

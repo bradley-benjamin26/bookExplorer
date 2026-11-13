@@ -34,7 +34,7 @@ describe("subject term cleaning", () => {
     const bookWithoutAwards = {
       isbn: "1", title: "T", authors: [], subjects: [], genres: [], description: null, descriptionSource: null,
       descriptionSourceUrl: null, coverUrl: null, coverSource: null, openLibraryWorkId: null, openLibraryEditionId: null,
-      wikidataId: null, format: null, rating: null, reviews: [],
+      wikidataId: null, format: null, rating: null,
     };
     expect(BookSchema.parse(bookWithoutAwards).awards).toEqual([]);
   });
