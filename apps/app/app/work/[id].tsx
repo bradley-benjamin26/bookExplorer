@@ -24,7 +24,7 @@ import { ShareButton } from "../../src/components/ShareButton";
 import { AwardsSection, EditLinkRow, TermsSection } from "../../src/components/TermsSection";
 import type { SaveSheetHandle } from "../../src/components/AddToListButton";
 import { routes } from "../../src/navigation";
-import { savedEditionOf } from "../../src/editionChoice";
+import { savedEditionLabel, savedEditionOf } from "../../src/editionChoice";
 import { getAllSavedBooks, type SavedBookRecord } from "../../src/storage/savedBooks";
 import { addRecent } from "../../src/storage/history";
 import { getSavedWork, seedSavedWorkFromApi, updateSavedWork, type SavedWorkRecord } from "../../src/storage/savedWorks";
@@ -162,9 +162,9 @@ export default function WorkDetail() {
       </DetailTop>
       {lock.error && <Text style={styles.lockError}>{lock.error}</Text>}
       {savedEdition && (
-        <Pressable ref={titleRef("View the saved edition")} accessibilityRole="link" style={styles.savedEditionLink} onPress={() => router.push(routes.book(savedEdition.isbn))}>
-          <Text style={styles.savedEdition}>Saved: {savedEdition.format ?? "edition"} {savedEdition.isbn}</Text>
-        </Pressable>
+        <Button variant="pill" style={styles.savedEditionButton} onPress={() => router.push(routes.book(savedEdition.isbn))} accessibilityLabel={savedEditionLabel(savedEdition)} tooltip="View the saved edition">
+          View saved edition
+        </Button>
       )}
 
       {data.description && (
@@ -240,8 +240,7 @@ function createStyles({ colors, radii, cardStyle, spacing, fonts, typeScale }: T
       marginTop: spacing.xs,
       textDecorationLine: "underline",
     },
-    savedEdition: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, textDecorationLine: "underline" },
-    savedEditionLink: { marginTop: spacing.sm, alignSelf: "center" },
+    savedEditionButton: { marginTop: spacing.sm },
     descriptionSource: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.cover, marginTop: spacing.sm },
     pressed: { opacity: 0.6 },
     lockError: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.danger, marginTop: spacing.sm, alignSelf: "center" },

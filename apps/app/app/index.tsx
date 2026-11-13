@@ -7,10 +7,11 @@ import { Image } from "expo-image";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
+import { confirmDestructive } from "../src/confirm";
 import { NODE_LABELS } from "../src/graphLabels";
 import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
-import { getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
+import { clearRecent, getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
 import { CoverPlaceholder } from "../src/components/CoverPlaceholder";
 import { FeedbackBanner } from "../src/components/FeedbackBanner";
@@ -47,6 +48,13 @@ export default function Home() {
   // A pill shows only when that kind is present; if the chosen kind empties, fall back to everything.
   const filters = FILTERS.filter((f) => f.value === "all" || recentOfKind(recent, f.value).length > 0);
   const shown = recentOfKind(recent, filters.some((f) => f.value === filter) ? filter : "all");
+
+  const clearHistory = async () => {
+    if (!(await confirmDestructive("Clear history?", "Remove everything from your recently viewed list? This can't be undone.", "Clear"))) return;
+    await clearRecent();
+    setRecent([]);
+    setFilter("all");
+  };
 
   const submitSearch = () => {
     const trimmed = query.trim();
@@ -161,6 +169,9 @@ export default function Home() {
               ))}
             </View>
             {shown.map(renderRecent)}
+            <Button variant="pill" onPress={clearHistory} accessibilityLabel="Clear recently looked at history">
+              Clear history
+            </Button>
           </View>
         )}
 

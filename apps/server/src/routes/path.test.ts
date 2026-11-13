@@ -90,7 +90,7 @@ describe("GET /api/path search", () => {
     await app.listen({ port: 0, host: "127.0.0.1" });
     const { port } = app.server.address() as { port: number };
     const client = new AbortController();
-    const request = fetch(`http://127.0.0.1:${port}/api/path?from=work:OL1W&to=work:OL2W`, { signal: client.signal });
+    const request = fetch(`http://127.0.0.1:${port}/api/path?from=work:OL7W&to=work:OL8W`, { signal: client.signal });
     await vi.waitFor(() => expect(signal).toBeDefined());
     expect(signal?.aborted).toBe(false);
     client.abort();
@@ -99,3 +99,48 @@ describe("GET /api/path search", () => {
     await app.close();
   });
 });
+
+describe("GET /api/path caching", () => {
+  const get = async (from: string, to: string) => {
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: `/api/path?from=${from}&to=${to}` });
+    await app.close();
+    return res.json();
+  };
+  const found: PathResult = { found: true, paths: [] };
+
+  it("serves a repeated search from the cache", async () => {
+    vi.mocked(findPath).mockClear();
+    vi.mocked(findPath).mockResolvedValue(found);
+    const a = await get("work:OL11W", "work:OL12W");
+    const b = await get("work:OL11W", "work:OL12W");
+    expect(findPath).toHaveBeenCalledTimes(1);
+    expect(b).toEqual(a);
+  });
+
+  it("does not serve reversed endpoints from the cache", async () => {
+    vi.mocked(findPath).mockClear();
+    vi.mocked(findPath).mockResolvedValue(found);
+    await get("work:OL21W", "work:OL22W");
+    await get("work:OL22W", "work:OL21W");
+    expect(findPath).toHaveBeenCalledTimes(2);
+  });
+
+  it("caches noPath", async () => {
+    vi.mocked(findPath).mockClear();
+    vi.mocked(findPath).mockResolvedValue({ found: false, reason: "noPath" });
+    await get("work:OL31W", "work:OL32W");
+    await get("work:OL31W", "work:OL32W");
+    expect(findPath).toHaveBeenCalledTimes(1);
+  });
+
+  const uncached = ["timeout", "incomplete", "nodeCap", "upstreamUnavailable"] as const;
+  it.each(uncached)("does not cache %s", async (reason, ) => {
+    vi.mocked(findPath).mockClear();
+    vi.mocked(findPath).mockResolvedValue({ found: false, reason });
+    await get(`work:OL4${uncached.indexOf(reason)}W`, "work:OL49W");
+    await get(`work:OL4${uncached.indexOf(reason)}W`, "work:OL49W");
+    expect(findPath).toHaveBeenCalledTimes(2);
+  });
+});
+

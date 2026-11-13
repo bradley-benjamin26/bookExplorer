@@ -1,0 +1,70 @@
+Connecting...OK.
+Sent initrequest.
+Connection accepted by v2 target.
+ID     : Z39.50-III
+Name   : z39-innopac
+Version: 1
+UserInformationfield:
+Guessing visiblestring:
+'Innovative Interfaces Inc. Z39.50 SERVER version 1.1'
+Options: search present scan namedResultSets
+Elapsed: 0.267240
+Sent searchRequest.
+Received SearchResponse.
+Search was a success.
+Number of hits: 1, setno 1
+records returned: 0
+Elapsed: 0.059423
+Sent presentRequest (1+1).
+Records: 1
+[INNOPAC]Record type: USmarc
+02353cam  2200529 i 4500
+001 51033055
+008 030306r20031813enk    e b    000 1 eng  
+010    $a 2003265779
+020    $a 9780141439518 $q (paperback ; $q Penguin Classics)
+020    $a 0141439513 $q (paperback ; $q Penguin Classics)
+020    $a 9780143036234 $q (paperback)
+020    $a 0143036238 $q (paperback)
+035    $a (OCoLC)51033055
+040    $a DLC $b eng $e rda $c DLC $d UKM $d CUY $d UtOrBLW
+043    $a e-uk-en
+049    $a GHIA
+100 1  $a Austen, Jane, $d 1775-1817, $e author.
+245 10 $a Pride and prejudice / $c Jane Austen ; edited with an introduction and notes by Vivien Jones ; with the original Penguin Classics introduction by Tony Tanner.
+264  1 $a London ; $a New York : $b Penguin Books, $c [2003]
+264  4 $c ©1813.
+300    $a xlii, 435 pages ; $c 20 cm.
+336    $a text $b txt $2 rdacontent.
+337    $a unmediated $b n $2 rdamedia.
+338    $a volume $b nc $2 rdacarrier.
+490 1  $a Penguin classics.
+504    $a Includes bibliographical references.
+526 0  $a Accelerated Reader AR $b UG $c 12.0 $d 27.0 $z 714.
+520    $a Charles Bingley, a handsome bachelor with a good income, moves into a house near the Bennet family estate and soon falls in love with Jane, eldest of the five Bennet sisters.  But his friend, the wealthy and aristocratic Mr. Darcy, disapproves of his choice, deeming the Bennets socially inferior.  At the same time, Darcy finds himself increasingly drawn to Elizabeth, Jane's younger sister.
+600 10 $a Bennet, Elizabeth $c (Fictitious character) $v Fiction.
+600 10 $a Darcy, Fitzwilliam $c (Fictitious character) $v Fiction.
+650  0 $a Young women $z England $v Fiction.
+650  0 $a Sisters $z England $v Fiction.
+650  0 $a Upper class $z England $v Fiction.
+650  0 $a Prejudices $v Fiction.
+650  0 $a Social classes $z England $x History $v Fiction.
+650  0 $a Courtship $v Fiction.
+650  0 $a Marriage $v Fiction.
+650  0 $a Families $v Fiction.
+651  0 $a Great Britain $v Fiction.
+651  0 $a England $v Fiction.
+651  0 $a England $x Social life and customs $y 19th century $v Fiction.
+655  7 $a Domestic fiction. $2 lcgft.
+655  7 $a Romance fiction. $2 lcgft.
+655  7 $a Regency fiction. $2 local.
+655  7 $a Novels of manners. $2 lcgft.
+700 1  $a Jones, Vivien, $d 1952-
+830  0 $a Penguin classics.
+
+nextResultSetPosition = 0
+Elapsed: 0.276050
+See you later, alligator.
+{
+  OCTETSTRING(len=52) Innovative Interfaces Inc. Z39.50 SERVER version 1.1
+}

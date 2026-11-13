@@ -153,6 +153,20 @@ describe("JSON backup", () => {
     expect(() => parseSnapshotJson(bad((s) => (s.schemaVersion = 99)))).toThrow(/newer version/);
   });
 
+  it("round-trips a library's z3950Id, even one no longer in the registry, keeping its manual URLs", async () => {
+    await upsertLibrary({ id: "z", name: "Z", isbnUrl: "https://z.example/?q=", titleUrl: "", z3950Id: "gone-from-registry" });
+    const text = await exportJson();
+    await AsyncStorage.clear();
+    await importSnapshot(parseSnapshotJson(text), "replace");
+    expect((await getSnapshot()).libraries).toMatchObject([{ id: "z", z3950Id: "gone-from-registry", isbnUrl: "https://z.example/?q=" }]);
+  });
+
+  it("still accepts a backup whose libraries lack z3950Id", async () => {
+    await seed();
+    const snap = parseSnapshotJson(await exportJson());
+    expect(snap.libraries[0]).not.toHaveProperty("z3950Id");
+  });
+
   it("exports v4 with lists", async () => {
     await seed();
     const v3 = JSON.parse(await exportJson());

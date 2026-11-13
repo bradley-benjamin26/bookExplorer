@@ -172,7 +172,7 @@ async function getWorkEditions(workId: string): Promise<{ editions: OpenLibraryE
     editions.push({ ...edition, nonEnglish, english, coverId });
   }
 
-  // English and unlabeled editions first, then newest, covers as a small boost; non-English are demoted,
+  // Labelled English first, then unlabeled, then non-English; within a tier newest, covers as a small boost; non-English are demoted,
   // not dropped. Open Library's listing order has no language preference.
   const ordered = orderEditions(editions);
 

@@ -17,8 +17,9 @@ describe("publishYear", () => {
 });
 
 describe("orderEditions", () => {
-  const edition = (id: string, extra: Partial<{ nonEnglish: boolean; publishDate: string | null; coverUrl: string | null }> = {}) => ({
+  const edition = (id: string, extra: Partial<{ english: boolean; nonEnglish: boolean; publishDate: string | null; coverUrl: string | null }> = {}) => ({
     id,
+    english: false,
     nonEnglish: false,
     publishDate: null as string | null,
     coverUrl: null as string | null,
@@ -31,6 +32,27 @@ describe("orderEditions", () => {
       edition("en-old", { publishDate: "1990" }),
     ]);
     expect(result.map((e) => e.id)).toEqual(["en-old", "fr-new"]);
+  });
+
+  it("ranks labelled English above unlabeled even when the unlabeled one is newer", () => {
+    const result = orderEditions([
+      edition("unlabeled-new", { publishDate: "2024" }),
+      edition("en-old", { english: true, publishDate: "1990" }),
+    ]);
+    expect(result.map((e) => e.id)).toEqual(["en-old", "unlabeled-new"]);
+  });
+
+  it("ranks unlabeled above non-English", () => {
+    const result = orderEditions([
+      edition("fr", { nonEnglish: true, publishDate: "2024" }),
+      edition("unlabeled", { publishDate: "1990" }),
+    ]);
+    expect(result.map((e) => e.id)).toEqual(["unlabeled", "fr"]);
+  });
+
+  it("drops nothing and keeps input order for ties when every edition is unlabeled", () => {
+    const result = orderEditions([edition("a"), edition("b"), edition("c")]);
+    expect(result.map((e) => e.id)).toEqual(["a", "b", "c"]);
   });
 
   it("orders newer first within a language group", () => {

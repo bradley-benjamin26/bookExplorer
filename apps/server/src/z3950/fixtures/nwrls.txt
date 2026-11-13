@@ -1,0 +1,82 @@
+Connecting...OK.
+Sent initrequest.
+Connection accepted by v3 target.
+ID     : The Library Corporation
+Name   : Library.Z
+Version: Version 4.0.0.0
+Options: search present scan extendedServices namedResultSets
+Elapsed: 0.285362
+Sent searchRequest.
+Received SearchResponse.
+Search was a success.
+Number of hits: 1, setno 1
+records returned: 0
+Elapsed: 0.059517
+Sent presentRequest (1+1).
+Records: 1
+[LSPacZ]Record type: USmarc
+04296cam a2200721 i 4500
+001   2003265779
+003 DLC
+005 20260922224815.0
+008 030306r20151813enk    d b    000 1 eng  
+010    $a 2003265779
+020    $a 9781420951141 (paperback)
+020    $a 9780141439518 (paperback)
+020    $a 9780199209217 (paperback)
+039    $a 390323 $c TLC
+040    $a DLC $c DLC $d DLC $d TLC $e rda
+041    $a eng
+043    $a e-uk-en
+092    $a YA F AUS
+100 1  $a Austen, Jane, $d 1775-1817 $e Author $0 (DLC)n  79032879 
+245 10 $a Pride and prejudice / $c Jane Austen ; edited wih an introduction and notes by Vivien Jones ; with the original Penguin Classics introduction by Tony Tanner.
+246 3  $a Pride & prejudice
+264  1 $a New York : $b Penguin Books, $c 2015.
+264  4 $c ©2003.
+300    $a xlii, 435 pages. $c 20 cm.
+336    $a text $b txt $2 rdacontent
+337    $a unmediated $b n $2 rdamedia
+338    $a volume $b nc $2 rdacarrier
+380    $a Book $2 tlcgt
+380    $a Fiction $2 marcgt
+385    $a General $2 tlctarget
+385    $a Juvenile $2 tlctarget
+385    $a Adolescent $2 marctarget
+385    $a Rated T+ $2 tlccontent
+504    $a Includes bibliographical references.
+520    $a First published in 1813, “Pride and Prejudice” is a story set in the English countryside outside of London during the early 19th century which centers on the life of Elizabeth Bennet, the second of five sisters who are all unmarried. When a wealthy and sociable young gentleman, Charles Bingley, rents the nearby manor of Netherfield Park the opportunity to find husbands presents itself. While attending a ball the Bennets meet Charles Bingley and his friend Fitzwilliam Darcy for the first time. Charles and Jane, Elizabeth’s older sister, form a quick friendship, while Fitzwilliam shows little interest in Elizabeth by refusing to dance with her. Darcy is a wealthy handsome intelligent young gentleman who suffers from a social awkwardness that makes him appear to be overly prideful. In the weeks that follow Elizabeth and Darcy find themselves repeatedly forced into each other’s company allowing Elizabeth to overcome the prejudice of her first impression and open herself up to the idea of a romance between the two. A classic novel of manners, “Pride and Prejudice” is arguably Jane Austen’s most popular novel. This edition is printed on premium acid-free paper, includes an introduction by William Dean Howells, and forty illustrations by Charles Edmund Brock.
+521    $a Ages 17 and Up.
+526 0  $a Lexile Level: 700.
+526 0  $a Accelerated Reader® Info	
+Quiz # (Quiz Name): 714(Pride and Prejudice (Unabridged))
+Reading Level: 12.0	Interest Level: Upper Grade	Point Value: 27.0.
+600 10 $a Bennet, Elizabeth $c (Fictitious character) $0 (DLC)no2015068194
+600 10 $a Darcy, Fitzwilliam $c (Fictitious character) $0 (DLC)no2015068166
+650  7 $a Young women fiction $2 lcsh $0 (DLC)sh 85149296 
+650  7 $a Prejudices $2 lcshac $0 (DLC)sj2021050808
+650  1 $a Social classes $0 (DLC)sj2021051466
+650  1 $a Courtship $0 (DLC)sj2021052346
+650  1 $a Sisters $0 (DLC)sj2021050879
+651  0 $a Derbyshire (England) $0 (DLC)n  50000477 
+651  0 $a Hertfordshire (England) $0 (DLC)n  80040162 
+655  7 $a Romance fiction. $2 lcgft
+655  7 $a Classics $2 tlcgt
+655  7 $a Domestic fiction $2 lcgft
+655  7 $a Young adult fiction $2 tlcgt
+700 1  $a Jones, Vivien, $d 1952- $e Editor $e Writer of introduction $e null $e null $e author of introduction, etc. $0 (DLC)n  84030740 
+700 1  $a Howells, William Dean, $d 1837-1920, $e Writer of introduction $0 (DLC)n  80002569 
+700 1  $a Brock, C. E., $d 1870-1938, $q (Charles Edmund), $e Illustrator $0 (DLC)n  79095382 
+949    $a BCPA $h F AUS $b 36632006487688 $p 7.00 $r gift
+949    $a BCPL $h YA F AUS $b 36632007338237 $p 10.90
+949    $a PCBL $h YA F AUS $b 36632007338245 $p 10.90
+949    $a BCPL $h YA F AUS $b 36632007702515 $p 5.20
+949    $a BCPL $h YA F AUS $b 36632007702507 $p 5.20
+949    $a BCPL $h YA F AUS $b 36632007705062 $p 12.60
+982    $1 y $a BCPA $b BAY COUNTY $c AD FICTION $i 36632006487688 $m F AUS $s U
+982    $1 y $a BCPL $b BAY COUNTY $c YA FICTION $i 36632007705062 $m YA F AUS $s A
+982    $1 y $a PCBL $b PANAMA CITY BCH $c YA FICTION $i 36632007338245 $m YA F AUS $s A
+
+nextResultSetPosition = 0
+Elapsed: 0.058561
+See you later, alligator.

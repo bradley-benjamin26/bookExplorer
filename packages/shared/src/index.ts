@@ -303,9 +303,22 @@ export type GraphPath = z.infer<typeof GraphPathSchema>;
 // `paths` is ordered most specific first.
 export const PathResultSchema = z.discriminatedUnion("found", [
   z.object({ found: z.literal(true), paths: z.array(GraphPathSchema).min(1) }),
-  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout", "upstreamUnavailable"]) }),
+  z.object({ found: z.literal(false), reason: z.enum(["noPath", "depthCap", "nodeCap", "timeout", "upstreamUnavailable", "incomplete"]) }),
 ]);
 export type PathResult = z.infer<typeof PathResultSchema>;
+
+export const LibraryLevelSchema = z.enum(["availability", "catalog"]);
+export const SupportedLibrarySchema = z.object({ id: z.string(), name: z.string(), level: LibraryLevelSchema });
+export type SupportedLibrary = z.infer<typeof SupportedLibrarySchema>;
+
+export const CopySchema = z.object({
+  branch: z.string(),
+  callNumber: z.string().nullable(),
+  status: z.enum(["available", "checkedOut", "unavailable", "unknown"]),
+  dueDate: z.string().nullable(),
+});
+export const LibraryAvailabilitySchema = z.object({ found: z.boolean(), level: LibraryLevelSchema, copies: z.array(CopySchema) });
+export type LibraryAvailability = z.infer<typeof LibraryAvailabilitySchema>;
 
 /**
  * Strips everything but digits and a check-digit "X" from an ISBN — barcode
@@ -395,6 +408,7 @@ export const LibraryExportSchema = z.object({
   name: z.string().max(500),
   isbnUrl: webUrl,
   titleUrl: webUrl,
+  z3950Id: z.string().max(100).optional(),
 });
 
 export const SavedListExportSchema = z.object({

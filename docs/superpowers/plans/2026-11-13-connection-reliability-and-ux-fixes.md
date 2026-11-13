@@ -175,8 +175,8 @@ Each server was tested with the same checks: connect, anonymous Init, ISBN searc
 | Server | Result | Registry level |
 |---|---|---|
 | `catalog.mbln.org:210/pac` | Polaris. 852 fields: branch, call number, status In/Out/Held, due date | `availability` |
-| `kcmo.sirsi.net:2500/UNICORN` | SirsiDynix. 926 fields: location, status (only `ON-SHELF` seen), call number | `availability` once Task 8's probe sees a non-shelf status |
-| `pac.nwrls.lib.fl.us:5666/LSPacZ` | Library.Z. 949 items plus 982 with `$s` A or U; meaning unconfirmed | `catalog` until Task 8's probe confirms A/U |
+| `kcmo.sirsi.net:2500/UNICORN` | SirsiDynix. 926 fields: location, status (only `ON-SHELF` seen), call number | `availability`. Task 8 probe (2026-11-13): saw `CHECKEDOUT` with a due date in `$e` (e.g. 11/16/2026) and `HOLDS` (no date). CHECKEDOUT is evident from the record; `HOLDS` is mapped to `unknown`. Not compared with the web catalog. `sirsi926` enabled |
+| `pac.nwrls.lib.fl.us:5666/LSPacZ` | Library.Z. 949 items plus 982 with `$s` A or U; meaning unconfirmed | `catalog`. Task 8 probe: `$s` A (13) and U (5) seen on three bestsellers, no due date or other value, meaning not matchable to the web catalog, so stays `catalog` (holdings `none`) |
 | `www.more.lib.wi.us:210/INNOPAC` | record, no holdings fields | `catalog` |
 | `catalog.oaklandlibrary.org:210/INNOPAC` | record, 907 (bib number) and 994 only | `catalog` |
 | `www.saclibrarycatalog.org:210/INNOPAC` | record, 907 and 932 (call number) | `catalog` |
@@ -184,8 +184,8 @@ Each server was tested with the same checks: connect, anonymous Init, ISBN searc
 | `catalog.brooklynpubliclibrary.org:210/INNOPAC` | record, 907 and 994 | `catalog` |
 | `prospector.coalliance.org:210/INNOPAC` | 3 hits (consortium), 907 only | `catalog` |
 | `catalog.ecpl.org:210/INNOPAC` | missed ISBN 1, hit ISBN 2 (no holdings fields); title and other ISBN also hit | `catalog` |
-| `opac.tulsalibrary.org:210/INNOPAC` | missed the first two ISBNs, hit a third and a title search; record fields not inspected | `catalog` after Task 8 inspection |
-| `vera.cals.lib.ar.us:210/INNOPAC` | same as Tulsa | `catalog` after Task 8 inspection |
+| `opac.tulsalibrary.org:210/INNOPAC` | missed the first two ISBNs, hit a third and a title search; record fields not inspected | `catalog`. Task 8 probe: Tulsa hit on 2 of 2 new ISBNs, only a 902 field; no 852/926/945/949 |
+| `vera.cals.lib.ar.us:210/INNOPAC` | same as Tulsa. Task 8 probe: hit 1 of 2 ISBNs; the hit has no 852/926/945/949 | `catalog` |
 | `viking.sirsi.net:2200/UNICORN` | hits on an ISBN and a title; hostname looks like a vendor demo, fields not inspected | **excluded** unless the user confirms it is a real library |
 | `ipac3.vpl.ca:210/DEFAULT` | Horizon. ISBN search returns server error 100; title search works (233 hits) | **excluded** (this app searches by ISBN) |
 | `merlin.nwls.lib.wi.us:210/INNOPAC`, `alam1.aclibrary.org:210/INNOPAC`, `www.ci.austin.tx.us:210/UNICORN` | TCP connects, then the server closes the connection on Init, in two separate rounds | **excluded** |
@@ -316,5 +316,5 @@ Each server was tested with the same checks: connect, anonymous Init, ISBN searc
 
 - **Coverage:** connection items 1 and 2 → Tasks 1 and 2; UI additions 1, 2, 3 → Tasks 3 (+4), 5, 6.
 - **Types:** `incomplete` is added to the shared enum in Task 1 and relied on in Task 2's tests; `pathRetryable` is defined in Task 1 only; `orderEditions` gains `english` in Task 3 and its single caller already has the field.
-- **Part B coverage:** every server in `docs/z39servers.txt` was tested and appears in the results table; Tasks 7 to 9 are server, 10 is the model, 11 is the Settings option, 12 is the page display. Types match across tasks: `Copy` and `CopyStatus` (Task 8) feed `LibraryAvailabilitySchema` (Task 9) and `availabilityLine` (Task 12); `Library.z3950Id` (Task 10) is what Tasks 11 and 12 read.
+- **Part B coverage:** every candidate server was tested and appears in the results table; Tasks 7 to 9 are server, 10 is the model, 11 is the Settings option, 12 is the page display. Types match across tasks: `Copy` and `CopyStatus` (Task 8) feed `LibraryAvailabilitySchema` (Task 9) and `availabilityLine` (Task 12); `Library.z3950Id` (Task 10) is what Tasks 11 and 12 read.
 - **Assumptions to confirm:** (a) "these" meant connection items 1 and 2 only; (b) "prioritize English in view more editions" is interpreted as English-first ordering of the whole editions list, since the "+N more" collapse hides only self-published editions and keeps order; (c) the library display names in Task 7 are guesses from hostnames; (d) the production host can install YAZ.

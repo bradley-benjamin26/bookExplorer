@@ -111,6 +111,7 @@ export function findPath(
   let capHit = false;
   let depthPruned = false;
   let upstreamDown = false;
+  let failedExpansions = 0;
 
   const penalty = (id: string) => {
     if (!/^(subject|genre|award):/.test(id)) return 0;
@@ -125,6 +126,7 @@ export function findPath(
     if (!hood) {
       expansions++;
       hood = neighbours(nodeId).catch((err) => {
+        failedExpansions++;
         // Open Library is in a cooldown: every further expansion would fail fast too.
         if (err instanceof UpstreamUnavailableError && err.host === "openlibrary.org") upstreamDown = true;
         console.warn(`[graphQuery] Failed to expand ${nodeId}:`, err);
@@ -215,7 +217,11 @@ export function findPath(
         });
       }
       if (upstreamDown) finish("upstreamUnavailable");
-      else if (!finished && running === 0) finish(capHit ? "nodeCap" : depthPruned ? "depthCap" : "noPath");
+      else if (!finished && running === 0) {
+        // A failed expansion may have hidden the path, so "none exists" isn't known.
+        const exhausted = depthPruned ? "depthCap" : "noPath";
+        finish(capHit ? "nodeCap" : failedExpansions > 0 ? "incomplete" : exhausted);
+      }
     };
 
     const settle = (s: number, id: string, hood: Neighbourhood | null) => {

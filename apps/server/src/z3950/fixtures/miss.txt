@@ -1,0 +1,26 @@
+Connecting...OK.
+Sent initrequest.
+Connection accepted by v2 target.
+ID     : Z39.50-III
+Name   : z39-innopac
+Version: 1
+UserInformationfield:
+Guessing visiblestring:
+'Innovative Interfaces Inc. Z39.50 SERVER version 1.1'
+Options: search present scan namedResultSets
+Elapsed: 0.589000
+Sent searchRequest.
+Received SearchResponse.
+Search was a success.
+Number of hits: 0, setno 1
+records returned: 0
+Elapsed: 0.060247
+Sent presentRequest (1+1).
+Diagnostic message(s) from database:
+    [22] Result set naming not supported -- v2 addinfo 'Result set naming not supported'
+nextResultSetPosition = 0
+Elapsed: 0.049276
+See you later, alligator.
+{
+  OCTETSTRING(len=52) Innovative Interfaces Inc. Z39.50 SERVER version 1.1
+}

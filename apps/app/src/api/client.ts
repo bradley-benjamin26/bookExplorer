@@ -14,6 +14,7 @@ import {
   HardcoverListBooksSchema,
   HardcoverListSummarySchema,
   HardcoverProgressSchema,
+  LibraryAvailabilitySchema,
   OpenLibraryAccountSchema,
   OpenLibraryAddResultSchema,
   OpenLibraryListSchema,
@@ -22,6 +23,7 @@ import {
   PathResultSchema,
   SeriesSchema,
   SubjectSchema,
+  SupportedLibrarySchema,
   WorkRefSchema,
   WorkSchema,
   type Author,
@@ -31,10 +33,12 @@ import {
   type Graph,
   type Series,
   type GraphNode,
+  type LibraryAvailability,
   type OpenLibraryAddResult,
   type OpenLibraryMember,
   type PathResult,
   type Subject,
+  type SupportedLibrary,
   type Work,
   type WorkRef,
 } from "@book-explorer/shared";
@@ -160,6 +164,14 @@ export async function removeHardcoverListBook(listId: number, bookId: number): P
 
 export function fetchHardcoverProgress(type: "book" | "work", id: string) {
   return getJson(`/api/hardcover/progress/${type}/${encodeURIComponent(id)}`, HardcoverProgressSchema);
+}
+
+export function fetchSupportedLibraries(): Promise<SupportedLibrary[]> {
+  return getJson("/api/libraries", z.array(SupportedLibrarySchema));
+}
+
+export function fetchLibraryAvailability(libraryId: string, isbn: string, signal?: AbortSignal): Promise<LibraryAvailability> {
+  return getJson(`/api/libraries/${encodeURIComponent(libraryId)}/availability?${new URLSearchParams({ isbn })}`, LibraryAvailabilitySchema, signal);
 }
 
 export function fetchBookByIsbn(isbn: string): Promise<Book> {

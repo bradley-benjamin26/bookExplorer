@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centeredLabel, legendEntries, nodeRelations, pathAsGraph, pathSteps, relationLabel } from "./graphLabels";
+import { centeredLabel, legendEntries, nodeRelations, pathAsGraph, pathRetryable, pathSteps, relationLabel } from "./graphLabels";
 
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
@@ -114,4 +114,12 @@ describe("relationLabel", () => {
 describe("centeredLabel", () => {
   it("names the centred item", () => expect(centeredLabel("The Map Room")).toBe("Centered on The Map Room"));
   it("copes with no label yet", () => expect(centeredLabel(undefined)).toBe("Centered on this item"));
+});
+
+describe("pathRetryable", () => {
+  it("is true only for reasons a second try can fix", () => {
+    expect(pathRetryable("incomplete")).toBe(true);
+    expect(pathRetryable("timeout")).toBe(true);
+    for (const r of ["noPath", "depthCap", "nodeCap", "upstreamUnavailable"] as const) expect(pathRetryable(r)).toBe(false);
+  });
 });
