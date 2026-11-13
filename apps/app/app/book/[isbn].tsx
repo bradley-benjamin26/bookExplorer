@@ -141,7 +141,8 @@ export default function BookDetail() {
                 View as graph
               </Button>
               <Button
-                variant="pill"
+                variant="primary"
+                style={PRIMARY_ACTION_STYLE}
                 onPress={() => router.push(routes.connection(`work:${data.openLibraryWorkId}`, data.title))}
                 accessibilityLabel={`Find a connection from ${data.title}`}
                 accessibilityHint="Shows how this book links to another book you pick"

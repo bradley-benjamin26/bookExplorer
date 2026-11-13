@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { slugifySubject } from "@book-explorer/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { fetchSubject, searchBooks } from "../../src/api/client";
 import { Button } from "../../src/components/Button";
 import { Footer } from "../../src/components/Footer";
@@ -13,10 +13,12 @@ import { AboutSection } from "../../src/components/AboutSection";
 import { DetailTop, PRIMARY_ACTION_STYLE } from "../../src/components/DetailTop";
 import { DetailSkeleton } from "../../src/components/Skeleton";
 import { ShareButton } from "../../src/components/ShareButton";
+import { SkipLink, SkipTarget } from "../../src/components/SkipLink";
 import { routes } from "../../src/navigation";
 import { addRecent } from "../../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
 import { booksForSort, DEFAULT_SUBJECT_SORT, SUBJECT_SORTS, subjectSortParams } from "../../src/subjectSort";
+import { subjectIdentifiers } from "../../src/subjectIdentifiers";
 import { subjectDisplayName, subjectLabel, subjectSpokenLabel } from "../../src/subjectLabel";
 import { titleRef } from "../../src/webTitle";
 
@@ -84,6 +86,19 @@ export default function SubjectDetail() {
           </DetailTop>
           {data.description && <AboutSection text={data.description} />}
 
+          <View style={styles.conceptSection}>
+            <Text style={styles.sectionTitle} accessibilityRole="header">Identifiers</Text>
+            <Text style={styles.helper}>Where this subject's data comes from.</Text>
+            {subjectIdentifiers(data).map(({ source, id, url }) => (
+              <View key={source} style={styles.identifierRow}>
+                <Text style={styles.identifierSource}>{source}: </Text>
+                <Pressable accessibilityRole="link" accessibilityLabel={`${source} identifier ${id}`} onPress={() => void Linking.openURL(url)}>
+                  <Text style={styles.identifierLink}>{id}</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+
           {[
             { title: "Broader topics", items: broader },
             { title: "Narrower topics", items: narrower },
@@ -123,12 +138,18 @@ export default function SubjectDetail() {
           </View>
           {sortParams && sorted.isLoading && <ActivityIndicator color={theme.colors.cover} style={styles.sortSpinner} />}
           {fellBack && <Text style={styles.noMatch}>Couldn't load this order, showing the classic list.</Text>}
+          {books.length > 1 && <SkipLink name="subject-books" label="Skip books" />}
         </View>
       }
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
-      ListFooterComponent={<Footer />}
+      ListFooterComponent={
+        <>
+          {books.length > 1 && <SkipTarget name="subject-books" />}
+          <Footer />
+        </>
+      }
       ListFooterComponentStyle={{ marginTop: "auto" }}
     />
   );
@@ -146,6 +167,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     pressed: { opacity: 0.6 },
     conceptSection: { marginTop: spacing.xl },
     sectionTitle: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.sm, marginBottom: spacing.md },
+    helper: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginBottom: spacing.sm },
+    identifierRow: { flexDirection: "row", alignItems: "center", minHeight: 44 },
+    identifierSource: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
+    identifierLink: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.chipTextSubject, textDecorationLine: "underline" },
     conceptTags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
     conceptTag: {
       backgroundColor: colors.chipBackgroundSubject,

@@ -1,10 +1,11 @@
 import { UpstreamUnavailableError } from "../httpClient.js";
 import type { Graph, GraphNode, GraphEdge, Subject } from "@book-explorer/shared";
-import { awardFamily, normalizeTitle, slugifySubject } from "@book-explorer/shared";
+import { awardDisplayName, awardSlug, normalizeTitle, slugifySubject } from "@book-explorer/shared";
 import { TtlCache } from "../cache.js";
 import * as openLibrary from "../sources/openLibrary.js";
 import type { OpenLibraryAuthorWork } from "../sources/openLibrary.js";
 import { getAuthorDetail, getAuthorLinks, type AuthorLinks } from "./authorService.js";
+import { getAwardDetail } from "./awardService.js";
 import { getSubjectBooks, getSubjectDetail } from "./subjectService.js";
 import { getWorkDetail, getWorkLinks, type WorkLinks } from "./workService.js";
 
@@ -63,9 +64,7 @@ export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: Gra
 }
 
 function awardNode(label: string): GraphNode {
-  // Open Library tags arrive lowercase; title-case so the label reads the same whichever source is seen first.
-  const family = awardFamily(label).replace(/(^|\s)\S/g, (m) => m.toUpperCase());
-  return { id: `award:${slugifySubject(family)}`, type: "award", label: family, navigable: false };
+  return { id: `award:${awardSlug(label)}`, type: "award", label: awardDisplayName(label), navigable: true };
 }
 
 function authorNodeId(openLibraryId: string | null, wikidataId: string): string {
@@ -257,5 +256,19 @@ function workGraph(work: WorkLinks): Graph {
     edges.push({ source: centerId, target: editionsNodeId, relation: "editions" });
   }
 
+  return { centerId, ...cleanGraph(nodes, edges) };
+}
+
+export async function buildAwardGraph(slug: string, label?: string): Promise<Graph> {
+  const award = await getAwardDetail(slug, label);
+  const centerId = `award:${award.slug}`;
+  const nodes: GraphNode[] = [{ id: centerId, type: "award", label: award.name, navigable: true }];
+  const edges: GraphEdge[] = [];
+  for (const w of award.winners) {
+    if (!w.openLibraryId || !w.kind) continue; // unresolved winners stay on the page only
+    const id = `${w.kind}:${w.openLibraryId}`;
+    nodes.push({ id, type: w.kind, label: w.label, navigable: true });
+    edges.push({ source: id, target: centerId, relation: "won" });
+  }
   return { centerId, ...cleanGraph(nodes, edges) };
 }

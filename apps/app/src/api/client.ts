@@ -4,6 +4,7 @@ import { z, type ZodType, type ZodTypeDef } from "zod";
 import { clearSession, getSessionToken } from "../hardcoverSession";
 import { clearOpenLibrarySession, getOpenLibrarySessionToken } from "../openLibrarySession";
 import {
+  AwardSchema,
   AuthorRefSchema,
   AuthorSchema,
   BookSchema,
@@ -24,6 +25,7 @@ import {
   WorkRefSchema,
   WorkSchema,
   type Author,
+  type Award,
   type AuthorRef,
   type Book,
   type Graph,
@@ -170,6 +172,10 @@ export function fetchAuthor(openLibraryId: string): Promise<Author> {
 
 export function fetchSubject(slug: string): Promise<Subject> {
   return getJson(`/api/subjects/${encodeURIComponent(slug)}`, SubjectSchema);
+}
+
+export function fetchAward(slug: string, label?: string): Promise<Award> {
+  return getJson(`/api/awards/${encodeURIComponent(slug)}${label ? `?label=${encodeURIComponent(label)}` : ""}`, AwardSchema);
 }
 
 export function fetchWork(workId: string): Promise<Work> {

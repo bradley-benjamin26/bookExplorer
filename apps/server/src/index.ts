@@ -6,6 +6,7 @@ import { parseTrustProxy } from "./trustProxy.js";
 import { booksRoutes } from "./routes/books.js";
 import { authorsRoutes } from "./routes/authors.js";
 import { subjectsRoutes } from "./routes/subjects.js";
+import { awardsRoutes } from "./routes/awards.js";
 import { worksRoutes } from "./routes/works.js";
 import { graphRoutes } from "./routes/graph.js";
 import { searchRoutes } from "./routes/search.js";
@@ -69,6 +70,7 @@ app.get("/health", { config: { rateLimit: false } }, async () => ({ status: "ok"
 await app.register(booksRoutes);
 await app.register(authorsRoutes);
 await app.register(subjectsRoutes);
+await app.register(awardsRoutes);
 await app.register(worksRoutes);
 await app.register(graphRoutes);
 await app.register(searchRoutes);

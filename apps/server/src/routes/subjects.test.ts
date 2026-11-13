@@ -27,7 +27,7 @@ describe("GET /api/subjects/:slug", () => {
 
   it("serves a legacy '--' slug, answering with the canonical slug", async () => {
     vi.mocked(getSubjectDetail).mockImplementationOnce(async () => ({
-      slug: "science_fiction_authorship", name: "Science fiction authorship", workCount: 141, wikidataId: null,
+      slug: "science_fiction_authorship", name: "Science fiction authorship", workCount: 141, wikidataId: null, lcshUri: null,
       description: null, relatedConcepts: [], books: [],
     }));
     const app = Fastify();

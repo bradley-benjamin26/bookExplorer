@@ -17,6 +17,7 @@ import { DetailSkeleton } from "../../src/components/Skeleton";
 import { AddToListButton } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
 import { routes } from "../../src/navigation";
+import { relationHref } from "../../src/relationHref";
 import { addRecent } from "../../src/storage/history";
 import { saveAuthor } from "../../src/storage/savedItems";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -156,20 +157,19 @@ export default function AuthorDetail() {
           <View key={relation} style={styles.section}>
             <Text style={styles.sectionTitle} accessibilityRole="header">{title}</Text>
             {items.map((item) => {
-              const navigable = relation === "influencedBy" || relation === "influenced";
-              const isNavigable = !!item.openLibraryId && navigable;
+              const href = relationHref(item);
               const content = (
                 <View style={styles.relationRow}>
                   <Text style={styles.relationLabel}>{item.label}</Text>
-                  {isNavigable && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>}
+                  {href && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><ChevronRight size={18} color={theme.colors.inkFaint} strokeWidth={2} /></View>}
                 </View>
               );
-              return isNavigable ? (
+              return href ? (
                 <Pressable
                   ref={titleRef(`View ${item.label}`)}
                   key={item.wikidataId}
                   style={({ pressed }) => pressed && styles.pressed}
-                  onPress={() => router.push(item.openLibraryId!.endsWith("W") ? routes.work(item.openLibraryId!) : routes.author(item.openLibraryId!))}
+                  onPress={() => router.push(href)}
                   accessibilityRole="button"
                   accessibilityLabel={item.label}
                 >

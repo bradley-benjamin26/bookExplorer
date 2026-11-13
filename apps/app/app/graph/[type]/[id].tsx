@@ -23,8 +23,9 @@ import { titleRef } from "../../../src/webTitle";
 import { SegmentedControl } from "../../../src/components/SegmentedControl";
 import { centeredLabel, legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
-import { nodeHref, routes } from "../../../src/navigation";
+import { nodeHref, nodePressHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
+import { TOOLBAR_CONTROL_HEIGHT } from "../../../src/toolbarMetrics";
 import { subjectSpokenLabel } from "../../../src/subjectLabel";
 import { shouldSuppressPress, useGraphMotion } from "../../../src/useGraphMotion";
 import { CENTER_NODE_RADIUS, CONTROLS_GUTTER, clampOffset, fitScale, hitNode, LABEL_LINE_HEIGHT, labelOpacity, layoutGraph, MAX_SCALE, MIN_SCALE, NODE_RADIUS, PILL_HEIGHT, shortenEdge, wrapLabel, zoomAt, type Center, type PositionedNode } from "../../../src/graphLayout";
@@ -348,34 +349,16 @@ export default function GraphExplorer() {
     // A drag released over its own node fires a press on web.
     if (shouldSuppressPress(motion.lastDragEnd(), Date.now())) return;
     if (!node.navigable) return;
-    const next = parseNodeId(node.id);
-
-    // Genre nodes have no graph of their own to pan into — a genre is really
-    // just an Open Library subject slug wearing a different label and color,
-    // and the server only knows how to build a graph for author/work/subject
-    // ids — so tapping one always jumps straight to the Subject browse
-    // screen instead of joining the recenter-the-graph behavior every other
-    // non-center node gets.
-    if (next.type === "genre") {
-      router.push(nodeHref(node.id)!);
+    // Genre, editions and award nodes have no graph of their own (a genre is an
+    // Open Library subject, editions a signpost to its work page) and the center
+    // opens its page, so those jump straight there; any other node recenters.
+    const href = nodePressHref(node.id, data.centerId);
+    if (href) {
+      router.push(href);
       return;
     }
-
-    // Likewise has no graph of its own — it's a signpost pointing at the
-    // Editions section on its own work's page (see buildWorkGraph), not a
-    // real browsable node, so tapping it jumps straight there instead of
-    // recentering.
-    if (next.type === "editions") {
-      router.push(nodeHref(node.id)!);
-      return;
-    }
-
-    if (node.id !== data.centerId) {
-      setHistory((h) => [...h, center]);
-      setCenter(next);
-      return;
-    }
-    router.push(nodeHref(node.id)!);
+    setHistory((h) => [...h, center]);
+    setCenter(parseNodeId(node.id));
   };
 
   const handleBack = () => {
@@ -450,13 +433,17 @@ export default function GraphExplorer() {
           }}
           describe={(mode) => (mode === "List" ? { label: "Show nodes as a list", tooltip: "Show as a list" } : { label: "Show graph", tooltip: "Show as a graph" })}
         />
-        <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
+        <View style={styles.toolbarActions}>
+        <Button variant="pill" style={{ minHeight: TOOLBAR_CONTROL_HEIGHT, justifyContent: "center" }} onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
         <ShareButton
           title={`${NODE_LABELS[center.type]} graph`}
           href={routes.graph(center.type, center.id, filterToParams(filter))}
+          style={{ minHeight: TOOLBAR_CONTROL_HEIGHT, justifyContent: "center" }}
+          align="right"
         />
+        </View>
       </View>
       <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
         <View style={styles.sheetBackdrop}>
@@ -880,7 +867,8 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderColor: colors.cardBorder,
     },
     pressed: { opacity: 0.6 },
-    toolbar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    toolbar: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
+    toolbarActions: { flexDirection: "row", gap: spacing.sm, marginLeft: "auto" },
     sheetBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {
       width: "100%",

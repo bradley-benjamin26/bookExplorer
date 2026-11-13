@@ -56,6 +56,19 @@ describe("getSubjectDetail", () => {
     ]);
   });
 
+  it("returns the LCSH heading uri, or null when there is none", async () => {
+    mockOpenLibrarySubject("Fairy tales (uri)");
+    vi.mocked(wikidata.searchConceptQid).mockResolvedValue(null);
+    vi.mocked(wikidata.fetchRelatedConcepts).mockResolvedValue([]);
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue("http://id.loc.gov/authorities/subjects/sh85101653");
+    vi.mocked(locLinkedData.fetchBroaderNarrower).mockResolvedValue({ broader: [], narrower: [], wikidataId: null });
+    expect((await getSubjectDetail("fairy_tales_uri"))?.lcshUri).toBe("http://id.loc.gov/authorities/subjects/sh85101653");
+
+    mockOpenLibrarySubject("Fairy tales (no uri)");
+    vi.mocked(locLinkedData.findSubjectHeadingUri).mockResolvedValue(null);
+    expect((await getSubjectDetail("fairy_tales_no_uri"))?.lcshUri).toBeNull();
+  });
+
   it("includes the Wikidata English description when available", async () => {
     mockOpenLibrarySubject("Fairy tales (described)");
     vi.mocked(wikidata.searchConceptQid).mockResolvedValue("Q123");
@@ -253,6 +266,7 @@ describe("getSubjectDetail", () => {
       name: "Zombies",
       workCount: 1,
       wikidataId: null,
+      lcshUri: null,
       description: null,
       relatedConcepts: [],
       books: [{ openLibraryWorkId: "OL5W", title: "Z", authors: [], coverUrl: null }],

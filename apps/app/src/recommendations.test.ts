@@ -27,7 +27,7 @@ const savedWork = (title: string, subjects: string[]): Snapshot["works"][number]
   schemaVersion: 1, updatedAt: 1, openLibraryWorkId: `OL${title}W`, title, authorNames: [], subjects, genres: [], notes: "", savedAt: 1,
 });
 const work = (id: string, authorId = "OLxA"): WorkRef => ({ openLibraryWorkId: id, title: `Title ${id}`, authors: [{ openLibraryId: authorId, name: authorId }], coverUrl: null });
-const subject = (slug: string, books: WorkRef[]): Subject => ({ slug, name: slug, workCount: books.length, wikidataId: null, description: null, relatedConcepts: [], books });
+const subject = (slug: string, books: WorkRef[]): Subject => ({ slug, name: slug, workCount: books.length, wikidataId: null, lcshUri: null, description: null, relatedConcepts: [], books });
 // Treats every saved term as public (as if every book's API detail were cached).
 const profileOf = (s: Snapshot, seeds: AuthorSeed[]) =>
   buildTasteProfile(s, seeds, new Set([...s.books, ...s.works].flatMap((b) => [...b.subjects, ...b.genres]).map(slugifySubject)));

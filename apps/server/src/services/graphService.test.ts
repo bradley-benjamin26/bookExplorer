@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GraphEdge, GraphNode } from "@book-explorer/shared";
 import { normalizeTitle } from "@book-explorer/shared";
-import { buildAuthorLinksGraph, buildWorkGraph, buildWorkLinksGraph, cleanGraph } from "./graphService.js";
+import { buildAwardGraph, buildAuthorLinksGraph, buildWorkGraph, buildWorkLinksGraph, cleanGraph } from "./graphService.js";
 import { getWorkDetail, getWorkLinks } from "./workService.js";
 import { getAuthorLinks } from "./authorService.js";
+import { getAwardDetail } from "./awardService.js";
+
+vi.mock("./awardService.js", () => ({ getAwardDetail: vi.fn() }));
 
 vi.mock("./authorService.js", () => ({ getAuthorDetail: vi.fn(), getAuthorLinks: vi.fn() }));
 vi.mock("../sources/openLibrary.js", () => ({ getAuthorWorks: vi.fn().mockResolvedValue([]), searchAuthorByName: vi.fn() }));
@@ -164,7 +167,7 @@ describe("buildWorkLinksGraph", () => {
     } as never);
     const a = await buildAuthorLinksGraph("OL3A");
     const w = await buildWorkLinksGraph("OL12W");
-    const node = { id: "award:hugo_award", type: "award", label: "Hugo Award", navigable: false };
+    const node = { id: "award:hugo_award", type: "award", label: "Hugo Award", navigable: true };
     expect(a?.nodes).toContainEqual(node);
     expect(a?.edges).toContainEqual({ source: "author:OL3A", target: "award:hugo_award", relation: "won" });
     expect(w?.nodes).toContainEqual(node);
@@ -173,5 +176,26 @@ describe("buildWorkLinksGraph", () => {
     } as never);
     expect((await buildWorkLinksGraph("OL13W"))?.nodes).toContainEqual(node);
     expect(w?.edges).toContainEqual({ source: "work:OL12W", target: "award:hugo_award", relation: "won" });
+  });
+});
+
+describe("buildAwardGraph", () => {
+  it("joins winners with an Open Library id to the award and leaves the rest out", async () => {
+    vi.mocked(getAwardDetail).mockResolvedValueOnce({
+      slug: "hugo-award",
+      name: "Hugo Award",
+      winners: [
+        { kind: "author", openLibraryId: "OL1A", wikidataId: "Q1", label: "Ann" },
+        { kind: "work", openLibraryId: "OL2W", wikidataId: "Q2", label: "Book" },
+        { kind: null, openLibraryId: null, wikidataId: "Q3", label: "Unresolved" },
+      ],
+    } as never);
+    const graph = await buildAwardGraph("hugo-award");
+    expect(graph.centerId).toBe("award:hugo-award");
+    expect(graph.nodes.map((n) => n.id).sort()).toEqual(["author:OL1A", "award:hugo-award", "work:OL2W"]);
+    expect(graph.edges).toEqual([
+      { source: "author:OL1A", target: "award:hugo-award", relation: "won" },
+      { source: "work:OL2W", target: "award:hugo-award", relation: "won" },
+    ]);
   });
 });

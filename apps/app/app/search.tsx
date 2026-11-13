@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 import { searchBooks } from "../src/api/client";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
+import { SkipLink, SkipTarget } from "../src/components/SkipLink";
 import { WorkListRow } from "../src/components/WorkListRow";
 import { routes } from "../src/navigation";
 import {
@@ -176,12 +177,18 @@ export default function Search() {
           {isSearchable && !isLoading && !isError && data?.length === 0 && (
             <Text style={styles.hint}>No books found for "{trimmedQuery}".</Text>
           )}
+          {(data?.length ?? 0) > 1 && <SkipLink name="search-results" label="Skip results" />}
         </View>
       }
       renderItem={({ item }) => (
         <WorkListRow work={item} onPress={() => router.push(routes.work(item.openLibraryWorkId))} />
       )}
-      ListFooterComponent={<Footer />}
+      ListFooterComponent={
+        <>
+          {(data?.length ?? 0) > 1 && <SkipTarget name="search-results" />}
+          <Footer />
+        </>
+      }
       ListFooterComponentStyle={{ marginTop: "auto" }}
     />
   );

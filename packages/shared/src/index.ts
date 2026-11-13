@@ -214,6 +214,7 @@ export const SubjectSchema = z.object({
   name: z.string(),
   workCount: z.number(),
   wikidataId: z.string().nullable(),
+  lcshUri: z.string().nullable().default(null), // default: old persisted cache entries lack it
   description: z.string().nullable(),
   relatedConcepts: z.array(SubjectConceptSchema),
   books: z.array(WorkRefSchema),
@@ -241,6 +242,33 @@ export function slugifySubject(name: string): string {
 export function awardFamily(label: string): string {
   return label.replace(/\s*\([^)]*\)\s*$/, "").replace(/\s+for\s.*$/i, "").trim();
 }
+
+/** An award's display name; Open Library tags arrive lowercase, so title-case each word. */
+export function awardDisplayName(label: string): string {
+  return awardFamily(label).replace(/(^|\s)\S/g, (m) => m.toUpperCase());
+}
+
+/** The award page's slug, and the tail of its graph node id. */
+export function awardSlug(label: string): string {
+  return slugifySubject(awardDisplayName(label));
+}
+
+export const AwardWinnerSchema = z.object({
+  kind: z.enum(["author", "work"]).nullable(),
+  openLibraryId: z.string().nullable(),
+  wikidataId: z.string(),
+  label: z.string(),
+});
+export type AwardWinner = z.infer<typeof AwardWinnerSchema>;
+
+export const AwardSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  wikidataId: z.string().nullable(),
+  description: z.string().nullable(),
+  winners: z.array(AwardWinnerSchema),
+});
+export type Award = z.infer<typeof AwardSchema>;
 
 export const GraphNodeSchema = z.object({
   id: z.string(),

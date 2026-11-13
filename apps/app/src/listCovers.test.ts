@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listCoverUrls, recentCoverUrl } from "./listCovers";
+import { listCoverUrls, memberCoverUrl, recentCoverUrl } from "./listCovers";
 import type { RecentItem } from "./storage/history";
 import type { ListMember } from "./storage/savedLists";
 
@@ -17,12 +17,23 @@ describe("listCoverUrls", () => {
     expect(listCoverUrls(members)).toHaveLength(3);
   });
 
-  it("gives null for works and authors, which have no ISBN to look up", () => {
-    expect(listCoverUrls([member("work", "OL1W"), member("author", "OL2A")])).toEqual([null, null]);
+  it("gives work and author members their Open Library olid covers", () => {
+    expect(listCoverUrls([member("work", "OL1W"), member("author", "OL2A")])).toEqual([
+      "https://covers.openlibrary.org/w/olid/OL1W-S.jpg",
+      "https://covers.openlibrary.org/a/olid/OL2A-S.jpg",
+    ]);
   });
 
   it("gives an empty list for an empty list", () => {
     expect(listCoverUrls([])).toEqual([]);
+  });
+});
+
+describe("memberCoverUrl", () => {
+  it("builds the URL for each member type", () => {
+    expect(memberCoverUrl(member("book", "111"))).toBe(cover("111"));
+    expect(memberCoverUrl(member("work", "OL1W"))).toBe("https://covers.openlibrary.org/w/olid/OL1W-S.jpg");
+    expect(memberCoverUrl(member("author", "OL2A"))).toBe("https://covers.openlibrary.org/a/olid/OL2A-S.jpg");
   });
 });
 

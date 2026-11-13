@@ -104,6 +104,12 @@ export async function searchWorkQid(title: string, authorName: string): Promise<
   return match?.id ?? null;
 }
 
+/** The first Wikidata item whose description reads as an award or prize. */
+export async function searchAwardQid(name: string): Promise<string | null> {
+  const body = await wbSearchEntities(name, 8);
+  return body.search.find((r) => /award|prize/i.test(r.description ?? ""))?.id ?? null;
+}
+
 async function wbSearchEntities(name: string, limit: number): Promise<WbSearchResult> {
   const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(
     name
@@ -404,6 +410,17 @@ export async function fetchDescription(qid: string): Promise<string | null> {
   if (!isWikidataQid(qid)) return null;
   const entities = await wbGetEntities([qid], "descriptions", "en");
   return entities[qid]?.descriptions?.en?.value ?? null;
+}
+
+/** Items that won the award (reverse P166), with labels and Open Library ids; unlabeled items are left out. */
+export async function fetchAwardWinners(awardQid: string, limit = 40): Promise<{ wikidataId: string; openLibraryId: string | null; label: string }[]> {
+  if (!isWikidataQid(awardQid)) return [];
+  const qids = await searchReverseStatementQids("P166", awardQid, limit);
+  const resolved = await resolveItems(qids);
+  return qids.flatMap((q) => {
+    const r = resolved.get(q);
+    return r ? [{ wikidataId: q, openLibraryId: r.openLibraryId, label: r.label }] : [];
+  });
 }
 
 /** Numeric ordinals sort by value ("2.5" between 2 and 3); anything else ("A", "prequel") sorts after them, alphabetically. */

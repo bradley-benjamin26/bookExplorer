@@ -18,7 +18,7 @@ async function shareLink(url: string): Promise<boolean> {
 }
 
 /** Shares the link to the page shown: native share sheet, or copy-to-clipboard on web. */
-export function ShareButton({ title, href, style }: { title: string; href: Href; style?: StyleProp<ViewStyle> }) {
+export function ShareButton({ title, href, style, align = "left" }: { title: string; href: Href; style?: StyleProp<ViewStyle>; align?: "left" | "right" }) {
   const { colors } = useTheme();
   const [status, setStatus] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -31,13 +31,13 @@ export function ShareButton({ title, href, style }: { title: string; href: Href;
     if (message && Platform.OS === "ios") AccessibilityInfo.announceForAccessibility(message);
   };
   return (
-    <View style={style}>
-      <Button variant="pill" onPress={share} accessibilityLabel={`Share ${title}`} tooltip="Copy link">
+    <View>
+      <Button variant="pill" style={style} onPress={share} accessibilityLabel={`Share ${title}`} tooltip="Copy link">
         Share
       </Button>
       <Text
         accessibilityLiveRegion="polite"
-        style={{ position: "absolute", top: "100%", left: 0, width: 200, color: colors.textMuted, pointerEvents: "none" }}
+        style={{ position: "absolute", top: "100%", [align]: 0, width: 200, textAlign: align, color: colors.textMuted, pointerEvents: "none" }}
       >
         {status}
       </Text>

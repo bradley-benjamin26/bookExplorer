@@ -2,8 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "../../src/components/Button";
+import { CoverPlaceholder } from "../../src/components/CoverPlaceholder";
+import { memberCoverUrl } from "../../src/listCovers";
 import { EmptyState } from "../../src/components/EmptyState";
 import { ExportButton } from "../../src/components/ExportButton";
 import type { ExportFormat } from "../../src/exportFormats";
@@ -11,6 +13,7 @@ import { CenteredModal } from "../../src/components/CenteredModal";
 import { titleRef } from "../../src/webTitle";
 import { today } from "../../src/components/BackupSection";
 import { Footer } from "../../src/components/Footer";
+import { SkipLink, SkipTarget } from "../../src/components/SkipLink";
 import { exportListCsv, exportListJson, ImportError } from "../../src/backup";
 import { shareFile } from "../../src/backupFiles";
 import { shelfSlug } from "../../src/csv";
@@ -21,6 +24,7 @@ import { getSessionToken } from "../../src/hardcoverSession";
 import { copyToOpenLibrary, syncWithOpenLibrary } from "../../src/openLibraryLists";
 import { getOpenLibrarySessionToken } from "../../src/openLibrarySession";
 import { memberHref, routes } from "../../src/navigation";
+import { listServiceLabels } from "../../src/listServiceLabels";
 import { applyListChanges, deleteListAndUnsave, leavesLibrary } from "../../src/storage/listMembership";
 import { getList, getLists, linkList, linkOpenLibraryList, type ListMember, type SavedList } from "../../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../../src/theme";
@@ -38,6 +42,7 @@ export default function ListDetail() {
   const [loadError, setLoadError] = useState("");
 
   const [busy, setBusy] = useState(false);
+  const [badCovers, setBadCovers] = useState<Set<string>>(new Set());
   // State lags a render, so a fast second tap would pass a `busy` check; the ref flips synchronously.
   const busyRef = useRef(false);
   const [progress, setProgress] = useState("");
@@ -151,15 +156,17 @@ export default function ListDetail() {
     }
     load();
   };
-  const syncButtons = (service: Service, linked: boolean) =>
-    linked ? (
+  const syncButtons = (service: Service, linked: boolean) => {
+    const labels = listServiceLabels(service);
+    return linked ? (
       <>
-        <Button variant="pill" disabled={busy} onPress={() => sync(service)}>{active === service ? "Syncing…" : `Sync with ${service}`}</Button>
-        <Button variant="pill" disabled={busy} onPress={() => unlink(service)} accessibilityLabel={`Unlink from ${service}`}>Unlink</Button>
+        <Button variant="pill" disabled={busy} onPress={() => sync(service)}>{active === service ? "Syncing…" : labels.sync}</Button>
+        <Button variant="pill" disabled={busy} onPress={() => unlink(service)} accessibilityLabel={labels.unlink}>{labels.unlink}</Button>
       </>
     ) : (
-      <Button variant="pill" disabled={busy} onPress={() => copy(service)}>{(active === service && progress) || `Copy to ${service}`}</Button>
+      <Button variant="pill" disabled={busy} onPress={() => copy(service)}>{(active === service && progress) || labels.copy}</Button>
     );
+  };
 
   const doDelete = async () => {
     setError("");
@@ -229,8 +236,13 @@ export default function ListDetail() {
               <EmptyState message="This list is empty. Save a book from its page to add it here." actionLabel="Search for a book" onAction={() => router.push("/")} />
             )
           ) : (
-            list.members.map((member) => (
-              <View key={`${member.type}:${member.id}`} style={styles.row}>
+            <>
+            {list.members.length > 1 && <SkipLink name="list-books" label="Skip list" />}
+            {list.members.map((member) => {
+              const key = `${member.type}:${member.id}`;
+              const coverUrl = badCovers.has(key) ? null : memberCoverUrl(member);
+              return (
+              <View key={key} style={styles.row}>
                 <Pressable
                   ref={titleRef(`Open ${member.title}`)}
                   style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}
@@ -238,6 +250,17 @@ export default function ListDetail() {
                   accessibilityRole="button"
                   accessibilityLabel={member.title}
                 >
+                  {coverUrl ? (
+                    <Image
+                      source={{ uri: `${coverUrl}?default=false` }}
+                      style={styles.cover}
+                      resizeMode="contain"
+                      alt=""
+                      onError={() => setBadCovers((prev) => new Set(prev).add(key))}
+                    />
+                  ) : (
+                    <CoverPlaceholder width={44} height={64} />
+                  )}
                   <Text style={styles.rowText} numberOfLines={2}>
                     {member.title}
                   </Text>
@@ -253,7 +276,10 @@ export default function ListDetail() {
                   <Text style={styles.removeText}>Remove</Text>
                 </Pressable>
               </View>
-            ))
+              );
+            })}
+            {list.members.length > 1 && <SkipTarget name="list-books" />}
+            </>
           )}
           <Button variant="pill" onPress={confirmDelete} style={styles.deleteButton} textStyle={styles.removeText}>
             Delete list
@@ -284,8 +310,9 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    rowMain: { flex: 1, paddingRight: spacing.md },
-    rowText: { fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
+    rowMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, paddingRight: spacing.md },
+    cover: { width: 44, height: 64, borderRadius: radii.xs },
+    rowText: { flex: 1, fontFamily: fonts.display, fontSize: typeScale.sm, color: colors.ink },
     removeButton: {
       paddingVertical: 4,
       paddingHorizontal: 10,

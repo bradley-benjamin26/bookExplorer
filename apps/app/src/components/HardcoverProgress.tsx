@@ -14,6 +14,7 @@ export function HardcoverProgress({ type, id }: { type: "book" | "work"; id: str
     queryFn: () => fetchHardcoverProgress(type, id),
     enabled: !!getSessionToken(),
     staleTime: 5 * 60_000,
+    retry: false, // decorative badge: a failing Hardcover shouldn't be hammered
   });
   // Cached data can outlive the session, so check the token too.
   const label = data && getSessionToken() ? progressLabel(data) : null;

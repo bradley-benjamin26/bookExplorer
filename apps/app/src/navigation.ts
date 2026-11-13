@@ -15,6 +15,7 @@ export const routes = {
   }),
   author: (id: string): Href => ({ pathname: "/author/[id]", params: { id } }),
   subject: (slug: string, label?: string): Href => ({ pathname: "/subject/[slug]", params: label ? { slug, label } : { slug } }),
+  award: (slug: string, label?: string): Href => ({ pathname: "/award/[slug]", params: label ? { slug, label } : { slug } }),
   work: (id: string, options?: { highlight?: string }): Href => ({
     pathname: "/work/[id]",
     params: options?.highlight ? { id, highlight: options.highlight } : { id },
@@ -52,7 +53,14 @@ export const nodeHref = (nodeId: string): Href | null => {
   if (id.startsWith("qid:")) return null;
   if (type === "author") return routes.author(id);
   if (type === "subject" || type === "genre") return routes.subject(id);
+  if (type === "award") return routes.award(id);
   if (type === "work") return routes.work(id);
   if (type === "editions") return routes.work(id, { highlight: "editions" });
   return null;
+};
+
+/** Where pressing a graph node goes, or null to recenter the graph on it: genre, editions and award nodes have no graph of their own, and the center opens its page. */
+export const nodePressHref = (nodeId: string, centerId: string): Href | null => {
+  const type = nodeId.split(":")[0];
+  return type === "genre" || type === "editions" || type === "award" || nodeId === centerId ? nodeHref(nodeId) : null;
 };

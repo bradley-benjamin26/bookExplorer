@@ -13,7 +13,7 @@ import {
   userAuthorization,
 } from "../services/hardcoverAccount.js";
 import { peekWork } from "../services/workService.js";
-import { HardcoverRateLimitError, HardcoverUnauthorizedError } from "../sources/hardcover.js";
+import { HardcoverRateLimitError, HardcoverUnauthorizedError, HardcoverUnavailableError } from "../sources/hardcover.js";
 import { addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "../sources/hardcoverUser.js";
 import { getWork } from "../sources/openLibrary.js";
 import { upstreamErrorHandler } from "../upstreamErrorHandler.js";
@@ -56,6 +56,7 @@ export async function hardcoverRoutes(app: FastifyInstance) {
       if (typeof session === "string") forgetSession(session);
       return reply.code(401).send({ error: "Connect your Hardcover account again." });
     }
+    if (err instanceof HardcoverUnavailableError) return reply.code(503).send({ error: "Hardcover is temporarily unavailable. Try again in a minute." });
     return upstreamErrorHandler(err, req, reply);
   });
 

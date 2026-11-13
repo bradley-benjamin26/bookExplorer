@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { buildAuthorGraph, buildSubjectGraph, buildWorkGraph } from "../services/graphService.js";
+import { buildAuthorGraph, buildAwardGraph, buildSubjectGraph, buildWorkGraph } from "../services/graphService.js";
 import { isOpenLibraryAuthorId, isOpenLibraryWorkId, isSubjectSlugInput } from "../validation.js";
 
 const BUILDERS = {
   author: buildAuthorGraph,
+  award: buildAwardGraph,
   subject: buildSubjectGraph,
   work: buildWorkGraph,
 } as const;
