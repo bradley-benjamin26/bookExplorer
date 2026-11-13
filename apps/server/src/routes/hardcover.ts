@@ -16,16 +16,20 @@ import { peekWork } from "../services/workService.js";
 import { HardcoverRateLimitError, HardcoverUnauthorizedError, HardcoverUnavailableError } from "../sources/hardcover.js";
 import { addListBook, createList, findBookId, listBooks, myLists, readingProgress, removeListBook } from "../sources/hardcoverUser.js";
 import { getWork } from "../sources/openLibrary.js";
+import { clearSessionCookie, readCookie, sessionFrom, setSessionCookie } from "../sessionCookie.js";
 import { upstreamErrorHandler } from "../upstreamErrorHandler.js";
 import { isOpenLibraryWorkId } from "../validation.js";
 
 const SESSION_HEADER = "x-hardcover-session";
+const SESSION_COOKIE = "hc_session";
+const COOKIE_PATH = "/api/hardcover/";
+const session = (req: FastifyRequest) => sessionFrom(req, SESSION_HEADER, SESSION_COOKIE);
 const HANDOFF_EXPIRED = "That sign-in has expired. Try connecting again.";
 const CALLBACK_EXPIRED = "This sign-in link has expired. Go back to ShelfThread and try connecting again.";
 
 /** Returns the Bearer header for the signed-in user, or sends 401 and returns null. Refresh failures other than revocation propagate. */
 export async function requireUser(request: FastifyRequest, reply: FastifyReply): Promise<string | null> {
-  const auth = await userAuthorization(request.headers[SESSION_HEADER]);
+  const auth = await userAuthorization(session(request));
   if (!auth) {
     reply.code(401).send({ error: "Connect your Hardcover account again." });
     return null;
@@ -52,8 +56,8 @@ export async function hardcoverRoutes(app: FastifyInstance) {
       return reply.code(429).header("Retry-After", String(err.retryAfterSeconds)).send({ error: "Hardcover is busy. Try again in a minute.", retryAfterSeconds: err.retryAfterSeconds });
     }
     if (err instanceof HardcoverUnauthorizedError) {
-      const session = req.headers[SESSION_HEADER];
-      if (typeof session === "string") forgetSession(session);
+      const token = session(req);
+      if (token) forgetSession(token);
       return reply.code(401).send({ error: "Connect your Hardcover account again." });
     }
     if (err instanceof HardcoverUnavailableError) return reply.code(503).send({ error: "Hardcover is temporarily unavailable. Try again in a minute." });
@@ -65,7 +69,7 @@ export async function hardcoverRoutes(app: FastifyInstance) {
   });
 
   const COOKIE = "hc_connect";
-  const cookieAttrs = "Path=/api/hardcover/; HttpOnly; SameSite=Lax";
+  const cookieAttrs = `Path=${COOKIE_PATH}; HttpOnly; SameSite=Lax`;
 
   app.get<{ Querystring: { returnTo?: string } }>("/api/hardcover/connect", async (req, reply) => {
     const { returnTo } = req.query;
@@ -81,8 +85,8 @@ export async function hardcoverRoutes(app: FastifyInstance) {
   });
 
   app.get<{ Querystring: { code?: string; state?: string; iss?: string; error?: string } }>("/api/hardcover/callback", async (req, reply) => {
-    const nonce = req.headers.cookie?.split(/;\s*/).find((c) => c.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
-    reply.header("Set-Cookie", `${COOKIE}=; Path=/api/hardcover/; Max-Age=0`);
+    const nonce = readCookie(req, COOKIE);
+    reply.header("Set-Cookie", `${COOKIE}=; Path=${COOKIE_PATH}; Max-Age=0`);
     try {
       return reply.redirect(await completeConnect(req.query, nonce), 302);
     } catch (err) {
@@ -91,21 +95,23 @@ export async function hardcoverRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post<{ Body: { handoff?: unknown } | null }>("/api/hardcover/session", async (req, reply) => {
+  app.post<{ Body: { handoff?: unknown; cookie?: unknown } | null }>("/api/hardcover/session", async (req, reply) => {
     const handoff = req.body?.handoff;
-    const session = typeof handoff === "string" ? redeemHandoff(handoff) : null;
-    if (!session) return reply.code(400).send({ error: HANDOFF_EXPIRED });
-    return session;
+    const redeemed = typeof handoff === "string" ? redeemHandoff(handoff) : null;
+    if (!redeemed) return reply.code(400).send({ error: HANDOFF_EXPIRED });
+    if (req.body?.cookie === true) setSessionCookie(req, reply, SESSION_COOKIE, COOKIE_PATH, redeemed.token);
+    return redeemed;
   });
 
   app.get("/api/hardcover/session", async (req, reply) => {
-    const account = getAccount(req.headers[SESSION_HEADER]);
+    const account = getAccount(session(req));
     if (!account) return reply.code(401).send({ error: "Connect your Hardcover account again." });
     return account;
   });
 
   app.delete("/api/hardcover/session", async (req, reply) => {
-    await disconnect(req.headers[SESSION_HEADER]);
+    await disconnect(session(req));
+    clearSessionCookie(reply, SESSION_COOKIE, COOKIE_PATH);
     return reply.code(204).send();
   });
 
