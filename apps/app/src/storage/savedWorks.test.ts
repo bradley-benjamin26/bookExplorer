@@ -19,7 +19,6 @@ const work: Work = {
   isbn: null,
   editions: [],
   rating: null,
-  reviews: [],
 };
 
 describe("savedWorks", () => {

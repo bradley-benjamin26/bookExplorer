@@ -14,7 +14,6 @@ const book = {
   openLibraryWorkId: "OL1W",
   wikidataId: "Q190192",
   rating: { average: 4.3, count: 900, sources: ["hardcover"] },
-  reviews: [{ rating: 5, text: "x", hasSpoilers: false }],
 } as never;
 
 describe("bookJsonLd", () => {

@@ -58,7 +58,7 @@ export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): P
       : [null, [] as string[]];
 
     // Awaited here (rather than folded into the Promise.all below) because
-    // its cover and rating, not just its reviews, factor into the Google
+    // its cover and rating factor into the Google
     // Books gating decision right after this — Google Books' shared/keyless
     // quota is the one most likely to run dry, so it's only spent once both
     // of the keyless sources (Open Library, then Hardcover) have had a
@@ -131,7 +131,6 @@ export function getBookDetail(rawIsbn: string, hardcoverAuth?: string | null): P
       wikidataId: workQid,
       format: ol.format,
       rating,
-      reviews: hc?.reviews ?? [],
       ...(locMetadata.lccn && { loc: { lcc: locMetadata.lcc, ddc: locMetadata.ddc, lccn: locMetadata.lccn } }),
     };
     return result;

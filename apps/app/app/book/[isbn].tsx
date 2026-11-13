@@ -20,7 +20,6 @@ import { GoogleBooksAttribution } from "../../src/components/GoogleBooksAttribut
 import { LibraryFindLinks } from "../../src/components/LibraryFindLinks";
 import { RatingBadge } from "../../src/components/RatingBadge";
 import { HardcoverProgress } from "../../src/components/HardcoverProgress";
-import { ReviewsSection } from "../../src/components/ReviewsSection";
 import { SavedRecordEditor } from "../../src/components/SavedRecordEditor";
 import { AddToListButton, type SaveSheetHandle } from "../../src/components/AddToListButton";
 import { ShareButton } from "../../src/components/ShareButton";
@@ -258,7 +257,6 @@ export default function BookDetail() {
         <LibraryFindLinks isbn={data.isbn} title={data.title} />
       </View>
 
-      <ReviewsSection reviews={data.reviews} />
       <Footer />
     </ScrollView>
   );

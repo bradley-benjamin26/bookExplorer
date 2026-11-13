@@ -12,7 +12,7 @@ import type { CacheEntryOptions } from "../cache.js";
 // How long a book/work assembled while one of its optional sources was
 // failing stays cached — long enough to absorb a burst of repeat views, short
 // enough that a brief outage isn't remembered as "this book has no
-// ratings/reviews/genres" for the cache's full hour.
+// ratings/genres" for the cache's full hour.
 export const DEGRADED_TTL_MS = 1000 * 60 * 5;
 
 /**

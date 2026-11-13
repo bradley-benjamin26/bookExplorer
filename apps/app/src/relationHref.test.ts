@@ -19,7 +19,10 @@ describe("relationHref", () => {
   it("links an award to its award page without an Open Library id", () => {
     expect(relationHref({ relation: "award", openLibraryId: null, label: "Hugo Award for Best Novel" } as never)).toEqual(routes.award("hugo_award", "Hugo Award"));
   });
-  it("leaves movements as text", () => {
+  it("links a movement only when Wikidata gives its Open Library subject", () => {
+    expect(relationHref({ relation: "movement", openLibraryId: null, openLibrarySubject: "romanticism_great_britain", label: "British Romanticism" })).toEqual(
+      routes.subject("romanticism_great_britain", "British Romanticism")
+    );
     expect(relationHref(r("movement", "OL1A"))).toBeNull();
   });
 });

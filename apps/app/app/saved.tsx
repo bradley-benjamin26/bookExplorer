@@ -3,6 +3,7 @@ import { EmptyState } from "../src/components/EmptyState";
 import { ArrowDownUp, BookOpen, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AccordionSection } from "../src/components/AccordionSection";
 import { Button } from "../src/components/Button";
 import { CoverStack } from "../src/components/CoverStack";
 import { Footer } from "../src/components/Footer";
@@ -66,48 +67,47 @@ export default function Saved() {
       </Text>
       {ACCOUNT_ROWS.map(navRow)}
 
-      <Text style={styles.heading} accessibilityRole="header">
-        Your lists
-      </Text>
-      {error ? (
-        <>
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {error}
-          </Text>
-          <Button variant="pill" onPress={load} style={styles.retry}>
-            Retry
-          </Button>
-        </>
-      ) : lists.length === 0 ? (
-        <EmptyState message="Save a book from its page to start a list." actionLabel="Search for a book" onAction={() => router.push("/")} />
-      ) : (
-        lists.map((list) => {
-          const noun = list.kind === "author" ? "author" : "book";
-          const count = `${list.members.length} ${noun}${list.members.length === 1 ? "" : "s"}`;
-          return (
-            <PressableRow
-              key={list.id}
-              label={`${list.name}, ${count}`}
-              tooltip={`Open ${list.name}`}
-              onPress={() => router.push(routes.list(list.id))}
-              trailing={chevron}
-            >
-              <View style={styles.listRow}>
-                <CoverStack urls={listCoverUrls(list.members)} />
-                <View style={styles.listText}>
-                  <Text style={styles.rowText} numberOfLines={2}>
-                    {list.name}
-                  </Text>
-                  <Text style={styles.count}>{count}</Text>
+      <AccordionSection title="Your lists" defaultOpen>
+        {error ? (
+          <>
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {error}
+            </Text>
+            <Button variant="pill" onPress={load} style={styles.retry}>
+              Retry
+            </Button>
+          </>
+        ) : lists.length === 0 ? (
+          <EmptyState message="Save a book from its page to start a list." actionLabel="Search for a book" onAction={() => router.push("/")} />
+        ) : (
+          lists.map((list) => {
+            const noun = list.kind === "author" ? "author" : "book";
+            const count = `${list.members.length} ${noun}${list.members.length === 1 ? "" : "s"}`;
+            return (
+              <PressableRow
+                key={list.id}
+                label={`${list.name}, ${count}`}
+                tooltip={`Open ${list.name}`}
+                onPress={() => router.push(routes.list(list.id))}
+                trailing={chevron}
+              >
+                <View style={styles.listRow}>
+                  <CoverStack urls={listCoverUrls(list.members)} />
+                  <View style={styles.listText}>
+                    <Text style={styles.rowText} numberOfLines={2}>
+                      {list.name}
+                    </Text>
+                    <Text style={styles.count}>{count}</Text>
+                  </View>
                 </View>
-              </View>
-            </PressableRow>
-          );
-        })
-      )}
-      <PressableRow label="See all lists" onPress={() => router.push(routes.lists())} trailing={chevron}>
-        <Text style={styles.rowText}>See all lists</Text>
-      </PressableRow>
+              </PressableRow>
+            );
+          })
+        )}
+        <PressableRow label="See all lists" onPress={() => router.push(routes.lists())} trailing={chevron}>
+          <Text style={styles.rowText}>See all lists</Text>
+        </PressableRow>
+      </AccordionSection>
 
       <View style={styles.group}>{DISCOVERY_ROWS.map(navRow)}</View>
 

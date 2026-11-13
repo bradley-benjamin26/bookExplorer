@@ -4,9 +4,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
 
-/** A titled section that starts closed and shows its children when opened. */
-export function AccordionSection({ title, children }: { title: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+/** A titled section that shows its children when opened; starts closed unless `defaultOpen`. */
+export function AccordionSection({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   // Down/up, not right: a right chevron means "go to another page" everywhere else in the app.

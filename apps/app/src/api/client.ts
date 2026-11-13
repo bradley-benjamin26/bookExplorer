@@ -196,8 +196,8 @@ export function searchBooks(params: Record<string, string>): Promise<WorkRef[]> 
 // fetchGraph is a compile error instead of a 400 discovered at runtime.
 export type GraphCenterType = Exclude<GraphNode["type"], "genre" | "editions">;
 
-export function fetchGraph(type: GraphCenterType, id: string): Promise<Graph> {
-  return getJson(`/api/graph/${type}/${encodeURIComponent(id)}`, GraphSchema);
+export function fetchGraph(type: GraphCenterType, id: string, extra = 0): Promise<Graph> {
+  return getJson(`/api/graph/${type}/${encodeURIComponent(id)}${extra ? `?extra=${extra}` : ""}`, GraphSchema);
 }
 
 export function fetchSeries(qid: string): Promise<Series> {
