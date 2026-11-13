@@ -138,6 +138,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               name="subject/[slug]"
               options={{ title: "Subject", headerRight: inHeader(<HeaderActions />) }}
             />
+            <Stack.Screen name="award/[slug]" options={{ title: "Award", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="work/[id]" options={{ title: "Work", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="search" options={{ title: "Search", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen
