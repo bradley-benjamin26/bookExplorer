@@ -164,7 +164,7 @@ describe("buildWorkLinksGraph", () => {
     } as never);
     const a = await buildAuthorLinksGraph("OL3A");
     const w = await buildWorkLinksGraph("OL12W");
-    const node = { id: "award:hugo_award", type: "award", label: "Hugo Award", navigable: false };
+    const node = { id: "award:hugo_award", type: "award", label: "Hugo Award", navigable: true };
     expect(a?.nodes).toContainEqual(node);
     expect(a?.edges).toContainEqual({ source: "author:OL3A", target: "award:hugo_award", relation: "won" });
     expect(w?.nodes).toContainEqual(node);

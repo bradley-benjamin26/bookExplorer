@@ -63,7 +63,7 @@ export function cleanGraph(nodes: GraphNode[], edges: GraphEdge[]): { nodes: Gra
 }
 
 function awardNode(label: string): GraphNode {
-  return { id: `award:${awardSlug(label)}`, type: "award", label: awardDisplayName(label), navigable: false };
+  return { id: `award:${awardSlug(label)}`, type: "award", label: awardDisplayName(label), navigable: true };
 }
 
 function authorNodeId(openLibraryId: string | null, wikidataId: string): string {

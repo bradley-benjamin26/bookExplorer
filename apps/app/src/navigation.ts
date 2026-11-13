@@ -15,6 +15,9 @@ export const routes = {
   }),
   author: (id: string): Href => ({ pathname: "/author/[id]", params: { id } }),
   subject: (slug: string, label?: string): Href => ({ pathname: "/subject/[slug]", params: label ? { slug, label } : { slug } }),
+  // The cast goes once Task 11 adds app/award/[slug].tsx and typed routes know the path.
+  award: (slug: string, label?: string) =>
+    ({ pathname: "/award/[slug]", params: label ? { slug, label } : { slug } }) as unknown as Href,
   work: (id: string, options?: { highlight?: string }): Href => ({
     pathname: "/work/[id]",
     params: options?.highlight ? { id, highlight: options.highlight } : { id },
@@ -52,6 +55,7 @@ export const nodeHref = (nodeId: string): Href | null => {
   if (id.startsWith("qid:")) return null;
   if (type === "author") return routes.author(id);
   if (type === "subject" || type === "genre") return routes.subject(id);
+  if (type === "award") return routes.award(id);
   if (type === "work") return routes.work(id);
   if (type === "editions") return routes.work(id, { highlight: "editions" });
   return null;

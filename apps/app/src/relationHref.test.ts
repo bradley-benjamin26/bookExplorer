@@ -16,6 +16,9 @@ describe("relationHref", () => {
     expect(relationHref(r("influencedBy", "OL26320A"))).toEqual(routes.author("OL26320A"));
     expect(relationHref(r("influenced", "OL1W"))).toEqual(routes.work("OL1W"));
   });
+  it("links an award to its award page without an Open Library id", () => {
+    expect(relationHref({ relation: "award", openLibraryId: null, label: "Hugo Award for Best Novel" } as never)).toEqual(routes.award("hugo_award", "Hugo Award"));
+  });
   it("leaves movements as text", () => {
     expect(relationHref(r("movement", "OL1A"))).toBeNull();
   });

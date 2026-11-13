@@ -1,4 +1,4 @@
-import { MAX_TAG_LENGTH, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
+import { awardDisplayName, awardSlug, MAX_TAG_LENGTH, slugifySubject, type TaggedTerm } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
@@ -131,15 +131,24 @@ export function TermsSection({
 /** Read-only "Awards" chips, or nothing when there are none. */
 export function AwardsSection({ awards }: { awards: string[] }) {
   const styles = useThemedStyles(createStyles);
+  const router = useRouter();
   if (awards.length === 0) return null;
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle} accessibilityRole="header">Awards</Text>
       <View style={styles.tags}>
         {awards.map((award) => (
-          <View key={award} style={styles.genreTag}>
+          <Pressable
+            ref={titleRef(`View ${award}`)}
+            key={award}
+            style={({ pressed }) => [styles.genreTag, pressed && styles.pressed]}
+            onPress={() => router.push(routes.award(awardSlug(award), awardDisplayName(award)))}
+            hitSlop={8}
+            accessibilityRole="link"
+            accessibilityLabel={titleCase(award)}
+          >
             <Text style={styles.genreTagText}>{titleCase(award)}</Text>
-          </View>
+          </Pressable>
         ))}
       </View>
     </View>

@@ -20,6 +20,13 @@ describe("routes", () => {
   });
 });
 
+describe("routes.award", () => {
+  it("carries the slug and, when given, the label", () => {
+    expect(routes.award("hugo_award", "Hugo Award")).toEqual({ pathname: "/award/[slug]", params: { slug: "hugo_award", label: "Hugo Award" } });
+    expect(routes.award("hugo_award")).toEqual({ pathname: "/award/[slug]", params: { slug: "hugo_award" } });
+  });
+});
+
 describe("nodeHref", () => {
   it("routes each node type to its page", () => {
     expect(nodeHref("author:OL1A")).toEqual(routes.author("OL1A"));
@@ -27,6 +34,7 @@ describe("nodeHref", () => {
     expect(nodeHref("genre:fantasy")).toEqual(routes.subject("fantasy"));
     expect(nodeHref("work:OL2W")).toEqual(routes.work("OL2W"));
     expect(nodeHref("editions:OL2W")).toEqual(routes.work("OL2W", { highlight: "editions" }));
+    expect(nodeHref("award:hugo_award")).toEqual(routes.award("hugo_award"));
   });
   it("has no page for unresolved (qid) nodes", () => {
     expect(nodeHref("author:qid:Q1")).toBeNull();
