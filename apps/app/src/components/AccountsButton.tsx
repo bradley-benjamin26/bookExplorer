@@ -10,22 +10,29 @@ import { HeaderIconButton } from "./HeaderIconButton";
 
 /** Header button that opens a popup for connecting the Hardcover and Open Library accounts. */
 export function AccountsButton() {
-  const styles = useThemedStyles(createStyles);
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   return (
     <>
       <HeaderIconButton label="Accounts" Icon={UserRound} onPress={() => setOpen(true)} />
       <CenteredModal visible={open} label="Accounts" onClose={close}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.heading} accessibilityRole="header">Hardcover</Text>
-          <HardcoverAccountPanel onNavigate={close} />
-          <Text style={styles.heading} accessibilityRole="header">Open Library</Text>
-          <OpenLibraryAccountPanel onNavigate={close} />
-          <Button variant="pill" onPress={close} style={styles.close}>Close</Button>
-        </ScrollView>
+        <AccountsPanels onClose={close} />
       </CenteredModal>
     </>
+  );
+}
+
+/** The popup's contents; the header menu shows them in its own modal, since iOS can't open a second modal while one closes. */
+export function AccountsPanels({ onClose }: { onClose: () => void }) {
+  const styles = useThemedStyles(createStyles);
+  return (
+    <ScrollView contentContainerStyle={styles.content}>
+      <Text style={styles.heading} accessibilityRole="header">Hardcover</Text>
+      <HardcoverAccountPanel onNavigate={onClose} />
+      <Text style={styles.heading} accessibilityRole="header">Open Library</Text>
+      <OpenLibraryAccountPanel onNavigate={onClose} />
+      <Button variant="pill" onPress={onClose} style={styles.close}>Close</Button>
+    </ScrollView>
   );
 }
 

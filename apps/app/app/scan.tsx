@@ -3,8 +3,9 @@ import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "ex
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { isIsbnBarcode } from "../src/batchScan";
+import { cameraBlockedHint } from "../src/cameraAccess";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
 import { routes } from "../src/navigation";
@@ -65,6 +66,7 @@ export default function Scan() {
   const hasScanned = useRef(false);
   const [batch, setBatch] = useState(false);
   const [prefs, setPrefs] = useState<Preferences | null>(null);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     getPreferences().then((p) => {
@@ -87,12 +89,24 @@ export default function Scan() {
   }
 
   if (!permission.granted) {
+    // Once denied, iOS/Android never show the prompt again; only Settings can change it.
+    const settingsOnly = Platform.OS !== "web" && !permission.canAskAgain;
+    const allow = async () => {
+      if (settingsOnly) return Linking.openSettings();
+      const result = await requestPermission();
+      if (!result.granted) setBlocked(true);
+    };
     return (
       // Android resizes the window for the keyboard itself; iOS needs the padding.
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.permissionScreen}>
         <Text style={styles.message}>Camera access is needed to scan book barcodes.</Text>
-        <Button variant="primary" onPress={requestPermission}>
-          Allow camera
+        {blocked && (
+          <Text style={styles.message} accessibilityLiveRegion="polite">
+            {cameraBlockedHint(Platform.OS, typeof window === "undefined" || window.isSecureContext !== false)}
+          </Text>
+        )}
+        <Button variant="primary" onPress={allow}>
+          {settingsOnly ? "Open Settings" : "Allow camera"}
         </Button>
         <IsbnEntry />
       </KeyboardAvoidingView>
