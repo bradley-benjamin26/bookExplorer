@@ -1,10 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { fetchSupportedLibraries } from "../src/api/client";
+import type { SupportedLibrary } from "@book-explorer/shared";
 import { Button } from "../src/components/Button";
+import { CenteredModal } from "../src/components/CenteredModal";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
+import { supportedLibraryOptions } from "../src/libraryOptions";
 import { routes } from "../src/navigation";
 import { clearRecent } from "../src/storage/history";
 import { getPreferences, setPreferences, type Preferences } from "../src/storage/preferences";
@@ -23,10 +28,13 @@ import { titleRef } from "../src/webTitle";
 
 function LibraryCard({
   library,
+  supported,
   onSave,
   onRemove,
 }: {
   library: Library;
+  /** The fetched registry; undefined while loading or on failure, when "no longer supported" can't be known. */
+  supported: SupportedLibrary[] | undefined;
   onSave: (library: Unversioned<Library>) => Promise<void>;
   onRemove: (id: string) => void;
 }) {
@@ -51,6 +59,15 @@ function LibraryCard({
     setSaved(false);
     setError("");
   };
+
+  const entry = supported?.find((s) => s.id === library.z3950Id);
+  const z3950Note = !library.z3950Id || !supported
+    ? ""
+    : !entry
+      ? "This library is no longer supported. Your saved links still work."
+      : entry.level === "availability"
+        ? "Checks live availability"
+        : "Checks whether the catalog has the book";
 
   return (
     <View style={styles.libraryCard}>
@@ -77,6 +94,8 @@ function LibraryCard({
           markDirty();
         }}
       />
+
+      {z3950Note ? <Text style={styles.helpText}>{z3950Note}</Text> : null}
 
       <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>Search by ISBN</Text>
       <Text style={styles.helpText}>
@@ -122,7 +141,7 @@ function LibraryCard({
         variant="primary"
         onPress={async () => {
           try {
-            await onSave({ id: library.id, name: name.trim(), isbnUrl: isbnUrl.trim(), titleUrl: titleUrl.trim() });
+            await onSave({ ...library, name: name.trim(), isbnUrl: isbnUrl.trim(), titleUrl: titleUrl.trim() });
             setSaved(true);
           } catch (err) {
             setError((err as Error).message);
@@ -294,6 +313,16 @@ export default function Settings() {
   }, []);
   useFocusEffect(load);
 
+  const [picking, setPicking] = useState(false);
+  const supported = useQuery({ queryKey: ["libraries", "supported"], queryFn: fetchSupportedLibraries, enabled: picking || libraries.some((l) => l.z3950Id) });
+  const options = supported.data ? supportedLibraryOptions(supported.data, libraries) : [];
+
+  const handleAddSupported = async (option: SupportedLibrary) => {
+    setPicking(false);
+    await upsertLibrary({ id: generateLibraryId(), name: option.name, isbnUrl: "", titleUrl: "", z3950Id: option.id });
+    load();
+  };
+
   const handleAddLibrary = () => {
     setLibraries((prev) => [...prev, stamp({ id: generateLibraryId(), name: "", isbnUrl: "", titleUrl: "" })]);
   };
@@ -316,7 +345,7 @@ export default function Settings() {
       <Text style={styles.helpText}>Add your library so book pages can link to its catalog.</Text>
 
       {libraries.map((library) => (
-        <LibraryCard key={library.id} library={library} onSave={handleSaveLibrary} onRemove={handleRemoveLibrary} />
+        <LibraryCard key={library.id} library={library} supported={supported.data} onSave={handleSaveLibrary} onRemove={handleRemoveLibrary} />
       ))}
 
       <Pressable
@@ -331,6 +360,26 @@ export default function Settings() {
         </View>
         <Text style={styles.addLibraryText}>Add new library</Text>
       </Pressable>
+
+      <Button variant="pill" onPress={() => setPicking(true)} style={styles.historyButton}>
+        Add a supported library
+      </Button>
+      <CenteredModal visible={picking} label="Supported libraries" onClose={() => setPicking(false)}>
+        <ScrollView contentContainerStyle={styles.content}>
+          {supported.isError ? (
+            <>
+              <Text style={styles.errorText} accessibilityRole="alert">Couldn't load libraries. Try again.</Text>
+              <Button variant="pill" onPress={() => supported.refetch()} style={styles.historyButton}>Try again</Button>
+            </>
+          ) : (
+            options.map((option) => (
+              <Button key={option.id} variant="pill" onPress={() => handleAddSupported(option)} style={styles.historyButton}>
+                {option.name}
+              </Button>
+            ))
+          )}
+        </ScrollView>
+      </CenteredModal>
 
       <PreferencesSections />
 
