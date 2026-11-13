@@ -29,9 +29,9 @@ export const radii = {
 export const fonts = {
   display: "Fraunces_600SemiBold",
   displayMedium: "Fraunces_500Medium",
-  body: "Inter_400Regular",
-  bodyMedium: "Inter_500Medium",
-  bodySemiBold: "Inter_600SemiBold",
+  body: "HankenGrotesk_400Regular",
+  bodyMedium: "HankenGrotesk_500Medium",
+  bodySemiBold: "HankenGrotesk_600SemiBold",
 } as const;
 
 export const typeScale = {
