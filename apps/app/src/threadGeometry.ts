@@ -41,6 +41,8 @@ export interface ThreadLoop {
   gap: number;
   /** Loop size relative to the largest that fits (default 1). */
   scale?: number;
+  /** Hang the loop below the line instead of rising above it. */
+  down?: boolean;
 }
 
 /** A thread running left to right through `stops` evenly spaced stops (first at `inset`, last at `width - inset`),
@@ -79,16 +81,18 @@ export function threadGeometry(
       // then cross the rising stroke and carry on to q. Sized to stay inside the box.
       // Loops sit on a given baseline, otherwise just above the bottom edge.
       const base = style.baseline ?? height - 2;
-      const rho = Math.min(((height - 4) / 2.2) * (loop.scale ?? 1), dx * 0.22, (base - 1) / 2);
+      const dir = loop.down ? -1 : 1; // 1 rises toward the top, -1 hangs toward the bottom
+      const room = loop.down ? height - base - 1 : base - 1;
+      const rho = Math.min(((height - 4) / 2.2) * (loop.scale ?? 1), dx * 0.22, room / 2);
       const k = rho * 0.5523;
       const mx = (p[0] + q[0]) / 2;
-      const right: Pt = [mx + rho, base - rho];
-      const top: Pt = [mx, base - 2 * rho];
-      const left: Pt = [mx - rho, base - rho];
-      curves.push([p, [p[0] + (right[0] - p[0]) / 2, p[1]], [right[0], right[1] + rho], right]);
-      curves.push([right, [right[0], right[1] - k], [top[0] + k, top[1]], top]);
-      curves.push([top, [top[0] - k, top[1]], [left[0], left[1] - k], left]);
-      curves.push([left, [left[0], left[1] + rho], [q[0] - (q[0] - left[0]) / 3, q[1]], q]);
+      const right: Pt = [mx + rho, base - dir * rho];
+      const top: Pt = [mx, base - dir * 2 * rho];
+      const left: Pt = [mx - rho, base - dir * rho];
+      curves.push([p, [p[0] + (right[0] - p[0]) / 2, p[1]], [right[0], right[1] + dir * rho], right]);
+      curves.push([right, [right[0], right[1] - dir * k], [top[0] + k, top[1]], top]);
+      curves.push([top, [top[0] - k, top[1]], [left[0], left[1] - dir * k], left]);
+      curves.push([left, [left[0], left[1] + dir * rho], [q[0] - (q[0] - left[0]) / 3, q[1]], q]);
     } else {
       curves.push([p, [p[0] + dx / 3, p[1]], [q[0] - dx / 3, q[1]], q]);
     }

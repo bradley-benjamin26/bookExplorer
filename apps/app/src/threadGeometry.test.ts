@@ -132,5 +132,28 @@ describe("threadGeometry", () => {
     }
     expect(xs.filter((x, i) => i === 0 || Math.abs(x - xs[i - 1]) > 4)).toHaveLength(3);
   });
+
+  it("can hang a loop below the line while the others rise above it", () => {
+    const loops = [{ gap: 1, scale: 0.8 }, { gap: 2, scale: 0.8, down: true }, { gap: 3, scale: 0.8 }];
+    const geo = threadGeometry(120, 26, 4, 6, loops, { wander: 0, baseline: 13 });
+    const [, s1, s2] = geo.points;
+    let belowMiddle = 0;
+    let belowElsewhere = 0;
+    let top = Infinity;
+    let bottom = -Infinity;
+    for (const sg of segments(geo.d)) {
+      for (let t = 0; t <= 1; t += 1 / 40) {
+        const [x, y] = at(sg, t);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+        if (x > s1.x && x < s2.x) belowMiddle = Math.max(belowMiddle, y - 13);
+        else belowElsewhere = Math.max(belowElsewhere, y - 13);
+      }
+    }
+    expect(belowMiddle).toBeGreaterThan(8);
+    expect(belowElsewhere).toBeLessThanOrEqual(0.5);
+    expect(top).toBeGreaterThanOrEqual(-0.5);
+    expect(bottom).toBeLessThanOrEqual(26.5);
+  });
 });
 

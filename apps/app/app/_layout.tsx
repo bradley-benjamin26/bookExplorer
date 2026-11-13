@@ -121,7 +121,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               headerTitle: ({ children }) => <HeaderTitle>{children}</HeaderTitle>,
               headerTitleStyle: { fontFamily: theme.fonts.displayMedium, color: theme.colors.ink },
               // Web's header is taller to fit the thread under the wordmark.
-              headerStyle: { backgroundColor: theme.colors.paper, ...(Platform.OS === "web" ? { height: 84 } : null) },
+              headerStyle: { backgroundColor: theme.colors.paper, ...(Platform.OS === "web" ? { height: 90 } : null) },
               headerShadowVisible: false,
               headerTintColor: theme.colors.cover,
               contentStyle: { backgroundColor: theme.colors.paper },

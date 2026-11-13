@@ -3,10 +3,10 @@ import Svg, { Circle, Path } from "react-native-svg";
 import { threadGeometry } from "../threadGeometry";
 import { useTheme } from "../theme";
 
-export const THREAD_MARK_HEIGHT = 20;
-// Neat: one level line, three identical loops rising from it, a node between each.
-const LOOPS = [1, 2, 3].map((gap) => ({ gap, scale: 0.8 }));
-const STYLE = { wander: 0, baseline: THREAD_MARK_HEIGHT - 3 };
+export const THREAD_MARK_HEIGHT = 26;
+// Neat: one level line through the middle, three identical loops, a node between each; the middle loop hangs below the line.
+const LOOPS = [1, 2, 3].map((gap) => ({ gap, scale: 0.8, down: gap === 2 }));
+const STYLE = { wander: 0, baseline: THREAD_MARK_HEIGHT / 2 };
 
 /** A short thread with loops and the graph's four node colours, as wide as the wordmark it sits under. Decorative. */
 export function ThreadMark({ width }: { width: number }) {
