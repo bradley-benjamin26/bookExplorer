@@ -9,6 +9,7 @@ import { threadGeometry } from "../threadGeometry";
 import { revealAt } from "../threadReveal";
 import { useThemedStyles, type Theme } from "../theme";
 import { titleRef } from "../webTitle";
+import { Spool, SPOOL_EXIT } from "./Spool";
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const HEIGHT = 96;
@@ -52,7 +53,8 @@ function ThreadBody({ thread, onOpen }: { thread: Thread; onOpen: (href: Stop["h
     if (!reduceMotion) progress.value = withTiming(1, { duration: DRAW_MS, easing: Easing.inOut(Easing.cubic) });
   }, []);
   const stops = stopsOf(thread);
-  const geo = width > 0 ? threadGeometry(width, HEIGHT, stops.length, width / (stops.length * 2)) : null;
+  // The thread comes off the spool at the left and runs through the stops; the spool's exit sits on the line's baseline.
+  const geo = width > 0 ? threadGeometry(width, HEIGHT, stops.length, width / (stops.length * 2), undefined, { start: SPOOL_EXIT.x }) : null;
   const length = geo?.length ?? 1;
   const lineProps = useAnimatedProps(() => ({ strokeDashoffset: length * (1 - progress.value) }));
 
@@ -62,6 +64,9 @@ function ThreadBody({ thread, onOpen }: { thread: Thread; onOpen: (href: Stop["h
         <View style={{ height: HEIGHT }}>
           {/* The thread and its nodes are decoration; the three text links below carry the meaning. */}
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+            <View style={{ position: "absolute", left: 0, top: HEIGHT / 2 - SPOOL_EXIT.y }}>
+              <Spool />
+            </View>
             <Svg width={width} height={HEIGHT}>
               <AnimatedPath
                 d={geo.d}

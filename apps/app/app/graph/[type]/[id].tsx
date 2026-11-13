@@ -3,6 +3,7 @@ import type { Graph, GraphNode } from "@book-explorer/shared";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Check, ChevronLeft, ChevronRight, Crosshair, Maximize, ZoomIn, ZoomOut } from "lucide-react-native";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { Footer } from "../../../src/components/Footer";
 import { AccessibilityInfo, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -298,10 +299,12 @@ export default function GraphExplorer() {
   // Trackpad/mouse equivalent for pinch, since Gesture.Pinch() only fires
   // from an actual two-finger touch gesture and react-native-gesture-handler's
   // web Pan handler doesn't surface plain mouse-wheel deltas at all — so this
-  // reads the native wheel event directly (ctrl/cmd+scroll or a plain scroll
-  // both zoom, matching common web map/canvas conventions). Native platforms
-  // have no wheel device and never fire this.
-  const handleWheel = (e: { deltaY: number; clientX: number; clientY: number; currentTarget: unknown }) => {
+  // reads the native wheel event directly (ctrl/cmd+scroll zooms; a plain
+  // scroll is left to the page). Native platforms have no wheel device and
+  // never fire this.
+  const handleWheel = (e: { deltaY: number; clientX: number; clientY: number; currentTarget: unknown; ctrlKey: boolean; metaKey: boolean }) => {
+    // A plain scroll belongs to the page; trackpad pinch arrives as ctrl+wheel.
+    if (!e.ctrlKey && !e.metaKey) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     zoomAbout(scale.value * (1 - e.deltaY * WHEEL_ZOOM_SPEED), e.clientX - rect.left, e.clientY - rect.top);
   };
@@ -396,7 +399,7 @@ export default function GraphExplorer() {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.pageContent}>
       {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <View style={styles.titleBlock}>
@@ -792,7 +795,8 @@ export default function GraphExplorer() {
         </View>
       </GestureDetector>
       )}
-    </View>
+      <Footer />
+    </ScrollView>
   );
 }
 
@@ -816,6 +820,8 @@ function FilterRow({ label, checked, onPress }: { label: string; checked: boolea
 function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
+    // The graph/list fill what's left of the screen but never shrink below MIN_CANVAS_HEIGHT, so short windows scroll to the footer.
+    pageContent: { flexGrow: 1 },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
     emptyGraphText: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, textAlign: "center", lineHeight: 28 },
     titleBlock: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
@@ -853,7 +859,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     // overflow: hidden clips the canvas to the visible viewport — now that
     // the canvas is panned/zoomed rather than fitted to the screen, it's
     // routinely larger than this box at 100% scale.
-    viewport: { flex: 1, overflow: "hidden", backgroundColor: colors.card, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.cardBorder },
+    viewport: { flex: 1, minHeight: 360, overflow: "hidden", backgroundColor: colors.card, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.cardBorder },
     graphArea: { position: "relative", transformOrigin: "top left" },
     zoomControls: { position: "absolute", right: spacing.md, bottom: spacing.md, gap: spacing.sm },
     zoomButton: {
@@ -891,7 +897,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
       justifyContent: "center",
     },
     checkboxOn: { backgroundColor: colors.cover },
-    list: { flex: 1, paddingHorizontal: spacing.lg },
+    list: { flex: 1, minHeight: 360, paddingHorizontal: spacing.lg },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
     listRowMain: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md },
     listHeading: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.ink, paddingVertical: spacing.md },
