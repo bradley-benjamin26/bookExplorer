@@ -135,6 +135,28 @@ describe("hardcover routes", () => {
     m.redeemHandoff.mockReturnValue({ token: "t", username: "u" });
     const res = await call({ method: "POST", url: "/api/hardcover/session", payload: { handoff: "h" } });
     expect(res.json()).toEqual({ token: "t", username: "u" });
+    expect(res.headers["set-cookie"]).toBeUndefined();
+  });
+
+  it("POST session with cookie: true also sets an httpOnly session cookie", async () => {
+    m.redeemHandoff.mockReturnValue({ token: "t", username: "u" });
+    const res = await call({ method: "POST", url: "/api/hardcover/session", payload: { handoff: "h", cookie: true } });
+    expect(res.headers["set-cookie"]).toBe("hc_session=t; Path=/api/hardcover/; HttpOnly; SameSite=Strict; Max-Age=7776000");
+  });
+
+  it("reads the session from the cookie when no header is sent, and the header wins over it", async () => {
+    m.getAccount.mockReturnValue({ username: "u" });
+    await call({ method: "GET", url: "/api/hardcover/session", headers: { cookie: "other=1; hc_session=c" } });
+    expect(m.getAccount).toHaveBeenLastCalledWith("c");
+    await call({ method: "GET", url: "/api/hardcover/session", headers: { cookie: "hc_session=c", "x-hardcover-session": "h" } });
+    expect(m.getAccount).toHaveBeenLastCalledWith("h");
+  });
+
+  it("DELETE session disconnects the cookie's session and clears the cookie", async () => {
+    const res = await call({ method: "DELETE", url: "/api/hardcover/session", headers: { cookie: "hc_session=c" } });
+    expect(m.disconnect).toHaveBeenCalledWith("c");
+    expect(res.headers["set-cookie"]).toContain("hc_session=; Path=/api/hardcover/;");
+    expect(res.headers["set-cookie"]).toContain("Max-Age=0");
   });
 
   it.each([[{ handoff: "h" }, true], [{}, false], [{ handoff: 1 }, false]])("POST session 400s on %j or unknown handoff", async (payload, wellFormed) => {

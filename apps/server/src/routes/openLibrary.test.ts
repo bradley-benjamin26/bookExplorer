@@ -80,6 +80,17 @@ describe("open library routes", () => {
     expect(res.json()).toEqual({ error: "Open Library didn't accept those keys. Check both and try again." });
   });
 
+  it("POST session with cookie: true sets an httpOnly cookie that later calls are read from; DELETE clears it", async () => {
+    m.connect.mockResolvedValue({ token: "t", username: "ada" });
+    const ok = await call({ method: "POST", url: "/api/openlibrary/session", payload: { access: KEY_A, secret: KEY_A, cookie: true } });
+    expect(ok.headers["set-cookie"]).toBe("ol_session=t; Path=/api/openlibrary/; HttpOnly; SameSite=Strict; Max-Age=7776000");
+    await call({ method: "GET", url: "/api/openlibrary/session", headers: { cookie: "ol_session=c" } });
+    expect(m.getOpenLibraryAccount).toHaveBeenCalledWith("c");
+    const del = await call({ method: "DELETE", url: "/api/openlibrary/session", headers: { cookie: "ol_session=c" } });
+    expect(m.disconnectOpenLibrary).toHaveBeenCalledWith("c");
+    expect(del.headers["set-cookie"]).toContain("Max-Age=0");
+  });
+
   it("GET session returns the account or 401; DELETE gives 204", async () => {
     m.getOpenLibraryAccount.mockReturnValueOnce({ username: "ada" }).mockReturnValueOnce(null);
     expect((await call({ method: "GET", url: "/api/openlibrary/session", headers })).json()).toEqual({ username: "ada" });

@@ -31,7 +31,9 @@ import { openLibraryRoutes } from "./routes/openLibrary.js";
 // dodge the limit. Off unless TRUST_PROXY is set (see trustProxy.ts).
 const app = Fastify({ logger: true, trustProxy: parseTrustProxy(process.env.TRUST_PROXY) });
 
-await app.register(cors, { origin: true, methods: ["GET", "HEAD", "POST", "DELETE"] });
+// The web app's session rides in a cookie, so only its own origins (and local dev) may make credentialed calls. Native apps send no Origin.
+const webOrigin = new URL(process.env.PUBLIC_WEB_URL ?? "https://shelfthread.com").origin;
+await app.register(cors, { origin: [webOrigin, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], credentials: true, methods: ["GET", "HEAD", "POST", "DELETE"] });
 
 // A required source in a cooldown (see httpClient.ts) is a temporary 503 the
 // app can explain, not a generic 500.

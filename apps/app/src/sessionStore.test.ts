@@ -67,14 +67,27 @@ describe("sessionStore", () => {
     expect(secure.m.get("a")).toBe("t1");
   });
 
-  it("web uses AsyncStorage", async () => {
+  it("web keeps only a signed-in marker in AsyncStorage, never the token", async () => {
     rn.Platform.OS = "web";
     const s = await fresh();
     const storage = (await import("@react-native-async-storage/async-storage")).default; // same instance the module got after resetModules
     await s.save("w");
-    expect(await storage.getItem("hardcover-session")).toBe("w");
+    expect(s.get()).toBe("cookie");
+    expect(await storage.getItem("hardcover-session")).toBe("cookie");
     expect(secure.m.size).toBe(0);
+    await s.load();
+    expect(s.get()).toBe("cookie");
     await s.clear();
+    expect(await storage.getItem("hardcover-session")).toBeNull();
+  });
+
+  it("web drops a real token an older build left in storage", async () => {
+    rn.Platform.OS = "web";
+    const s = await fresh();
+    const storage = (await import("@react-native-async-storage/async-storage")).default;
+    await storage.setItem("hardcover-session", "old-real-token");
+    await s.load();
+    expect(s.get()).toBeNull();
     expect(await storage.getItem("hardcover-session")).toBeNull();
   });
 });

@@ -86,15 +86,18 @@ export class ApiError extends Error {
 function headers(extra?: Record<string, string>): Record<string, string> | undefined {
   const h: Record<string, string> = { ...extra };
   if (APP_SHARED_SECRET) h["X-App-Key"] = APP_SHARED_SECRET;
-  const session = getSessionToken();
-  if (session) h["X-Hardcover-Session"] = session;
-  const olSession = getOpenLibrarySessionToken();
-  if (olSession) h["X-OpenLibrary-Session"] = olSession;
+  // Web sends its sessions as httpOnly cookies instead (see request).
+  if (Platform.OS !== "web") {
+    const session = getSessionToken();
+    if (session) h["X-Hardcover-Session"] = session;
+    const olSession = getOpenLibrarySessionToken();
+    if (olSession) h["X-OpenLibrary-Session"] = olSession;
+  }
   return Object.keys(h).length ? h : undefined;
 }
 
 async function request<T>(path: string, init: RequestInit, schema?: ZodType<T, ZodTypeDef, unknown>): Promise<T | undefined> {
-  const res = await fetch(`${API_BASE_URL}${path}`, init);
+  const res = await fetch(`${API_BASE_URL}${path}`, Platform.OS === "web" ? { ...init, credentials: "include" } : init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     // A rejected session is dead; drop it so the app reads as signed out.
@@ -131,7 +134,7 @@ export function sendJson<T>(method: "POST" | "DELETE", path: string, body: unkno
 }
 
 export async function redeemHardcoverHandoff(handoff: string): Promise<{ token: string; username: string }> {
-  return (await sendJson("POST", "/api/hardcover/session", { handoff }, HardcoverHandoffSchema))!;
+  return (await sendJson("POST", "/api/hardcover/session", { handoff, cookie: Platform.OS === "web" }, HardcoverHandoffSchema))!;
 }
 
 export function fetchHardcoverAccount(): Promise<{ username: string }> {
@@ -232,7 +235,7 @@ export function searchAuthors(q: string): Promise<AuthorRef[]> {
 }
 
 export async function connectOpenLibrary(access: string, secret: string): Promise<{ token: string; username: string }> {
-  return (await sendJson("POST", "/api/openlibrary/session", { access, secret }, OpenLibrarySessionSchema))!;
+  return (await sendJson("POST", "/api/openlibrary/session", { access, secret, cookie: Platform.OS === "web" }, OpenLibrarySessionSchema))!;
 }
 
 export function fetchOpenLibraryAccount(): Promise<{ username: string }> {
