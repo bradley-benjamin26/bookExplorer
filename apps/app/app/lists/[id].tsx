@@ -67,6 +67,7 @@ export default function ListDetail() {
   useFocusEffect(load);
 
   const handleRemove = async (member: ListMember) => {
+    if (busyRef.current) return;
     setError("");
     try {
       const lists = await getLists(member.type === "author" ? "author" : "book");
@@ -267,6 +268,7 @@ export default function ListDetail() {
                 </Pressable>
                 <Pressable
                   ref={titleRef("Remove from this list")}
+                  disabled={busy}
                   style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}
                   onPress={() => handleRemove(member)}
                   hitSlop={8}

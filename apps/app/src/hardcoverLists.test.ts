@@ -242,6 +242,15 @@ describe("hardcoverLists", () => {
       expect(await getSavedBook("X")).toBeNull();
     });
 
+    it("sync deletes a pending remote book once, even if the remote lists it twice", async () => {
+      const id = await removedLocally();
+      const dup = { hardcoverBookId: 9, isbn: "X", title: "T" };
+      fetchList.mockResolvedValue({ name: "A", description: "", booksCount: 2, books: [dup, dup] });
+      await syncWithHardcover((await getList(id))!);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledWith(5, 9);
+    });
+
     it("sync forgets settled removals, so a book re-added on Hardcover stays", async () => {
       const id = await removedLocally();
       fetchList.mockResolvedValue(remoteWith9);

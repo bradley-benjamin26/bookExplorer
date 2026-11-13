@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Book } from "@book-explorer/shared";
 import AsyncStorage from "../test/asyncStorageMock";
-import { getSavedBook, removeSavedBook, saveBook, saveBookFromApi, seedSavedBookFromApi, saveListedBook, unsaveBook, updateSavedBook } from "./savedBooks";
+import { getAllSavedBooks, getSavedBook, removeSavedBook, saveBook, saveBookFromApi, seedSavedBookFromApi, saveListedBook, unsaveBook, updateSavedBook } from "./savedBooks";
 import { getSavedItems } from "./savedItems";
 
 vi.mock("@react-native-async-storage/async-storage", () => import("../test/asyncStorageMock"));
@@ -26,7 +26,33 @@ const book: Book = {
 };
 
 describe("savedBooks", () => {
-  beforeEach(() => AsyncStorage.clear());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    return AsyncStorage.clear();
+  });
+
+  it("getAllSavedBooks reads every record in one multiGet, tombstones included", async () => {
+    await saveBook(book);
+    await saveBook({ ...book, isbn: "9780306406157" });
+    await unsaveBook("9780306406157");
+    const getItem = vi.spyOn(AsyncStorage, "getItem");
+    const multiGet = vi.spyOn(AsyncStorage, "multiGet");
+    const all = await getAllSavedBooks();
+    expect(all.map((r) => r.isbn).sort()).toEqual(["9780141439518", "9780306406157"]);
+    expect(all.find((r) => r.isbn === "9780306406157")?.deletedAt).toBeDefined();
+    expect(multiGet).toHaveBeenCalledTimes(1);
+    expect(getItem).not.toHaveBeenCalled();
+  });
+
+  it("getAllSavedBooks skips a damaged record and sees a write still in flight", async () => {
+    await saveBook(book);
+    await AsyncStorage.setItem("book-explorer:saved-book:9780306406157", "{not json");
+    const pending = updateSavedBook(book.isbn, { notes: "fresh" }); // not awaited
+    const all = await getAllSavedBooks();
+    await pending;
+    expect(all).toHaveLength(1);
+    expect(all[0].notes).toBe("fresh");
+  });
 
   it("snapshots the book's tags on first save and keeps the existing record on a second save", async () => {
     const first = await saveBookFromApi(book);

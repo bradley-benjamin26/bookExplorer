@@ -25,6 +25,10 @@ const AsyncStorage = {
     await io();
     return [...store.keys()];
   },
+  multiGet: async (keys: readonly string[]) => {
+    await io();
+    return keys.map((k) => [k, store.get(k) ?? null] as [string, string | null]);
+  },
   clear: async () => {
     store.clear();
   },
