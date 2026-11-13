@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>2</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>04188cam a2200781 i 4500</leader>
+          <controlfield tag="001">990001132830108238</controlfield>
+          <controlfield tag="005">20260601124749.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">721213s1962    nyu      b    000 0 eng^^</controlfield>
+          <datafield ind1=" " ind2=" " tag="010">
+            <subfield code="a">62016820</subfield>
+          </datafield>
+          <datafield ind1="7" ind2=" " tag="016">
+            <subfield code="a">001323819</subfield>
+            <subfield code="2">Uk</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="016">
+            <subfield code="a">(AMICUS)000001252827</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="019">
+            <subfield code="a">733796663</subfield>
+            <subfield code="a">877164570</subfield>
+            <subfield code="a">1132164227</subfield>
+            <subfield code="a">1159836258</subfield>
+            <subfield code="a">1173037757</subfield>
+            <subfield code="a">1173186197</subfield>
+            <subfield code="a">1175576893</subfield>
+            <subfield code="a">1191331609</subfield>
+            <subfield code="a">1200997967</subfield>
+            <subfield code="a">1201890647</subfield>
+            <subfield code="a">1201902024</subfield>
+            <subfield code="a">1201921102</subfield>
+            <subfield code="a">1201985553</subfield>
+            <subfield code="a">1202006171</subfield>
+            <subfield code="a">1202012435</subfield>
+            <subfield code="a">1221824254</subfield>
+            <subfield code="a">1243844821</subfield>
+            <subfield code="a">1425033310</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">080570552X</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780805705522</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="z">0000000000 {dollar}17.50*</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(Aleph)000113283MAI01</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">CP0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">MS0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">BC0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">ES0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">TS0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">FS0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">SS0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">CS0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">UB0000273426</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">LN17728</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)273426</subfield>
+            <subfield code="z">(OCoLC)733796663</subfield>
+            <subfield code="z">(OCoLC)877164570</subfield>
+            <subfield code="z">(OCoLC)1132164227</subfield>
+            <subfield code="z">(OCoLC)1159836258</subfield>
+            <subfield code="z">(OCoLC)1173037757</subfield>
+            <subfield code="z">(OCoLC)1173186197</subfield>
+            <subfield code="z">(OCoLC)1175576893</subfield>
+            <subfield code="z">(OCoLC)1191331609</subfield>
+            <subfield code="z">(OCoLC)1200997967</subfield>
+            <subfield code="z">(OCoLC)1201890647</subfield>
+            <subfield code="z">(OCoLC)1201902024</subfield>
+            <subfield code="z">(OCoLC)1201921102</subfield>
+            <subfield code="z">(OCoLC)1201985553</subfield>
+            <subfield code="z">(OCoLC)1202006171</subfield>
+            <subfield code="z">(OCoLC)1202012435</subfield>
+            <subfield code="z">(OCoLC)1221824254</subfield>
+            <subfield code="z">(OCoLC)1243844821</subfield>
+            <subfield code="z">(OCoLC)1425033310</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)ocm00273426</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(EXLNZ-01USMAI_NETWORK)9910288383808236</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">DLC</subfield>
+            <subfield code="b">eng</subfield>
+            <subfield code="e">rda</subfield>
+            <subfield code="c">DLC</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">NLGGC</subfield>
+            <subfield code="d">BAKER</subfield>
+            <subfield code="d">BTCTA</subfield>
+            <subfield code="d">OCLCG</subfield>
+            <subfield code="d">YDXCP</subfield>
+            <subfield code="d">GBVCP</subfield>
+            <subfield code="d">ZWZ</subfield>
+            <subfield code="d">UKMGB</subfield>
+            <subfield code="d">EUM</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">WAU</subfield>
+            <subfield code="d">DEBBG</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCLCF</subfield>
+            <subfield code="d">GYG</subfield>
+            <subfield code="d">LET</subfield>
+            <subfield code="d">OCLCA</subfield>
+            <subfield code="d">IOL</subfield>
+            <subfield code="d">NLC</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">LUE</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OPT</subfield>
+            <subfield code="d">QGE</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">NKM</subfield>
+            <subfield code="d">VICSF</subfield>
+            <subfield code="d">OCL</subfield>
+            <subfield code="d">U@M</subfield>
+            <subfield code="d">AUQ</subfield>
+            <subfield code="d">CTX</subfield>
+            <subfield code="d">ZQC</subfield>
+            <subfield code="d">IL4J6</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">EZ9</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">YBM</subfield>
+            <subfield code="d">OCL</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">LWA</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCLCO</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="049">
+            <subfield code="a">UMCP</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="050">
+            <subfield code="a">PS2473</subfield>
+            <subfield code="b">.F7</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="080">
+            <subfield code="a">PS2473 .F7</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="082">
+            <subfield code="a">813.4</subfield>
+            <subfield code="2">23</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/ddc/E3pXmB7MhhFgtTJWvXGwc6mKBB</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="084">
+            <subfield code="a">18.06</subfield>
+            <subfield code="2">bcl</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">French, Warren G.,</subfield>
+            <subfield code="d">1922-2009,</subfield>
+            <subfield code="e">author.</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PCjCXbhHThFgw4whxd4k9H3</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="245">
+            <subfield code="a">Frank Norris /</subfield>
+            <subfield code="c">Warren G. French.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">New York :</subfield>
+            <subfield code="b">Twayne Publishers,</subfield>
+            <subfield code="c">[1962]</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">160 pages ;</subfield>
+            <subfield code="c">21 cm.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="336">
+            <subfield code="a">text</subfield>
+            <subfield code="b">txt</subfield>
+            <subfield code="2">rdacontent</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="337">
+            <subfield code="a">unmediated</subfield>
+            <subfield code="b">n</subfield>
+            <subfield code="2">rdamedia</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="338">
+            <subfield code="a">volume</subfield>
+            <subfield code="b">nc</subfield>
+            <subfield code="2">rdacarrier</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="340">
+            <subfield code="m">8vo.</subfield>
+            <subfield code="2">rdabf</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="490">
+            <subfield code="a">Twayne's United States authors series ;</subfield>
+            <subfield code="v">25</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="510">
+            <subfield code="a">BAL</subfield>
+            <subfield code="c">volume 6 page 467</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="504">
+            <subfield code="a">Includes bibliographical references.</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="505">
+            <subfield code="a">Chronology -- Pride of Fiji -- March we must -- Young man's fancy -- The gilded cage -- Victorian Valkyries -- A large enough view -- It's when you are quiet that you are at your best -- Stubble -- Cricket chorus.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Authors, American</subfield>
+            <subfield code="y">19th century.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Authors, American</subfield>
+            <subfield code="y">20th century.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="4" tag="650">
+            <subfield code="a">Norris, Frank, 1870-1902.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="6" tag="650">
+            <subfield code="a">Écrivains américains</subfield>
+            <subfield code="0">(CaQQLa)201-0205491</subfield>
+            <subfield code="y">19e siècle</subfield>
+            <subfield code="0">(CaQQLa)201-0205491</subfield>
+            <subfield code="x">Critique et interprétation.</subfield>
+            <subfield code="0">(CaQQLa)201-0377579</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="6" tag="650">
+            <subfield code="a">Écrivains américains</subfield>
+            <subfield code="0">(CaQQLa)201-0205493</subfield>
+            <subfield code="y">20e siècle</subfield>
+            <subfield code="0">(CaQQLa)201-0205493</subfield>
+            <subfield code="x">Critique et interprétation.</subfield>
+            <subfield code="0">(CaQQLa)201-0377579</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Authors, American</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst00821764</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="653">
+            <subfield code="a">Norris, Frank</subfield>
+            <subfield code="a">1870-1902</subfield>
+            <subfield code="a">Criticism and interpretation</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Literary criticism</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01986215</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Criticism, interpretation, etc.</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01411635</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Literary criticism.</subfield>
+            <subfield code="2">lcgft</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Critiques littéraires.</subfield>
+            <subfield code="2">rvmgf</subfield>
+            <subfield code="0">(CaQQLa)RVMGF-000001939</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="600">
+            <subfield code="a">Norris, Frank,</subfield>
+            <subfield code="d">1870-1902</subfield>
+            <subfield code="x">Criticism and interpretation.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="1" tag="600">
+            <subfield code="a">Norris</subfield>
+            <subfield code="b">Frank.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="7" tag="600">
+            <subfield code="a">Norris, Frank,</subfield>
+            <subfield code="d">1870-1902</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PBJm98b9wgQY6hF7kghPPcP</subfield>
+            <subfield code="0">(OCoLC)fst00051873</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="7" tag="600">
+            <subfield code="a">Norris, Frank,</subfield>
+            <subfield code="d">1870-1902</subfield>
+            <subfield code="x">Criticism and interpretation.</subfield>
+            <subfield code="2">nli</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="7" tag="600">
+            <subfield code="a">Norris, Frank,</subfield>
+            <subfield code="d">(1870-1902)</subfield>
+            <subfield code="x">Critique et interprétation.</subfield>
+            <subfield code="2">ram</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="648">
+            <subfield code="a">1800-1999</subfield>
+            <subfield code="2">fast</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="8" tag="776">
+            <subfield code="i">Online version:</subfield>
+            <subfield code="a">French, Warren G., 1922-</subfield>
+            <subfield code="t">Frank Norris.</subfield>
+            <subfield code="d">New York, Twayne Publishers [1962]</subfield>
+            <subfield code="w">(OCoLC)570640377</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="830">
+            <subfield code="a">Twayne's United States authors series.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="951">
+            <subfield code="a">000113283</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="994">
+            <subfield code="a">C0</subfield>
+            <subfield code="b">UMC</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">990001132830108238</subfield>
+            <subfield code="8">22257678550008238</subfield>
+            <subfield code="a">01USMAI_UMCP</subfield>
+            <subfield code="b">CPMCK</subfield>
+            <subfield code="c">Stacks</subfield>
+            <subfield code="d">PS2473 .F7</subfield>
+            <subfield code="e">available</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">0</subfield>
+            <subfield code="j">STACK</subfield>
+            <subfield code="k">0</subfield>
+            <subfield code="p">1</subfield>
+            <subfield code="q">UMCP McKeldin Library</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordIdentifier>990001132830108238</recordIdentifier>
+      <recordPosition>1</recordPosition>
+    </record>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>02850cam a22006011  4500</leader>
+          <controlfield tag="001">990001243700108238</controlfield>
+          <controlfield tag="005">20260605095347.0</controlfield>
+          <controlfield tag="008">711012s1966    wau      b    000 0 eng^^</controlfield>
+          <datafield ind1=" " ind2=" " tag="010">
+            <subfield code="a">66013540</subfield>
+          </datafield>
+          <datafield ind1="7" ind2=" " tag="016">
+            <subfield code="a">000605284</subfield>
+            <subfield code="2">Uk</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="016">
+            <subfield code="a">(AMICUS)000001418460</subfield>
+          </datafield>
+          <datafield ind1="7" ind2=" " tag="016">
+            <subfield code="a">BA02412931</subfield>
+            <subfield code="2">JP-ToKJK</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="019">
+            <subfield code="a">819773777</subfield>
+            <subfield code="a">1076757117</subfield>
+            <subfield code="a">1155928635</subfield>
+            <subfield code="a">1165418283</subfield>
+            <subfield code="a">1171097272</subfield>
+            <subfield code="a">1183295695</subfield>
+            <subfield code="a">1191439958</subfield>
+            <subfield code="a">1200954492</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780295740928</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0295740922</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="z">0000000000 {dollar}50.00*</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(Aleph)000124370MAI01</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">CP0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">BC0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">TS0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">FS0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">SS0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">BS0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">UB0000297374</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">LN20178</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)297374</subfield>
+            <subfield code="z">(OCoLC)819773777</subfield>
+            <subfield code="z">(OCoLC)1076757117</subfield>
+            <subfield code="z">(OCoLC)1155928635</subfield>
+            <subfield code="z">(OCoLC)1165418283</subfield>
+            <subfield code="z">(OCoLC)1171097272</subfield>
+            <subfield code="z">(OCoLC)1183295695</subfield>
+            <subfield code="z">(OCoLC)1191439958</subfield>
+            <subfield code="z">(OCoLC)1200954492</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)ocm00297374</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(EXLNZ-01USMAI_NETWORK)9910002074808236</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">DLC</subfield>
+            <subfield code="b">eng</subfield>
+            <subfield code="c">DLC</subfield>
+            <subfield code="d">UKM</subfield>
+            <subfield code="d">MUQ</subfield>
+            <subfield code="d">BTCTA</subfield>
+            <subfield code="d">OCLCG</subfield>
+            <subfield code="d">GBVCP</subfield>
+            <subfield code="d">UKMGB</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">UKBRU</subfield>
+            <subfield code="d">OCLCF</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">WLU</subfield>
+            <subfield code="d">NLC</subfield>
+            <subfield code="d">DHA</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">EYB</subfield>
+            <subfield code="d">CPO</subfield>
+            <subfield code="d">UKUOY</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">IBR</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">SAB</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">CSY</subfield>
+            <subfield code="d">AUQ</subfield>
+            <subfield code="d">JABUK</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">PAE</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCQ</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="049">
+            <subfield code="a">UMCP</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="050">
+            <subfield code="a">PR6045.A97</subfield>
+            <subfield code="b">Z62</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="082">
+            <subfield code="a">823.912</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/ddc/E33H8KRwbgkwrQdHXQWFWcyg7V</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="082">
+            <subfield code="a">823.912</subfield>
+            <subfield code="2">23</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="084">
+            <subfield code="a">YIJ WAUGH 8</subfield>
+            <subfield code="2">bliss</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">Carens, James F.</subfield>
+            <subfield code="q">(James Francis),</subfield>
+            <subfield code="d">1927-</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PCjHXDcV96vM9KHKBHkDMKd</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="4" tag="245">
+            <subfield code="a">The satiric art of Evelyn Waugh,</subfield>
+            <subfield code="c">by James F. Carens.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="260">
+            <subfield code="a">Seattle,</subfield>
+            <subfield code="b">University of Washington Press,</subfield>
+            <subfield code="c">1966.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">xvi, 195 pages</subfield>
+            <subfield code="c">22 cm</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="336">
+            <subfield code="a">text</subfield>
+            <subfield code="b">txt</subfield>
+            <subfield code="2">rdacontent</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="337">
+            <subfield code="a">unmediated</subfield>
+            <subfield code="b">n</subfield>
+            <subfield code="2">rdamedia</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="338">
+            <subfield code="a">volume</subfield>
+            <subfield code="b">nc</subfield>
+            <subfield code="2">rdacarrier</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="520">
+            <subfield code="a">Traces satiric techniques throughout the entire canon of Waugh's writings.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="504">
+            <subfield code="a">Includes bibliographical references (pages 183-191).</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="505">
+            <subfield code="a">Part one. In the waste land -- Part two. The doom of youth -- Part three. The satirical rebellion -- Part four. Affirmation and apology -- Part five. The present age and the passing order.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Satire, English</subfield>
+            <subfield code="x">History and criticism.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Satire, English.</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01105706</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="653">
+            <subfield code="a">Satire, English</subfield>
+            <subfield code="a">History and criticism</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="653">
+            <subfield code="a">Waugh, Evelyn</subfield>
+            <subfield code="a">1903-1966</subfield>
+            <subfield code="a">Criticism and interpretation</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Criticism, interpretation, etc.</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01411635</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="600">
+            <subfield code="a">Waugh, Evelyn,</subfield>
+            <subfield code="d">1903-1966</subfield>
+            <subfield code="x">Criticism and interpretation.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="1" tag="600">
+            <subfield code="a">Waugh</subfield>
+            <subfield code="b">Evelyn</subfield>
+            <subfield code="v">Humor.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="6" tag="600">
+            <subfield code="a">Waugh, Evelyn,</subfield>
+            <subfield code="d">1903-1966</subfield>
+            <subfield code="x">Critique et interprétation.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="7" tag="600">
+            <subfield code="a">Waugh, Evelyn,</subfield>
+            <subfield code="d">1903-1966.</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst00034875</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PBJwhv7WkCFXTXbG9vbxkXd</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="951">
+            <subfield code="a">000124370</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="994">
+            <subfield code="a">C0</subfield>
+            <subfield code="b">UMC</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">990001243700108238</subfield>
+            <subfield code="8">22247145990008238</subfield>
+            <subfield code="a">01USMAI_UMCP</subfield>
+            <subfield code="b">CPMCK</subfield>
+            <subfield code="c">Stacks</subfield>
+            <subfield code="d">PR6045.A97 Z62</subfield>
+            <subfield code="e">available</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">0</subfield>
+            <subfield code="j">STACK</subfield>
+            <subfield code="k">0</subfield>
+            <subfield code="p">1</subfield>
+            <subfield code="q">UMCP McKeldin Library</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordIdentifier>990001243700108238</recordIdentifier>
+      <recordPosition>2</recordPosition>
+    </record>
+  </records>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2026-11-13T16:27:23-0500</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>

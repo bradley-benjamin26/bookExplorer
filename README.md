@@ -46,7 +46,7 @@ curl http://localhost:3001/health
 
 On a deployed server, run `npm start --workspace=apps/server` instead (no file watching).
 
-Z39.50 library lookups shell out to `yaz-client`; install YAZ on the host (`brew install yaz`, or `apt install yaz` on Debian/Ubuntu).
+Z39.50 library lookups shell out to `yaz-client`; install YAZ on the host (`brew install yaz`, or `apt install yaz` on Debian/Ubuntu). The University of Maryland is looked up over HTTPS (its Alma SRU endpoint) instead, so it needs no YAZ.
 
 Optionally, set `CACHE_DB_PATH` to a file path (e.g. `./cache.db`) to persist the
 server's namespaced public-data caches in SQLite across restarts (otherwise they

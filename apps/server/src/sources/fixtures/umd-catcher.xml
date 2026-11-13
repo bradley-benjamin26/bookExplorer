@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><searchRetrieveResponse xmlns="http://www.loc.gov/zing/srw/">
+  <version>1.2</version>
+  <numberOfRecords>1</numberOfRecords>
+  <records>
+    <record>
+      <recordSchema>marcxml</recordSchema>
+      <recordPacking>xml</recordPacking>
+      <recordData>
+        <record xmlns="http://www.loc.gov/MARC21/slim">
+          <leader>07975cam a2201117 i 4500</leader>
+          <controlfield tag="001">990001199870108238</controlfield>
+          <controlfield tag="005">20261026104546.0</controlfield>
+          <controlfield tag="007">ta</controlfield>
+          <controlfield tag="008">730522s1951    mau           000 f eng^^</controlfield>
+          <datafield ind1=" " ind2=" " tag="010">
+            <subfield code="a">51004713</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="016">
+            <subfield code="a">(AMICUS)000001172479</subfield>
+          </datafield>
+          <datafield ind1="7" ind2=" " tag="016">
+            <subfield code="a">BA04004867</subfield>
+            <subfield code="2">JP-ToKJK</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="019">
+            <subfield code="a">308311</subfield>
+            <subfield code="a">660913</subfield>
+            <subfield code="a">1003115</subfield>
+            <subfield code="a">1131314</subfield>
+            <subfield code="a">9225365</subfield>
+            <subfield code="a">23226658</subfield>
+            <subfield code="a">39933629</subfield>
+            <subfield code="a">49052468</subfield>
+            <subfield code="a">55484855</subfield>
+            <subfield code="a">83440864</subfield>
+            <subfield code="a">429365440</subfield>
+            <subfield code="a">767732260</subfield>
+            <subfield code="a">961639043</subfield>
+            <subfield code="a">962710979</subfield>
+            <subfield code="a">965583589</subfield>
+            <subfield code="a">966165858</subfield>
+            <subfield code="a">966912318</subfield>
+            <subfield code="a">968019053</subfield>
+            <subfield code="a">978095095</subfield>
+            <subfield code="a">1015716080</subfield>
+            <subfield code="a">1035393390</subfield>
+            <subfield code="a">1037585292</subfield>
+            <subfield code="a">1183210227</subfield>
+            <subfield code="a">1200993381</subfield>
+            <subfield code="a">1201002658</subfield>
+            <subfield code="a">1201597132</subfield>
+            <subfield code="a">1201633122</subfield>
+            <subfield code="a">1201835741</subfield>
+            <subfield code="a">1201882063</subfield>
+            <subfield code="a">1201926465</subfield>
+            <subfield code="a">1201969420</subfield>
+            <subfield code="a">1201996926</subfield>
+            <subfield code="a">1202005563</subfield>
+            <subfield code="a">1255414979</subfield>
+            <subfield code="a">1334616071</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0316769533</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780316769532</subfield>
+            <subfield code="q">(centennial hardcover)</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0316769177</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780316769174</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780553149661</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0553149660</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9781439576649</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">1439576645</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">9780316769488</subfield>
+            <subfield code="q">(pbk.)</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="020">
+            <subfield code="a">0316769487</subfield>
+            <subfield code="q">(pbk.)</subfield>
+          </datafield>
+          <datafield ind1="3" ind2=" " tag="024">
+            <subfield code="a">9780316769174</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(Aleph)000119987MAI01</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">YBP207192</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">CP0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">TS0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">FS0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">SS0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">BS0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">UB0000287628</subfield>
+          </datafield>
+          <datafield ind1="9" ind2=" " tag="035">
+            <subfield code="a">LN19068</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)287628</subfield>
+            <subfield code="z">(OCoLC)308311</subfield>
+            <subfield code="z">(OCoLC)660913</subfield>
+            <subfield code="z">(OCoLC)1003115</subfield>
+            <subfield code="z">(OCoLC)1131314</subfield>
+            <subfield code="z">(OCoLC)9225365</subfield>
+            <subfield code="z">(OCoLC)23226658</subfield>
+            <subfield code="z">(OCoLC)39933629</subfield>
+            <subfield code="z">(OCoLC)49052468</subfield>
+            <subfield code="z">(OCoLC)55484855</subfield>
+            <subfield code="z">(OCoLC)83440864</subfield>
+            <subfield code="z">(OCoLC)429365440</subfield>
+            <subfield code="z">(OCoLC)767732260</subfield>
+            <subfield code="z">(OCoLC)961639043</subfield>
+            <subfield code="z">(OCoLC)962710979</subfield>
+            <subfield code="z">(OCoLC)965583589</subfield>
+            <subfield code="z">(OCoLC)966165858</subfield>
+            <subfield code="z">(OCoLC)966912318</subfield>
+            <subfield code="z">(OCoLC)968019053</subfield>
+            <subfield code="z">(OCoLC)978095095</subfield>
+            <subfield code="z">(OCoLC)1015716080</subfield>
+            <subfield code="z">(OCoLC)1035393390</subfield>
+            <subfield code="z">(OCoLC)1037585292</subfield>
+            <subfield code="z">(OCoLC)1183210227</subfield>
+            <subfield code="z">(OCoLC)1200993381</subfield>
+            <subfield code="z">(OCoLC)1201002658</subfield>
+            <subfield code="z">(OCoLC)1201597132</subfield>
+            <subfield code="z">(OCoLC)1201633122</subfield>
+            <subfield code="z">(OCoLC)1201835741</subfield>
+            <subfield code="z">(OCoLC)1201882063</subfield>
+            <subfield code="z">(OCoLC)1201926465</subfield>
+            <subfield code="z">(OCoLC)1201969420</subfield>
+            <subfield code="z">(OCoLC)1201996926</subfield>
+            <subfield code="z">(OCoLC)1202005563</subfield>
+            <subfield code="z">(OCoLC)1255414979</subfield>
+            <subfield code="z">(OCoLC)1334616071</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(OCoLC)ocm00287628</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="035">
+            <subfield code="a">(EXLNZ-01USMAI_NETWORK)9910175516508236</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="040">
+            <subfield code="a">DLC</subfield>
+            <subfield code="b">eng</subfield>
+            <subfield code="e">rda</subfield>
+            <subfield code="c">DLC</subfield>
+            <subfield code="d">JPL</subfield>
+            <subfield code="d">UV$</subfield>
+            <subfield code="d">XY4</subfield>
+            <subfield code="d">BAKER</subfield>
+            <subfield code="d">YDXCP</subfield>
+            <subfield code="d">BTCTA</subfield>
+            <subfield code="d">BOS</subfield>
+            <subfield code="d">CQU</subfield>
+            <subfield code="d">HVC</subfield>
+            <subfield code="d">ALAUL</subfield>
+            <subfield code="d">UPM</subfield>
+            <subfield code="d">YDX</subfield>
+            <subfield code="d">KRV</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">BDX</subfield>
+            <subfield code="d">TXJON</subfield>
+            <subfield code="d">ALAUL</subfield>
+            <subfield code="d">IAA</subfield>
+            <subfield code="d">FHF</subfield>
+            <subfield code="d">OCLCF</subfield>
+            <subfield code="d">NKM</subfield>
+            <subfield code="d">ZCU</subfield>
+            <subfield code="d">EOS</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">RBN</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">IOO</subfield>
+            <subfield code="d">NKT</subfield>
+            <subfield code="d">WVX</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">DEFHM</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">GND</subfield>
+            <subfield code="d">CNNLC</subfield>
+            <subfield code="d">FEM</subfield>
+            <subfield code="d">TC@</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">CHY</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCL</subfield>
+            <subfield code="d">DGU</subfield>
+            <subfield code="d">MNG</subfield>
+            <subfield code="d">NJK</subfield>
+            <subfield code="d">QE2</subfield>
+            <subfield code="d">AL5DL</subfield>
+            <subfield code="d">SFR</subfield>
+            <subfield code="d">TXMAR</subfield>
+            <subfield code="d">CHILD</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">NLC</subfield>
+            <subfield code="d">GRC</subfield>
+            <subfield code="d">TYC</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">NMC</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">ZMZ</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">CNO</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">TXGRD</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">TXMAL</subfield>
+            <subfield code="d">TCJ</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">TFW</subfield>
+            <subfield code="d">MLM</subfield>
+            <subfield code="d">CSO</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">CPS</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">TW7</subfield>
+            <subfield code="d">CBA</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">EVV</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">K#T</subfield>
+            <subfield code="d">B@L</subfield>
+            <subfield code="d">TS8</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">CPO</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">O2C</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCL</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">FWR</subfield>
+            <subfield code="d">OIP</subfield>
+            <subfield code="d">JABUK</subfield>
+            <subfield code="d">VVB</subfield>
+            <subfield code="d">XMC</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">EBC</subfield>
+            <subfield code="d">FHP</subfield>
+            <subfield code="d">OCLCA</subfield>
+            <subfield code="d">UCW</subfield>
+            <subfield code="d">OCLCA</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCL</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">IG#</subfield>
+            <subfield code="d">FDL</subfield>
+            <subfield code="d">GV$</subfield>
+            <subfield code="d">LA0</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">JG0</subfield>
+            <subfield code="d">VXH</subfield>
+            <subfield code="d">OCLCQ</subfield>
+            <subfield code="d">WAU</subfield>
+            <subfield code="d">SEA</subfield>
+            <subfield code="d">OCLCL</subfield>
+            <subfield code="d">OCLCO</subfield>
+            <subfield code="d">KSU</subfield>
+            <subfield code="d">AUNTL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="042">
+            <subfield code="a">pcc</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="043">
+            <subfield code="a">n-us-ny</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="049">
+            <subfield code="a">LOYY</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="4" tag="050">
+            <subfield code="a">PS3537.A426</subfield>
+            <subfield code="b">C3 1951</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="0" tag="050">
+            <subfield code="a">PZ4.S165</subfield>
+            <subfield code="a">PS3537.A426</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="8" tag="055">
+            <subfield code="a">FIC</subfield>
+            <subfield code="b">SAL</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="4" tag="082">
+            <subfield code="a">813.5</subfield>
+            <subfield code="b">S165c</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/ddc/E3tg3b7VvpHqtyCWCk6qmfpjK7</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="100">
+            <subfield code="a">Salinger, J. D.</subfield>
+            <subfield code="q">(Jerome David),</subfield>
+            <subfield code="d">1919-2010,</subfield>
+            <subfield code="e">author.</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PBJbtr9qPpyJrpTqFGkH6Kd</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="4" tag="245">
+            <subfield code="a">The catcher in the rye /</subfield>
+            <subfield code="c">J.D. Salinger.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="250">
+            <subfield code="a">First edition</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="1" tag="264">
+            <subfield code="a">Boston :</subfield>
+            <subfield code="b">Little, Brown, and Company,</subfield>
+            <subfield code="c">1951.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="300">
+            <subfield code="a">8 unnumbered pages, 277 pages, 3 unnumbered pages ;</subfield>
+            <subfield code="c">21 cm</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="336">
+            <subfield code="a">text</subfield>
+            <subfield code="b">txt</subfield>
+            <subfield code="2">rdacontent</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="337">
+            <subfield code="a">unmediated</subfield>
+            <subfield code="b">n</subfield>
+            <subfield code="2">rdamedia</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="338">
+            <subfield code="a">volume</subfield>
+            <subfield code="b">nc</subfield>
+            <subfield code="2">rdacarrier</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="510">
+            <subfield code="a">Starosciak, K. Salinger,</subfield>
+            <subfield code="c">A30a</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="510">
+            <subfield code="a">Bixby, G. Salinger,</subfield>
+            <subfield code="c">A2a</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="563">
+            <subfield code="a">First issued in black cloth, spine lettered in gold; in illustrated dust jacket depicting a carousel horse, designed by E. Michael Mitchell, printed in red, black and yellow, with black and white full page photoportrait of the author by Lotte Jacobi; price $3.00 (front flap); at foot of back flap, "The catcher in the rye is a Book-of-the-Month Club selection."</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="520">
+            <subfield code="a">"The hero-narrator of 'The Catcher in the Rye' is an ancient child of sixteen, a native New Yorker named Holden Caulfield. Through circumstances that tend to preclude adult, secondhand description, he leaves his prep school in Pennsylvania and goes underground in New York City for three days. The boy himself is at once too simple and too complex for us to make any final comment about him or his story. Perhaps the safest thing we can say about Holden is that he was born in the world not just strongly attracted to beauty but, almost, hopelessly impaled on it. There are many voices in this novel: children's voices, adult voices, underground voices -- but Holden's voice is the most eloquent of all. Transcending his own vernacular, yet remaining marvelously faithful to it, he issues a perfectly articulated cry of mixed pain and pleasure. However, like most lovers and clowns and poets of the higher orders, he keeps most of the pain to, and for, himself. The pleasure he gives away, or sets aside, with all his heart. It is there for the reader who can handle it to keep"--Jacket.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="500">
+            <subfield code="a">Collation: [unsigned, 1-9¹⁶]; 144 leaves, pages [8 unnumbered (first leaf blank)] [1-2] 3-277 [278-280 (blank)].</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="526">
+            <subfield code="a">Accelerated Reader</subfield>
+            <subfield code="b">Grades 9-12</subfield>
+            <subfield code="c">4.7</subfield>
+            <subfield code="d">11</subfield>
+            <subfield code="x">SD</subfield>
+            <subfield code="z">Quiz 5978</subfield>
+            <subfield code="z">English fiction, vocabulary quiz available, literary skills quiz available.</subfield>
+          </datafield>
+          <datafield ind1="0" ind2=" " tag="505">
+            <subfield code="a">A perfect day for bananafish -- Uncle Wiggily in Connecticut -- Just before the war with the Eskimos -- The laughing man -- Down at the dinghy -- For Esme, with love and squalor -- Pretty mouth and green my eyes -- De Daumier-Smith's blue period -- Teddy.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Runaway teenagers</subfield>
+            <subfield code="v">Fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="650">
+            <subfield code="a">Teenage boys</subfield>
+            <subfield code="v">Fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="6" tag="650">
+            <subfield code="a">Garçons adolescents</subfield>
+            <subfield code="0">(CaQQLa)000262708</subfield>
+            <subfield code="v">Romans, nouvelles, etc.</subfield>
+            <subfield code="0">(CaQQLa)201-0377299</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">FICTION / Classics.</subfield>
+            <subfield code="2">bisacsh</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Runaway teenagers</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01101304</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Teenage boys</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01145373</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="650">
+            <subfield code="a">Caulfield, Holden (Fictitious character)</subfield>
+            <subfield code="x">Fiction.</subfield>
+            <subfield code="2">sears</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="651">
+            <subfield code="a">New York (N.Y.)</subfield>
+            <subfield code="v">Fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="1" tag="651">
+            <subfield code="a">New York (N.Y.)</subfield>
+            <subfield code="v">Fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="651">
+            <subfield code="a">New York (State)</subfield>
+            <subfield code="z">New York</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39QbtfRvQh7864Jh4rDGBFDWc</subfield>
+            <subfield code="0">(OCoLC)fst01204333</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="651">
+            <subfield code="a">New York (N.Y.)</subfield>
+            <subfield code="x">Fiction.</subfield>
+            <subfield code="2">sears</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="0" tag="655">
+            <subfield code="a">Young adult fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="4" tag="655">
+            <subfield code="a">Coming of age fiction.</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Young adult works</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01726790</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Bildungsromans</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01726536</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Fiction</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst01423787</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Bildungsromans.</subfield>
+            <subfield code="2">gsafd</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Coming-of-age fiction.</subfield>
+            <subfield code="2">lcgft</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Dust jackets (Binding)</subfield>
+            <subfield code="y">1951.</subfield>
+            <subfield code="2">rbbin</subfield>
+          </datafield>
+          <datafield ind1=" " ind2="7" tag="655">
+            <subfield code="a">Bildungsromans</subfield>
+            <subfield code="y">1951.</subfield>
+            <subfield code="2">rbgenr</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="0" tag="600">
+            <subfield code="a">Caulfield, Holden</subfield>
+            <subfield code="c">(Fictitious character)</subfield>
+            <subfield code="v">Fiction.</subfield>
+          </datafield>
+          <datafield ind1="1" ind2="7" tag="600">
+            <subfield code="a">Caulfield, Holden</subfield>
+            <subfield code="c">(Fictitious character)</subfield>
+            <subfield code="2">fast</subfield>
+            <subfield code="0">(OCoLC)fst00849815</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="752">
+            <subfield code="a">United States</subfield>
+            <subfield code="b">Massachusetts</subfield>
+            <subfield code="d">Boston.</subfield>
+          </datafield>
+          <datafield ind1="2" ind2=" " tag="710">
+            <subfield code="a">Little, Brown and Company,</subfield>
+            <subfield code="e">publisher.</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39QH7JmqMQTGhqDpQmhgTmf3F</subfield>
+          </datafield>
+          <datafield ind1="0" ind2="8" tag="776">
+            <subfield code="i">Online version:</subfield>
+            <subfield code="a">Salinger, J.D. (Jerome David), 1919-2010.</subfield>
+            <subfield code="t">Catcher in the rye.</subfield>
+            <subfield code="b">[1st ed.].</subfield>
+            <subfield code="d">Boston, Little, Brown, 1951</subfield>
+            <subfield code="w">(OCoLC)607747538</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="700">
+            <subfield code="a">Mitchell, E. Michael,</subfield>
+            <subfield code="d">1920-2009,</subfield>
+            <subfield code="e">book jacket designer.</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PBJgtcxgvW3y8mKPpCPr8YP</subfield>
+          </datafield>
+          <datafield ind1="1" ind2=" " tag="700">
+            <subfield code="a">Jacobi, Lotte,</subfield>
+            <subfield code="d">1896-1990,</subfield>
+            <subfield code="e">illustrator</subfield>
+            <subfield code="1">https://id.oclc.org/worldcat/entity/E39PBJfh6WBCqmg6HTQwCVQg8C</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="856">
+            <subfield code="u">http://www.levity.com/corduroy/salinger.htm</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="856">
+            <subfield code="u">http://www.salinger.org</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="951">
+            <subfield code="a">000119987</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="956">
+            <subfield code="u">http://www.levity.com/corduroy/salinger.htm</subfield>
+            <subfield code="7">LN</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1="4" ind2=" " tag="956">
+            <subfield code="u">http://www.salinger.org</subfield>
+            <subfield code="7">LN</subfield>
+            <subfield code="9">LOCAL</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="994">
+            <subfield code="a">C0</subfield>
+            <subfield code="b">LOY</subfield>
+          </datafield>
+          <datafield ind1=" " ind2=" " tag="AVA">
+            <subfield code="0">990001199870108238</subfield>
+            <subfield code="8">22306914450008238</subfield>
+            <subfield code="a">01USMAI_UMCP</subfield>
+            <subfield code="b">CPMCK</subfield>
+            <subfield code="c">Stacks</subfield>
+            <subfield code="d">PS3537.A426 C3 1951</subfield>
+            <subfield code="e">unavailable</subfield>
+            <subfield code="f">1</subfield>
+            <subfield code="g">1</subfield>
+            <subfield code="j">STACK</subfield>
+            <subfield code="k">0</subfield>
+            <subfield code="p">1</subfield>
+            <subfield code="q">UMCP McKeldin Library</subfield>
+          </datafield>
+        </record>
+      </recordData>
+      <recordIdentifier>990001199870108238</recordIdentifier>
+      <recordPosition>1</recordPosition>
+    </record>
+  </records>
+  <extraResponseData xmlns:xb="http://www.exlibris.com/repository/search/xmlbeans/">
+    <xb:exact>true</xb:exact>
+    <xb:responseDate>2026-11-13T16:23:11-0500</xb:responseDate>
+  </extraResponseData>
+</searchRetrieveResponse>
