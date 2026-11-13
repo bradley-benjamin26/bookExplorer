@@ -35,11 +35,16 @@ vi.mock("../sources/hardcover.js", () => {
     }
   }
   class HardcoverUnauthorizedError extends Error {}
-  return { HardcoverRateLimitError, HardcoverUnauthorizedError };
+  class HardcoverUnavailableError extends Error {
+    constructor(readonly status: number) {
+      super("down");
+    }
+  }
+  return { HardcoverRateLimitError, HardcoverUnauthorizedError, HardcoverUnavailableError };
 });
 import { getWork } from "../sources/openLibrary.js";
 import { peekWork } from "../services/workService.js";
-import { HardcoverRateLimitError, HardcoverUnauthorizedError } from "../sources/hardcover.js";
+import { HardcoverRateLimitError, HardcoverUnauthorizedError, HardcoverUnavailableError } from "../sources/hardcover.js";
 import * as user from "../sources/hardcoverUser.js";
 import * as svc from "../services/hardcoverAccount.js";
 import { hardcoverRoutes } from "./hardcover.js";
@@ -265,6 +270,14 @@ describe("hardcover routes", () => {
       u.readingProgress.mockResolvedValue({ status: "reading", percent: 40 });
       const res = await call({ method: "GET", url: "/api/hardcover/progress/book/9780306406157", headers });
       expect(res.json()).toEqual({ status: "reading", percent: 40 });
+    });
+
+    it("answers 503, not 500, when Hardcover is down", async () => {
+      u.findBookId.mockResolvedValue(5);
+      u.readingProgress.mockRejectedValue(new HardcoverUnavailableError(503));
+      const res = await call({ method: "GET", url: "/api/hardcover/progress/book/9780306406157", headers });
+      expect(res.statusCode).toBe(503);
+      expect(res.json()).toEqual({ error: "Hardcover is temporarily unavailable. Try again in a minute." });
     });
 
     it("Hardcover 401 forgets the session and returns 401", async () => {

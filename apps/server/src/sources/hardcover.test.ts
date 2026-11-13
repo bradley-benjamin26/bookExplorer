@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { fetchWithTimeout } from "../httpClient.js";
-import { HardcoverRateLimitError, HardcoverUnauthorizedError, hardcoverGraphql, lookupByAnyIsbn, lookupByIsbn } from "./hardcover.js";
+import { HardcoverRateLimitError, HardcoverUnavailableError, HardcoverUnauthorizedError, hardcoverGraphql, lookupByAnyIsbn, lookupByIsbn } from "./hardcover.js";
 
 vi.mock("../httpClient.js", async () => ({
   ...(await vi.importActual<typeof import("../httpClient.js")>("../httpClient.js")),
@@ -87,6 +87,14 @@ it("maps fetchWithTimeout's UpstreamUnavailableError to HardcoverRateLimitError"
   const { UpstreamUnavailableError } = await vi.importActual<typeof import("../httpClient.js")>("../httpClient.js");
   vi.mocked(fetchWithTimeout).mockRejectedValue(new UpstreamUnavailableError("api.hardcover.app", 1200));
   await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toMatchObject({ retryAfterSeconds: 2 });
+});
+
+it("throws HardcoverUnavailableError for a 503 and a 500", async () => {
+  for (const status of [503, 500]) {
+    vi.mocked(fetchWithTimeout).mockResolvedValue(new Response("", { status }));
+    await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toMatchObject({ name: "HardcoverUnavailableError", status });
+    await expect(hardcoverGraphql("q", {}, "Bearer k")).rejects.toBeInstanceOf(HardcoverUnavailableError);
+  }
 });
 
 it("maps 401 to HardcoverUnauthorizedError", async () => {

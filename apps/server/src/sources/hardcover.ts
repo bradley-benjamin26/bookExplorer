@@ -14,6 +14,13 @@ function authHeader(): string | null {
   return key.startsWith("Bearer ") ? key : `Bearer ${key}`;
 }
 
+export class HardcoverUnavailableError extends Error {
+  constructor(readonly status: number) {
+    super(`Hardcover request failed: ${status}`);
+    this.name = "HardcoverUnavailableError";
+  }
+}
+
 export class HardcoverRateLimitError extends Error {
   constructor(readonly retryAfterSeconds: number) {
     super(`Hardcover rate limit hit; retry in ${retryAfterSeconds}s`);
@@ -55,6 +62,7 @@ export async function hardcoverGraphql<T>(query: string, variables: object, auth
     const body = (await res.json().catch(() => ({}))) as { scope?: string };
     throw new Error(`Hardcover token lacks scope${body.scope ? ` "${body.scope}"` : ""}`);
   }
+  if (res.status >= 500) throw new HardcoverUnavailableError(res.status);
   if (!res.ok) throw new Error(`Hardcover request failed: ${res.status}`);
   const body = (await res.json()) as { data?: T; errors?: { message: string }[] };
   if (body.errors?.length) throw new Error(`Hardcover GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`);
