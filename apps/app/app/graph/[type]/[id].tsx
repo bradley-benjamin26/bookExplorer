@@ -860,7 +860,9 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     // the canvas is panned/zoomed rather than fitted to the screen, it's
     // routinely larger than this box at 100% scale.
     viewport: { flex: 1, minHeight: 360, overflow: "hidden", backgroundColor: colors.card, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.cardBorder },
-    graphArea: { position: "relative", transformOrigin: "top left" },
+    // Absolute so the canvas never sizes the viewport: inside the page ScrollView an in-flow canvas
+    // made the measured height track the content, which re-laid-out the graph and zoomed it to a speck.
+    graphArea: { position: "absolute", top: 0, left: 0, transformOrigin: "top left" },
     zoomControls: { position: "absolute", right: spacing.md, bottom: spacing.md, gap: spacing.sm },
     zoomButton: {
       width: 40,
