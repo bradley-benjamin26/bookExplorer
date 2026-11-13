@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nodeReveal } from "./threadReveal";
+import { nodeReveal, revealAt } from "./threadReveal";
 
 describe("nodeReveal", () => {
   it("shows the first node from the start", () => expect(nodeReveal(0, 0, 4)).toBe(1));
@@ -13,5 +13,13 @@ describe("nodeReveal", () => {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe("revealAt", () => {
+  it("hides a node before the thread nears its position", () => expect(revealAt(0, 0.5)).toBe(0));
+  it("shows it fully once the thread reaches it", () => expect(revealAt(0.5, 0.5)).toBe(1));
+  it("is what nodeReveal uses for evenly spaced nodes", () => {
+    for (const p of [0, 0.2, 0.3, 0.6, 1]) for (const i of [0, 1, 2, 3]) expect(nodeReveal(p, i, 4)).toBeCloseTo(revealAt(p, i / 3));
   });
 });
