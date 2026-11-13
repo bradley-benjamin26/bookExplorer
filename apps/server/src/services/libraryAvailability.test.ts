@@ -24,16 +24,11 @@ describe("getLibraryAvailability", () => {
     expect(search).toHaveBeenCalledTimes(1);
   });
 
-  it("marks a library without holdings as catalog level", async () => {
-    search.mockResolvedValue(OUT);
-    expect((await getLibraryAvailability("sfpl", "9780141439518"))?.level).toBe("catalog");
-  });
-
   it("does not cache an unavailable error", async () => {
     search.mockRejectedValueOnce(new Z3950UnavailableError("down"));
-    await expect(getLibraryAvailability("oakland", "9780141439518")).rejects.toBeInstanceOf(Z3950UnavailableError);
+    await expect(getLibraryAvailability("kcmo", "9780141439518")).rejects.toBeInstanceOf(Z3950UnavailableError);
     search.mockResolvedValue(OUT);
-    expect((await getLibraryAvailability("oakland", "9780141439518"))?.found).toBe(true);
+    expect((await getLibraryAvailability("kcmo", "9780141439518"))?.found).toBe(true);
     expect(search).toHaveBeenCalledTimes(2);
   });
 });

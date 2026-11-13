@@ -1,32 +1,17 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { EmptyState } from "../src/components/EmptyState";
-import { ArrowDownUp, BookOpen, ChevronRight, Settings, Sparkles, Waypoints } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { AccordionSection } from "../src/components/AccordionSection";
 import { Button } from "../src/components/Button";
 import { CoverStack } from "../src/components/CoverStack";
 import { Footer } from "../src/components/Footer";
-import { HardcoverLogo } from "../src/components/HardcoverLogo";
 import { PressableRow } from "../src/components/PressableRow";
-import { ACCOUNT_ROWS, DISCOVERY_ROWS, LIBRARY_PRIMARY, LIBRARY_TOOLS } from "../src/libraryRows";
 import { listCoverUrls } from "../src/listCovers";
 import { routes } from "../src/navigation";
 import { getLists, type SavedList } from "../src/storage/savedLists";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
-
-const ROUTES = {
-  hardcover: routes.hardcover,
-  openlibrary: routes.openLibrary,
-  recommendations: routes.recommendations,
-  connection: routes.connection,
-  backup: routes.backup,
-  settings: routes.settings,
-};
-
-const ICONS = { openlibrary: BookOpen, recommendations: Sparkles, connection: Waypoints, backup: ArrowDownUp, settings: Settings };
-
-type RowDef = (typeof LIBRARY_PRIMARY)[number] | (typeof LIBRARY_TOOLS)[number];
 
 export default function Saved() {
   const router = useRouter();
@@ -48,25 +33,8 @@ export default function Saved() {
       <ChevronRight size={18} color={colors.inkFaint} />
     </View>
   );
-  const navRow = ({ id, label }: RowDef) => {
-    const Icon = id === "hardcover" ? null : ICONS[id];
-    return (
-      <PressableRow key={id} label={label} tooltip={`Open ${label}`} onPress={() => router.push(ROUTES[id]())} trailing={chevron}>
-        <View style={styles.navRow}>
-          {Icon ? <Icon size={20} color={colors.cover} /> : <HardcoverLogo height={22} />}
-          <Text style={styles.rowText}>{id === "hardcover" ? "Account" : label}</Text>
-        </View>
-      </PressableRow>
-    );
-  };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.heading} accessibilityRole="header">
-        Accounts
-      </Text>
-      {ACCOUNT_ROWS.map(navRow)}
-
       <AccordionSection title="Your lists" defaultOpen>
         {error ? (
           <>
@@ -109,13 +77,6 @@ export default function Saved() {
         </PressableRow>
       </AccordionSection>
 
-      <View style={styles.group}>{DISCOVERY_ROWS.map(navRow)}</View>
-
-      <Text style={styles.tools} accessibilityRole="header">
-        Tools
-      </Text>
-      {LIBRARY_TOOLS.map(navRow)}
-
       <Footer />
     </ScrollView>
   );
@@ -125,13 +86,8 @@ function createStyles({ colors, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.paper },
     content: { flexGrow: 1, padding: spacing.lg },
-    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.md, color: colors.ink, marginTop: spacing.md, marginBottom: spacing.sm },
-    // Quiet: tools are not the point of this page.
-    tools: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: spacing.xl, marginBottom: spacing.xs },
-    group: { marginTop: spacing.md },
     // Medium, not semibold: 600 Fraunces reads heavy at 16px row size.
     rowText: { fontFamily: fonts.displayMedium, fontSize: typeScale.sm, color: colors.ink },
-    navRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
     listRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
     listText: { flex: 1 },
     count: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, marginTop: 2 },

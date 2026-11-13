@@ -64,10 +64,10 @@ function LibraryCard({
   const z3950Note = !library.z3950Id || !supported
     ? ""
     : !entry
-      ? "This library is no longer supported. Your saved links still work."
+      ? "This library is no longer supported. Remove it."
       : entry.level === "availability"
-        ? "Checks live availability"
-        : "Checks whether the catalog has the book";
+        ? "Shows live availability"
+        : "Shows whether the catalog has the book";
 
   return (
     <View style={styles.libraryCard}>
@@ -84,7 +84,7 @@ function LibraryCard({
           <Text style={styles.removeText}>Remove</Text>
         </Pressable>
       </View>
-      <TextInput
+      {library.z3950Id ? <Text style={styles.libraryName}>{library.name}</Text> : <TextInput
         style={styles.input}
         placeholder="e.g. Springfield Public Library"
         placeholderTextColor={theme.colors.inkFaint}
@@ -93,9 +93,10 @@ function LibraryCard({
           setName(text);
           markDirty();
         }}
-      />
+      />}
 
       {z3950Note ? <Text style={styles.helpText}>{z3950Note}</Text> : null}
+      {library.z3950Id ? null : <>
 
       <Text style={[styles.fieldLabel, styles.fieldLabelSpaced]}>Search by ISBN</Text>
       <Text style={styles.helpText}>
@@ -156,6 +157,7 @@ function LibraryCard({
           {error}
         </Text>
       ) : null}
+      </>}
     </View>
   );
 }
@@ -417,6 +419,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     switchLabel: { flex: 1, fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink },
     historyButton: { marginTop: spacing.sm, alignSelf: "flex-start" },
     themeOption: { alignSelf: "auto" },
+    libraryName: { fontFamily: fonts.body, fontSize: typeScale.sm, color: colors.ink, marginBottom: spacing.xs },
     fieldLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14, color: colors.ink, marginBottom: spacing.xs },
     fieldLabelSpaced: { marginTop: spacing.lg },
     input: {

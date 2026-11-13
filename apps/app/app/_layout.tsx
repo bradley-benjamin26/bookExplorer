@@ -10,7 +10,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { getHeaderTitle, Header } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { Platform, StyleSheet, Text, useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "../src/suppressKnownWebWarnings";
@@ -79,6 +79,10 @@ export default function RootLayout() {
 // leaving controls like "New Search" stranded off in a far corner of the
 // window.
 // Insets header buttons from the screen edge so every screen's pills sit the same distance in.
+type Shown = NonNullable<ComponentProps<typeof HeaderActions>["show"]>;
+const ALL_BUT_SEARCH: Shown = ["about", "library", "recommendations", "connection", "backup", "settings", "accounts"];
+const ALL_BUT_LIBRARY: Shown = ["about", "recommendations", "connection", "backup", "settings", "accounts", "search"];
+const ALL_BUT_ABOUT: Shown = ["library", "recommendations", "connection", "backup", "settings", "accounts", "search"];
 const inHeader = (buttons: ReactNode) => () => <View style={styles.headerRight}>{buttons}</View>;
 
 function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: boolean; onRetryMigration: () => void }) {
@@ -127,7 +131,7 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               contentStyle: { backgroundColor: theme.colors.paper },
             }}
           >
-            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<HeaderActions show={["about", "library"]} />) }} />
+            <Stack.Screen name="index" options={{ title: "Shelf Thread", headerRight: inHeader(<HeaderActions show={ALL_BUT_SEARCH} />) }} />
             <Stack.Screen
               name="scan"
               options={{ title: "Scan barcode", presentation: "modal", headerRight: inHeader(<HeaderActions />) }}
@@ -146,14 +150,14 @@ function ThemedShell({ migrationFailed, onRetryMigration }: { migrationFailed: b
               options={{ title: "Explore graph", headerRight: inHeader(<HeaderActions />) }}
             />
             <Stack.Screen name="connection" options={{ title: "Find connection", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<HeaderActions show={["about", "search"]} />) }} />
+            <Stack.Screen name="saved" options={{ title: "My Library", headerRight: inHeader(<HeaderActions show={ALL_BUT_LIBRARY} />) }} />
             <Stack.Screen name="recommendations" options={{ title: "Recommendations", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="backup" options={{ title: "Import & export", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="settings" options={{ title: "Settings", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover" options={{ title: "My Hardcover account", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="openlibrary" options={{ title: "My Open Library Account", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="hardcover-connected" options={{ title: "Hardcover", headerRight: inHeader(<HeaderActions />) }} />
-            <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions show={["library", "search"]} />) }} />
+            <Stack.Screen name="about" options={{ title: "About", headerRight: inHeader(<HeaderActions show={ALL_BUT_ABOUT} />) }} />
             <Stack.Screen name="lists/index" options={{ title: "Lists", headerRight: inHeader(<HeaderActions />) }} />
             <Stack.Screen name="lists/[id]" options={{ title: "List", headerRight: inHeader(<HeaderActions />) }} />
           </Stack>
