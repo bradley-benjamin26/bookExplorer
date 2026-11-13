@@ -20,7 +20,8 @@ import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
 import { ShareButton } from "../../../src/components/ShareButton";
 import { titleRef } from "../../../src/webTitle";
-import { legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
+import { SegmentedControl } from "../../../src/components/SegmentedControl";
+import { centeredLabel, legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
 import { nodeHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
@@ -406,6 +407,7 @@ export default function GraphExplorer() {
   }
 
   const legend = legendEntries(data.nodes);
+  const centerLabel = data.nodes.find((n) => n.id === data.centerId)?.label;
   const orderedNodes = [...motion.nodes].sort((a, b) =>
     a.id === data.centerId ? -1 : b.id === data.centerId ? 1 : 0
   );
@@ -414,8 +416,14 @@ export default function GraphExplorer() {
     <View style={styles.container}>
       {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
+      <View style={styles.titleBlock}>
+        <Text style={styles.eyebrow}>Follow the thread</Text>
+        <Text style={styles.heading} accessibilityRole="header">
+          {exploringTitle(centerLabel)}
+        </Text>
+      </View>
       <Text style={styles.hint}>
-        Each circle is a book, author or subject. Tap one to move there, drag it to rearrange, or tap the center circle to open its page.
+        Each circle is a book, author or subject. Choose one to follow it, drag it to rearrange, or choose the centre circle to open its page.
       </Text>
       <View style={styles.legend}>
         {legend.types.map((nodeType) => (
@@ -432,21 +440,16 @@ export default function GraphExplorer() {
         )}
       </View>
       <View style={styles.toolbar}>
-        {(["Graph", "List"] as const).map((mode) => (
-          <Button
-            key={mode}
-            variant="pill"
-            active={showList === (mode === "List")}
-            onPress={() => {
-              setListChosen(true);
-              setShowList(mode === "List");
-            }}
-            accessibilityLabel={mode === "List" ? "Show nodes as a list" : "Show graph"}
-            tooltip={mode === "List" ? "Show as a list" : "Show as a graph"}
-          >
-            {mode}
-          </Button>
-        ))}
+        <SegmentedControl
+          label="View connections as"
+          options={["Graph", "List"] as const}
+          value={showList ? "List" : "Graph"}
+          onChange={(mode) => {
+            setListChosen(true);
+            setShowList(mode === "List");
+          }}
+          describe={(mode) => (mode === "List" ? { label: "Show nodes as a list", tooltip: "Show as a list" } : { label: "Show graph", tooltip: "Show as a graph" })}
+        />
         <Button variant="pill" onPress={() => setFilterOpen(true)} active={isFiltered(filter)} accessibilityLabel="Filter graph" tooltip="Choose what the graph shows">
           Filter
         </Button>
@@ -494,14 +497,17 @@ export default function GraphExplorer() {
           style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Back to previous graph"
+          accessibilityLabel="Previous thread"
         >
           <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <ChevronLeft size={16} color={theme.colors.cover} strokeWidth={2} />
           </View>
-          <Text style={styles.backButtonText}>Back</Text>
+          <Text style={styles.backButtonText}>Previous thread</Text>
         </Pressable>
       )}
+      <Text style={styles.centered} accessibilityLiveRegion="polite">
+        {centeredLabel(centerLabel)}
+      </Text>
       {showList ? (
         <ScrollView style={styles.list}>
           {orderedNodes.length > 1 ? (
@@ -522,7 +528,7 @@ export default function GraphExplorer() {
                   onPress={() => href && router.push(href)}
                   disabled={!href}
                   accessibilityRole="button"
-                  accessibilityLabel={[`${spoken(node)}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered", !node.navigable && "not yet linked", relations]
+                  accessibilityLabel={[`${spoken(node)}, ${NODE_LABELS[node.type]}`, isCenter && "currently centered, you are here", !node.navigable && "not yet linked", relations]
                     .filter(Boolean)
                     .join(". ")}
                   accessibilityHint={href ? "Opens this item's page" : undefined}
@@ -646,9 +652,9 @@ export default function GraphExplorer() {
                       cy={node.y}
                       r={radius + 5}
                       fill="none"
-                      stroke={NODE_COLORS[node.type]}
-                      strokeWidth={1}
-                      opacity={opacity * 0.3}
+                      stroke={theme.colors.primary}
+                      strokeWidth={2}
+                      opacity={opacity}
                     />
                   )}
                   <Circle
@@ -688,6 +694,33 @@ export default function GraphExplorer() {
                       </SvgText>
                     </Fragment>
                   ))}
+                  {isCenter && (
+                    <>
+                      <SvgText
+                        x={node.x}
+                        y={firstLineY + lines.length * LABEL_LINE_HEIGHT}
+                        fontSize={12}
+                        fontFamily={theme.fonts.bodySemiBold}
+                        fill={theme.colors.paper}
+                        stroke={theme.colors.paper}
+                        strokeWidth={3}
+                        strokeLinejoin="round"
+                        textAnchor="middle"
+                      >
+                        You are here
+                      </SvgText>
+                      <SvgText
+                        x={node.x}
+                        y={firstLineY + lines.length * LABEL_LINE_HEIGHT}
+                        fontSize={12}
+                        fontFamily={theme.fonts.bodySemiBold}
+                        fill={theme.colors.cover}
+                        textAnchor="middle"
+                      >
+                        You are here
+                      </SvgText>
+                    </>
+                  )}
                 </Fragment>
               );
             })}
@@ -798,6 +831,10 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     container: { flex: 1, backgroundColor: colors.paper },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.paper },
     emptyGraphText: { fontFamily: fonts.display, fontSize: typeScale.md, color: colors.ink, textAlign: "center", lineHeight: 28 },
+    titleBlock: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    eyebrow: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.xs, color: colors.cover, letterSpacing: 1.5, textTransform: "uppercase" },
+    heading: { fontFamily: fonts.displayMedium, fontSize: typeScale.lg, lineHeight: 32, color: colors.ink, marginTop: 2 },
+    centered: { fontFamily: fonts.body, fontSize: typeScale.xs, color: colors.inkFaint, textAlign: "center", paddingBottom: spacing.sm },
     hint: {
       fontFamily: fonts.body,
       fontSize: typeScale.xs,
@@ -829,7 +866,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     // overflow: hidden clips the canvas to the visible viewport — now that
     // the canvas is panned/zoomed rather than fitted to the screen, it's
     // routinely larger than this box at 100% scale.
-    viewport: { flex: 1, overflow: "hidden" },
+    viewport: { flex: 1, overflow: "hidden", backgroundColor: colors.card, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.cardBorder },
     graphArea: { position: "relative", transformOrigin: "top left" },
     zoomControls: { position: "absolute", right: spacing.md, bottom: spacing.md, gap: spacing.sm },
     zoomButton: {

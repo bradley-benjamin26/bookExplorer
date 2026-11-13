@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { legendEntries, nodeRelations, pathAsGraph, pathSteps, relationLabel } from "./graphLabels";
+import { centeredLabel, legendEntries, nodeRelations, pathAsGraph, pathSteps, relationLabel } from "./graphLabels";
 
 describe("pathSteps", () => {
   it("labels each step with its position, type and relation, read along the edge's direction", () => {
@@ -109,4 +109,9 @@ describe("relationLabel", () => {
   it("reads an award edge as won", () => {
     expect(relationLabel("won")).toBe("won");
   });
+});
+
+describe("centeredLabel", () => {
+  it("names the centred item", () => expect(centeredLabel("The Map Room")).toBe("Centered on The Map Room"));
+  it("copes with no label yet", () => expect(centeredLabel(undefined)).toBe("Centered on this item"));
 });
