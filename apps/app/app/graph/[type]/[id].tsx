@@ -19,6 +19,7 @@ import { exploringTitle } from "../../../src/graphTitle";
 import { ErrorState } from "../../../src/components/ErrorState";
 import { Button } from "../../../src/components/Button";
 import { OfflineBanner } from "../../../src/components/OfflineBanner";
+import { SearchBox } from "../../../src/components/SearchBox";
 import { ShareButton } from "../../../src/components/ShareButton";
 import { titleRef } from "../../../src/webTitle";
 import { SegmentedControl } from "../../../src/components/SegmentedControl";
@@ -416,6 +417,7 @@ export default function GraphExplorer() {
           {exploringTitle(centerLabel)}
         </Text>
       </View>
+      <SearchBox style={styles.search} />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Choose one to follow it, drag it to rearrange, or choose the centre circle to open its page.
       </Text>
@@ -896,6 +898,7 @@ function createStyles({ colors, spacing, radii, fonts, typeScale }: Theme) {
     pressed: { opacity: 0.6 },
     toolbar: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: spacing.sm, paddingBottom: spacing.sm },
     toolbarActions: { flexDirection: "row", gap: spacing.sm, marginLeft: "auto" },
+    search: { marginHorizontal: spacing.lg, marginTop: spacing.md },
     sheetBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg, backgroundColor: "rgba(0,0,0,0.4)" },
     sheet: {
       width: "100%",

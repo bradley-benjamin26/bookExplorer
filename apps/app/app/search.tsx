@@ -46,7 +46,7 @@ export default function Search() {
   const [debouncedQuery, setDebouncedQuery] = useState(q ?? "");
 
   const [filters, setFilters] = useState<SearchFilterChoice>(DEFAULT_SEARCH_FILTERS);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   useEffect(() => {
     getSearchFilters().then(setFilters);
   }, []);
