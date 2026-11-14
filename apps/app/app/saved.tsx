@@ -3,6 +3,7 @@ import { EmptyState } from "../src/components/EmptyState";
 import { ChevronRight } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../src/largeText";
 import { AccordionSection } from "../src/components/AccordionSection";
 import { Button } from "../src/components/Button";
 import { CoverStack } from "../src/components/CoverStack";
@@ -17,6 +18,7 @@ export default function Saved() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const [lists, setLists] = useState<SavedList[]>([]);
   const [error, setError] = useState("");
 
@@ -62,7 +64,7 @@ export default function Saved() {
                 <View style={styles.listRow}>
                   <CoverStack urls={listCoverUrls(list.members)} />
                   <View style={styles.listText}>
-                    <Text style={styles.rowText} numberOfLines={2}>
+                    <Text style={styles.rowText} numberOfLines={largeText ? undefined : 2}>
                       {list.name}
                     </Text>
                     <Text style={styles.count}>{count}</Text>

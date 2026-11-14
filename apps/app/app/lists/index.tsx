@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../../src/largeText";
 import { CreateListForm } from "../../src/components/AddToListButton";
 import { Button } from "../../src/components/Button";
 import { EmptyState } from "../../src/components/EmptyState";
@@ -23,6 +24,7 @@ export default function Lists() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const [lists, setLists] = useState<SavedList[]>([]);
   const [creating, setCreating] = useState(false);
 
@@ -88,7 +90,7 @@ export default function Lists() {
                   >
                     <CoverStack urls={listCoverUrls(list.members)} />
                     <View style={styles.rowMain}>
-                      <Text style={styles.rowText} numberOfLines={2}>
+                      <Text style={styles.rowText} numberOfLines={largeText ? undefined : 2}>
                         {list.name}
                       </Text>
                       <Text style={styles.countText}>{count}</Text>

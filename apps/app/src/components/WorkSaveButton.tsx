@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Image as CachedImage } from "expo-image";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../largeText";
 import { fetchBookWithAlternate } from "../api/bookLookup";
 import { isbnEditions } from "../editionChoice";
 import { saveBook } from "../storage/savedBooks";
@@ -118,6 +119,7 @@ export function WorkSaveButton({ work, saved: isSaved, onSaved, ref }: { work: W
 
 function EditionRow({ edition, onPress }: { edition: Edition; onPress: () => void }) {
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const label = edition.format ?? "Edition";
   return (
     <Pressable
@@ -131,7 +133,7 @@ function EditionRow({ edition, onPress }: { edition: Edition; onPress: () => voi
       <View style={styles.rowText}>
         <Text style={styles.format}>{label}</Text>
         {[edition.publisher, edition.publishDate, edition.isbn].filter(Boolean).map((t) => (
-          <Text key={t} style={styles.meta} numberOfLines={1}>{t}</Text>
+          <Text key={t} style={styles.meta} numberOfLines={largeText ? undefined : 1}>{t}</Text>
         ))}
       </View>
     </Pressable>
