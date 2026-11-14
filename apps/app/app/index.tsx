@@ -1,15 +1,14 @@
-import { isValidIsbn } from "@book-explorer/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ChevronRight, ScanBarcode, Search } from "lucide-react-native";
+import { ChevronRight, ScanBarcode } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Image } from "expo-image";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SearchBox } from "../src/components/SearchBox";
 import { Button } from "../src/components/Button";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
 import { NODE_LABELS } from "../src/graphLabels";
-import { routes } from "../src/navigation";
 import { titleRef } from "../src/webTitle";
 import { clearRecent, getRecent, recentHref, recentOfKind, type RecentItem } from "../src/storage/history";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
@@ -34,7 +33,6 @@ export default function Home() {
   const router = useRouter();
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
-  const [query, setQuery] = useState("");
   const queryClient = useQueryClient();
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const [filter, setFilter] = useState<RecentFilter>("all");
@@ -54,12 +52,6 @@ export default function Home() {
     await clearRecent();
     setRecent([]);
     setFilter("all");
-  };
-
-  const submitSearch = () => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    router.push(isValidIsbn(trimmed) ? routes.book(trimmed) : routes.search(trimmed));
   };
 
   const renderRecent = (item: RecentItem, index: number) => (
@@ -125,28 +117,7 @@ export default function Home() {
           <Text style={styles.scanText}>Scan a book</Text>
         </Pressable>
 
-        <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by title, author, or ISBN"
-            placeholderTextColor={theme.colors.inkFaint}
-            accessibilityLabel="Search by title, author, or ISBN"
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            onSubmitEditing={submitSearch}
-          />
-          <Pressable
-            ref={titleRef("Search")}
-            onPress={submitSearch}
-            accessibilityRole="button"
-            accessibilityLabel="Search"
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Search size={20} color={theme.colors.cover} />
-          </Pressable>
-        </View>
+        <SearchBox style={styles.searchRow} />
 
         <View style={styles.threadSection}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -206,24 +177,7 @@ function createStyles({ colors, fonts, typeScale, spacing, radii }: Theme) {
       paddingVertical: spacing.lg,
     },
     scanText: { fontFamily: fonts.bodySemiBold, fontSize: typeScale.sm, color: colors.primaryText },
-    searchRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.sm,
-      marginTop: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: radii.button,
-      backgroundColor: colors.card,
-      paddingHorizontal: spacing.md,
-    },
-    searchInput: {
-      flex: 1,
-      fontFamily: fonts.body,
-      fontSize: typeScale.sm,
-      color: colors.ink,
-      paddingVertical: spacing.md,
-    },
+    searchRow: { marginTop: spacing.md },
     filterRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.sm },
     recentSection: { marginTop: spacing.xxl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
     recentHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md, marginBottom: spacing.sm },

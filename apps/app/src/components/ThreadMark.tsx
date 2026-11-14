@@ -8,14 +8,15 @@ export const THREAD_MARK_HEIGHT = 26;
 const SCALE = THREAD_MARK_HEIGHT / SPOOL_H;
 const EXIT = { x: SPOOL_EXIT.x * SCALE, y: SPOOL_EXIT.y * SCALE };
 
-/** A spool with a short thread coming off it and the graph's four node colours, as wide as the wordmark it sits under. Decorative. */
+/** A spool with a short wavy thread coming off it through three graph node colours, as wide as the wordmark it sits under. Decorative. */
 export function ThreadMark({ width }: { width: number }) {
   const { colors } = useTheme();
   if (width <= 0) return null;
-  const dots = [colors.graphWork, colors.graphAuthor, colors.graphSubject, colors.graphGenre];
+  // Author → book → subject, as on Home's thread, with the same gentle wave.
+  const dots = [colors.graphAuthor, colors.graphWork, colors.graphSubject];
   // Nodes start past the spool's flange so the first one doesn't sit on it.
   const inset = SPOOL_W * SCALE + 6;
-  const geo = threadGeometry(width, THREAD_MARK_HEIGHT, dots.length, inset, undefined, { wander: 0, baseline: EXIT.y, start: EXIT.x });
+  const geo = threadGeometry(width, THREAD_MARK_HEIGHT, dots.length, inset, undefined, { baseline: EXIT.y, start: EXIT.x });
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       <Svg width={width} height={THREAD_MARK_HEIGHT}>

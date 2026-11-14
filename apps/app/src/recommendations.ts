@@ -28,7 +28,8 @@ export interface AuthorSeed {
 export interface TasteProfile {
   /** The most common subject/genre slugs across saved books, with their idf weight and the saved books that carry them. */
   subjects: { slug: string; label: string; weight: number; seedTitles: string[] }[];
-  authors: AuthorSeed[];
+  /** Each author with every saved item behind them, so a combined reason can tell which saved books share it. */
+  authors: (AuthorSeed & { seedTitles: string[] })[];
   /** Work ids already saved (as a work, or as a book's work), never recommended. */
   excludedWorkIds: Set<string>;
   /** Normalised titles of saved books and works, for saved books with no work id. */
@@ -45,8 +46,9 @@ export interface Recommendation {
 }
 
 export interface Reason {
-  kind: "subject" | "author" | "influence";
-  /** The subject label, or the author's name. */
+  /** "combo": several subjects and/or authors that the same saved items all carry. */
+  kind: "subject" | "author" | "influence" | "combo";
+  /** The subject label, the author's name, or a combo's labels joined ("Fantasy and Tolkien"). */
   label: string;
   /** The saved items that carry it. */
   seedTitles: string[];
@@ -58,6 +60,7 @@ export const reasonKey = (r: Reason) => `${r.kind}:${r.label}`;
 export function reasonHeading({ kind, label, seedTitles }: Reason): string {
   if (kind === "author") return `More by ${label}`;
   if (kind === "influence") return `Connected to ${label}`; // influence edges run either way
+  // Subjects and combos.
   return `Because you like ${label}${seedTitles.length > 1 ? ` (${seedTitles.length} saved)` : ""}`;
 }
 
@@ -158,7 +161,7 @@ export function buildTasteProfile(snapshot: Snapshot, authors: AuthorSeed[], pub
   const topAuthors = [...byId.values()]
     .sort((a, b) => b.length - a.length || cmp(a[0].id, b[0].id))
     .slice(0, TOP_AUTHORS)
-    .map((seeds) => seeds.sort((a, b) => cmp(a.seedTitle, b.seedTitle))[0]);
+    .map((seeds) => ({ ...seeds.sort((a, b) => cmp(a.seedTitle, b.seedTitle))[0], seedTitles: [...new Set(seeds.map((s) => s.seedTitle))] }));
   return { subjects, authors: topAuthors, excludedWorkIds, excludedTitles };
 }
 
@@ -212,7 +215,7 @@ export function rankRecommendations(
       else if (other.type === "work") {
         const influence = e.relation === "influencedBy";
         const work = { openLibraryWorkId: olid, title: other.label, authors: influence ? [] : [{ openLibraryId: seed.id, name: seed.name }], coverUrl: null };
-        add(work, influence ? "influence" : "author", seed.name, influence ? `influence link to ${seed.name}` : `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
+        add(work, influence ? "influence" : "author", seed.name, influence ? `influence link to ${seed.name}` : `author ${seed.name}`, AUTHOR_WEIGHT, influence ? [seed.seedTitle] : seed.seedTitles);
       }
     }
   }
@@ -220,7 +223,7 @@ export function rankRecommendations(
   for (const c of candidates.values()) {
     for (const a of c.work.authors) {
       const seed = seedsById.get(a.openLibraryId);
-      if (seed) add(c.work, "author", seed.name, `author ${seed.name}`, AUTHOR_WEIGHT, [seed.seedTitle]);
+      if (seed) add(c.work, "author", seed.name, `author ${seed.name}`, AUTHOR_WEIGHT, seed.seedTitles);
       const influenced = influences.get(a.openLibraryId);
       if (influenced) add(c.work, "influence", influenced.name, `influence link to ${influenced.name}`, AUTHOR_WEIGHT, [influenced.seedTitle]);
     }
@@ -236,10 +239,45 @@ export function rankRecommendations(
     .slice(0, limit);
 }
 
-/** The primary reason is the heaviest evidence; ties go to more saved items sharing it, then the label. */
+const byStrength = (a: Evidence["reasons"][number], b: Evidence["reasons"][number]) =>
+  b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.label, b.label);
+
+/**
+ * The primary reason is the largest combination of subjects and/or authors that at least MIN_SHARED_SUBJECT
+ * saved items all carry (ties: more saved items); without one, the heaviest single evidence, ties going to
+ * more saved items sharing it, then the label.
+ */
 export function explain(reasons: Evidence["reasons"]): { reason: Reason; shares: string[] } {
-  const [{ kind, label, seedTitles }] = [...reasons].sort((a, b) => b.weight - a.weight || b.seedTitles.length - a.seedTitles.length || cmp(a.label, b.label));
-  return { reason: { kind, label, seedTitles }, shares: reasons.map((r) => r.share) };
+  const shares = reasons.map((r) => r.share);
+  const combo = bestCombo(reasons);
+  if (combo) return { reason: combo, shares };
+  const [{ kind, label, seedTitles }] = [...reasons].sort(byStrength);
+  return { reason: { kind, label, seedTitles }, shares };
+}
+
+function bestCombo(reasons: Evidence["reasons"]): Reason | null {
+  // Influence links are left out: their saved item is the author, not the books that share a subject.
+  const parts = reasons.filter((r) => r.kind === "subject" || r.kind === "author").sort(byStrength);
+  let best: { parts: typeof parts; shared: string[] } | null = null;
+  // Greedy from each starting reason: keep adding reasons while enough saved items still carry them all.
+  for (let i = 0; i < parts.length; i++) {
+    const chosen = [parts[i]];
+    let shared = parts[i].seedTitles;
+    for (const p of parts.slice(i + 1)) {
+      const next = shared.filter((t) => p.seedTitles.includes(t));
+      if (next.length >= MIN_SHARED_SUBJECT) {
+        chosen.push(p);
+        shared = next;
+      }
+    }
+    if (chosen.length > 1 && (!best || chosen.length > best.parts.length || (chosen.length === best.parts.length && shared.length > best.shared.length)))
+      best = { parts: chosen, shared };
+  }
+  if (!best) return null;
+  // Subjects before authors, then by label, so the same combination gets the same group on every row.
+  const labels = best.parts.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "subject" ? -1 : 1) || cmp(a.label, b.label)).map((p) => p.label);
+  const label = labels.length > 2 ? `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}` : labels.join(" and ");
+  return { kind: "combo", label, seedTitles: [...best.shared].sort() };
 }
 
 /**
