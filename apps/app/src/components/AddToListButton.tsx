@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
+import { useLargeText } from "../largeText";
 import { createHardcoverList, fetchHardcoverLists } from "../api/client";
 import { confirmLeave } from "../confirm";
 import { hardcoverChoices, keepOffered, linkedTo, listsNotHolding } from "../hardcoverChoices";
@@ -141,6 +142,7 @@ export function AddToListButton({
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const queryClient = useQueryClient();
   const kind: SavedList["kind"] = member.type === "author" ? "author" : "book";
   const [open, setOpen] = useState(false);
@@ -291,7 +293,7 @@ export function AddToListButton({
                         accessibilityLabel={list.name}
                       >
                         <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
-                        <Text style={styles.rowText} numberOfLines={2}>
+                        <Text style={styles.rowText} numberOfLines={largeText ? undefined : 2}>
                           {list.name}
                         </Text>
                       </Pressable>
@@ -311,7 +313,7 @@ export function AddToListButton({
                         accessibilityLabel={`${r.name}, a Hardcover list; adds this book and imports the list`}
                       >
                         <Icon size={20} color={isChecked ? theme.colors.cover : theme.colors.inkFaint} />
-                        <Text style={styles.rowText} numberOfLines={2}>
+                        <Text style={styles.rowText} numberOfLines={largeText ? undefined : 2}>
                           {r.name} · on Hardcover
                         </Text>
                       </Pressable>

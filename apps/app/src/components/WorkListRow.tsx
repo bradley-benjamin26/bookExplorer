@@ -1,6 +1,7 @@
 import type { WorkRef } from "@book-explorer/shared";
 import { ChevronRight } from "lucide-react-native";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../largeText";
 import { seriesRowLabel } from "../seriesLabel";
 import { CoverPlaceholder } from "./CoverPlaceholder";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
@@ -24,6 +25,7 @@ export function WorkListRow({
 }) {
   const theme = useTheme();
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const authorNames = work.authors.map((a) => a.name).join(", ") || "Unknown author";
   return (
     <Pressable
@@ -41,14 +43,14 @@ export function WorkListRow({
         <CoverPlaceholder width={44} height={64} />
       )}
       <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={styles.title} numberOfLines={largeText ? undefined : 2}>
           {work.title}
         </Text>
-        <Text style={styles.authors} numberOfLines={1}>
+        <Text style={styles.authors} numberOfLines={largeText ? undefined : 1}>
           {series ? [series.position && `Book ${series.position}`, series.current && "You are here"].filter(Boolean).join(" · ") : authorNames}
         </Text>
         {note ? (
-          <Text style={styles.authors} numberOfLines={1}>
+          <Text style={styles.authors} numberOfLines={largeText ? undefined : 1}>
             {note}
           </Text>
         ) : null}

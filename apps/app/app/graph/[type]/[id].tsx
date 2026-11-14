@@ -25,6 +25,7 @@ import { titleRef } from "../../../src/webTitle";
 import { SegmentedControl } from "../../../src/components/SegmentedControl";
 import { centeredLabel, legendEntries, NODE_LABELS, nodeRelations, pathAsGraph, relationLabel } from "../../../src/graphLabels";
 import { applyGraphFilter, filterFromParams, filterToParams, isFiltered, shouldAutoOpenList, toggle, type GraphFilter } from "../../../src/graphFilters";
+import { useLargeText } from "../../../src/largeText";
 import { nodeHref, nodePressHref, routes } from "../../../src/navigation";
 import { CONTENT_MAX_WIDTH, useTheme, useThemedStyles, type Theme, type ThemeColors } from "../../../src/theme";
 import { TOOLBAR_CONTROL_HEIGHT } from "../../../src/toolbarMetrics";
@@ -144,12 +145,13 @@ export default function GraphExplorer() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [showList, setShowList] = useState(false);
   const [listChosen, setListChosen] = useState(false);
-  // Screen-reader users can't use the canvas, so open the list for them, but never override the user's own toggle.
+  const largeText = useLargeText();
+  // Screen-reader and large-text users can't use the canvas (its labels are fixed-size SVG), so open the list for them, but never override the user's own toggle.
   useEffect(() => {
     if (listChosen) return;
     let cancelled = false;
     const apply = (on: boolean) => {
-      if (!cancelled && shouldAutoOpenList(Platform.OS, on, listChosen)) setShowList(true);
+      if (!cancelled && shouldAutoOpenList(Platform.OS, on || largeText, listChosen)) setShowList(true);
     };
     AccessibilityInfo.isScreenReaderEnabled().then(apply);
     const sub = AccessibilityInfo.addEventListener("screenReaderChanged", apply);
@@ -157,7 +159,7 @@ export default function GraphExplorer() {
       cancelled = true;
       sub.remove();
     };
-  }, [listChosen]);
+  }, [listChosen, largeText]);
   const updateFilter = (next: GraphFilter) => {
     setFilter(next);
     const p = filterToParams(next);

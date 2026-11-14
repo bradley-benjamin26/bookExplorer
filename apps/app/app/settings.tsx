@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
@@ -9,6 +9,7 @@ import { Button } from "../src/components/Button";
 import { CenteredModal } from "../src/components/CenteredModal";
 import { Footer } from "../src/components/Footer";
 import { confirmDestructive } from "../src/confirm";
+import { deleteAllData } from "../src/deleteAllData";
 import { supportedLibraryOptions } from "../src/libraryOptions";
 import { routes } from "../src/navigation";
 import { clearRecent } from "../src/storage/history";
@@ -249,6 +250,7 @@ function DefaultListPicker({
 
 function PreferencesSections() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [lists, setLists] = useState<SavedList[]>([]);
@@ -271,6 +273,11 @@ function PreferencesSections() {
     if (!(await confirmDestructive("Clear history?", "Remove everything from your recently viewed list? This can't be undone.", "Clear"))) return;
     await clearRecent();
     setCleared(true);
+  };
+  const deleteEverything = async () => {
+    if (!(await confirmDestructive("Delete all data?", "Everything Shelf Thread stores for you is erased and your accounts are disconnected. Export a backup first if you want to keep it. This can't be undone.", "Delete"))) return;
+    await deleteAllData(queryClient);
+    router.replace("/");
   };
 
   return (
@@ -300,6 +307,12 @@ function PreferencesSections() {
       <Text style={styles.helpText}>Back up your lists, notes and libraries, or move them to another device.</Text>
       <Button variant="pill" onPress={() => router.push(routes.backup())} style={styles.historyButton}>
         Open Import & export
+      </Button>
+
+      <Text style={styles.sectionTitle} accessibilityRole="header">Delete all data</Text>
+      <Text style={styles.helpText}>Erase your saved books, lists, notes, history, libraries and settings from this device, and disconnect Hardcover and Open Library.</Text>
+      <Button variant="pill" onPress={deleteEverything} style={styles.historyButton}>
+        Delete all data
       </Button>
     </>
   );

@@ -2,6 +2,7 @@ import type { Edition } from "@book-explorer/shared";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../largeText";
 import { collapseSelfPublished } from "../editions";
 import { routes } from "../navigation";
 import { useThemedStyles, type Theme } from "../theme";
@@ -10,6 +11,7 @@ import { SkipLink, SkipTarget } from "./SkipLink";
 
 function EditionCard({ edition }: { edition: Edition }) {
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const router = useRouter();
   const isbn = edition.isbn;
 
@@ -22,12 +24,12 @@ function EditionCard({ edition }: { edition: Edition }) {
           <Text style={styles.coverPlaceholderText}>No cover</Text>
         </View>
       )}
-      <Text style={styles.format} numberOfLines={1}>
+      <Text style={styles.format} numberOfLines={largeText ? undefined : 1}>
         {edition.format ?? "Edition"}
       </Text>
       {edition.publisher && <Text style={styles.meta}>{edition.publisher}</Text>}
       {edition.publishDate && (
-        <Text style={styles.meta} numberOfLines={1}>
+        <Text style={styles.meta} numberOfLines={largeText ? undefined : 1}>
           {edition.publishDate}
         </Text>
       )}

@@ -3,6 +3,7 @@ import type { Work } from "@book-explorer/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLargeText } from "../../src/largeText";
 import { Button } from "../../src/components/Button";
 import { CoverPlaceholder } from "../../src/components/CoverPlaceholder";
 import { memberCoverUrl } from "../../src/listCovers";
@@ -36,6 +37,7 @@ export default function ListDetail() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const theme = useTheme();
   const [list, setList] = useState<SavedList | null | undefined>(undefined);
   const [error, setError] = useState("");
@@ -262,7 +264,7 @@ export default function ListDetail() {
                   ) : (
                     <CoverPlaceholder width={44} height={64} />
                   )}
-                  <Text style={styles.rowText} numberOfLines={2}>
+                  <Text style={styles.rowText} numberOfLines={largeText ? undefined : 2}>
                     {member.title}
                   </Text>
                 </Pressable>

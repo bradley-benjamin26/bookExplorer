@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Alert, FlatList, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { useLargeText } from "../largeText";
 import type { Book } from "@book-explorer/shared";
 import { fetchBookWithAlternate } from "../api/bookLookup";
 import { acceptScan, createLookupQueue, lookupFailure, parseTypedIsbn, saveAll } from "../batchScan";
@@ -30,6 +31,7 @@ async function saveScanned(queryClient: QueryClient, book: Book, tag: string) {
 
 export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () => void }) {
   const styles = useThemedStyles(createStyles);
+  const largeText = useLargeText();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const [rows, setRows] = useState<Row[]>([]);
@@ -127,7 +129,7 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
       renderItem={({ item }) => (
         <View style={styles.row} accessible accessibilityLabel={`${item.book?.title ?? item.isbn}, ${rowStatus(item)}`}>
           <View style={styles.rowText}>
-            <Text style={styles.rowTitle} numberOfLines={1}>{item.book?.title ?? item.isbn}</Text>
+            <Text style={styles.rowTitle} numberOfLines={largeText ? undefined : 1}>{item.book?.title ?? item.isbn}</Text>
             <Text style={styles.muted}>{rowStatus(item)}</Text>
           </View>
           {(item.lookup === "missing" || item.lookup === "error") && (
