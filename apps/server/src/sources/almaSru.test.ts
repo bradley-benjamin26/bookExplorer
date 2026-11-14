@@ -19,7 +19,7 @@ describe("parseAlmaResponse (live UMD responses)", () => {
     expect(parse(fx("umd-catcher"), "9780316769488")).toEqual({
       found: true,
       copies: [{ branch: "UMCP McKeldin Library, Stacks", callNumber: "PS3537.A426 C3 1951", status: "unavailable", dueDate: null }],
-      recordUrl: "https://usmai-umcp.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma990001199870108238&vid=01USMAI_UMCP:DEFAULT",
+      recordUrl: "https://usmai-umcp.primo.exlibrisgroup.com/discovery/fulldisplay?docid=alma990001199870108238&vid=01USMAI_UMCP:UMCP",
     });
   });
 
