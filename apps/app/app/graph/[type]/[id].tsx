@@ -408,7 +408,7 @@ export default function GraphExplorer() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.pageContent}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.pageContent} keyboardShouldPersistTaps="handled">
       {titleScreen}
       <OfflineBanner show={isError} updatedAt={dataUpdatedAt} />
       <View style={styles.titleBlock}>
@@ -417,7 +417,7 @@ export default function GraphExplorer() {
           {exploringTitle(centerLabel)}
         </Text>
       </View>
-      <SearchBox style={styles.search} />
+      <SearchBox style={styles.search} graph />
       <Text style={styles.hint}>
         Each circle is a book, author or subject. Choose one to follow it, drag it to rearrange, or choose the centre circle to open its page.
       </Text>
