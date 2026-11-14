@@ -80,7 +80,7 @@ describe("buildTasteProfile", () => {
     const profile = profileOf(snapshot([]), seeds);
     expect(profile.authors).toHaveLength(TOP_AUTHORS);
     expect(profile.authors.map((a) => a.id)).toEqual(Array.from({ length: TOP_AUTHORS }, (_, i) => `OL${i + 2}A`));
-    expect(profile.authors[0]).toEqual({ id: "OL2A", name: "OL2A", seedTitle: "Book 97" });
+    expect(profile.authors[0]).toEqual({ id: "OL2A", name: "OL2A", seedTitle: "Book 97", seedTitles: ["Book 97", "Book 98"] });
   });
 });
 
@@ -137,7 +137,8 @@ describe("recommendation reasons", () => {
   });
   it("breaks reason ties on weight, then saved count, then label", () => {
     // Weight is idf: the rarer subject wins even with fewer saved books.
-    const rare = rankRecommendations(profileOf(snapshot([book("A", ["Common", "Rare"]), book("B", ["Common", "Rare"]), book("C", ["Common"]), book("D", ["Common"])]), []), subjects(subject("common", [work("W1")]), subject("rare", [work("W1")])), new Map());
+    // Only A carries both, so they don't combine.
+    const rare = rankRecommendations(profileOf(snapshot([book("A", ["Common", "Rare"]), book("B", ["Rare"]), book("C", ["Common"]), book("D", ["Common"])]), []), subjects(subject("common", [work("W1")]), subject("rare", [work("W1")])), new Map());
     expect(rare[0].reason.label).toBe("Rare");
     // Equal weights: more saved items wins, then the label.
     const reasons = (labels: [string, string[]][]) =>
@@ -145,6 +146,21 @@ describe("recommendation reasons", () => {
     const pick = (r: ReturnType<typeof reasons>) => explain(r).reason.label;
     expect(pick(reasons([["A", ["x"]], ["B", ["x", "y"]]]))).toBe("B");
     expect(pick(reasons([["B", ["x"]], ["A", ["y"]]]))).toBe("A");
+  });
+  it("combines subjects that the same saved books share", () => {
+    const lib = snapshot([book("A", ["Fantasy", "Dragons"]), book("B", ["Fantasy", "Dragons"]), book("C", ["Fantasy"])]);
+    const listing = subjects(subject("fantasy", [work("W1"), work("W2")]), subject("dragons", [work("W1")]));
+    const [both, fantasyOnly] = rankRecommendations(profileOf(lib, []), listing, new Map());
+    expect(both.reason).toEqual({ kind: "combo", label: "Dragons and Fantasy", seedTitles: ["A", "B"] });
+    expect(reasonHeading(both.reason)).toBe("Because you like Dragons and Fantasy (2 saved)");
+    expect(fantasyOnly.reason).toMatchObject({ kind: "subject", label: "Fantasy" });
+  });
+  it("combines a subject with an author whose books share it, and keeps the widest combination", () => {
+    const lib = snapshot([book("Hobbit", ["Fantasy", "Quests"]), book("Fellowship", ["Fantasy", "Quests"]), book("Earthsea", ["Fantasy"])]);
+    const seeds = [{ id: "OLtA", name: "Tolkien", seedTitle: "Hobbit" }, { id: "OLtA", name: "Tolkien", seedTitle: "Fellowship" }];
+    const listing = subjects(subject("fantasy", [work("W1", "OLtA")]), subject("quests", [work("W1", "OLtA")]));
+    const [rec] = rankRecommendations(profileOf(lib, seeds), listing, new Map());
+    expect(rec.reason).toEqual({ kind: "combo", label: "Fantasy, Quests and Tolkien", seedTitles: ["Fellowship", "Hobbit"] });
   });
   it("words the headings", () => {
     expect(reasonHeading({ kind: "subject", label: "Fantasy", seedTitles: ["A"] })).toBe("Because you like Fantasy");
