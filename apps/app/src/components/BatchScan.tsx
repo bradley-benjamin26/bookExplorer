@@ -1,5 +1,5 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { CameraView, type BarcodeScanningResult } from "expo-camera";
+import type { BarcodeScanningResult } from "expo-camera";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +11,7 @@ import { acceptScan, createLookupQueue, lookupFailure, parseTypedIsbn, saveAll }
 import { saveBook, updateSavedBook } from "../storage/savedBooks";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 import { Button } from "./Button";
+import { ScanCamera } from "./ScanCamera";
 
 interface Row {
   isbn: string;
@@ -178,12 +179,11 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
   // Camera stays dark regardless of theme, as in single-scan mode.
   return (
     <View style={styles.camera}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ["ean13"] }}
-        onBarcodeScanned={handleScanned}
-      />
+      <ScanCamera onBarcodeScanned={handleScanned} />
+      <View style={styles.frameArea}>
+        <View style={styles.scanBox} />
+        <Text style={styles.hint}>Scan each book's barcode in turn, about 15 cm (6 in) away</Text>
+      </View>
       <View style={styles.panel}>
         <Text style={styles.toast} accessibilityLiveRegion="polite">{toast}</Text>
         <Text style={styles.count}>{rows.length} scanned</Text>
@@ -208,7 +208,10 @@ export function BatchScan({ haptics, onExit }: { haptics: boolean; onExit: () =>
 
 function createStyles({ colors, radii, spacing, fonts, typeScale }: Theme) {
   return StyleSheet.create({
-    camera: { flex: 1, backgroundColor: "#000", justifyContent: "flex-end" },
+    camera: { flex: 1, backgroundColor: "#000" },
+    frameArea: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
+    scanBox: { width: "80%", height: 140, borderWidth: 2, borderColor: "#fff", borderRadius: 10 },
+    hint: { color: "#fff", fontFamily: fonts.body, fontSize: 14, textAlign: "center" },
     panel: { padding: spacing.lg, gap: spacing.sm, backgroundColor: "rgba(0,0,0,0.6)" },
     toast: { color: "#fff", fontFamily: fonts.body, fontSize: 14, minHeight: 20, textAlign: "center" },
     count: { color: "#fff", fontFamily: fonts.body, fontSize: 14, textAlign: "center" },

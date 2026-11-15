@@ -1,5 +1,5 @@
 import { isValidIsbn, normalizeIsbn } from "@book-explorer/shared";
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +8,7 @@ import { isIsbnBarcode } from "../src/batchScan";
 import { cameraBlockedHint } from "../src/cameraAccess";
 import { BatchScan } from "../src/components/BatchScan";
 import { Button } from "../src/components/Button";
+import { ScanCamera } from "../src/components/ScanCamera";
 import { routes } from "../src/navigation";
 import { getPreferences, type Preferences } from "../src/storage/preferences";
 import { useTheme, useThemedStyles, type Theme } from "../src/theme";
@@ -120,15 +121,10 @@ export default function Scan() {
   // out against the camera feed the same way it would in any camera app.
   return (
     <View style={styles.container}>
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        barcodeScannerSettings={{ barcodeTypes: ["ean13"] }}
-        onBarcodeScanned={handleScanned}
-      />
+      <ScanCamera onBarcodeScanned={handleScanned} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.overlay}>
         <View style={styles.scanBox} />
-        <Text style={styles.hint}>Align the book's barcode within the frame</Text>
+        <Text style={styles.hint}>Hold the barcode in the frame, about 15 cm (6 in) away</Text>
         <Button variant="pill" onPress={() => setBatch(true)} accessibilityLabel="Scan multiple books">
           Scan multiple
         </Button>
