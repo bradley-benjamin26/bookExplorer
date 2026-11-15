@@ -1,10 +1,11 @@
-import { CameraView, useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
+import { useCameraPermissions, type BarcodeScanningResult } from "expo-camera";
 import { ScanBarcode } from "lucide-react-native";
 import { useRef, useState } from "react";
 import { Linking, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { isIsbnBarcode } from "../batchScan";
 import { cameraBlockedHint } from "../cameraAccess";
 import { Button } from "./Button";
+import { ScanCamera } from "./ScanCamera";
 import { titleRef } from "../webTitle";
 import { useTheme, useThemedStyles, type Theme } from "../theme";
 
@@ -51,10 +52,10 @@ export function IsbnScanButton({ onScanned }: { onScanned: (isbn: string) => voi
         {permission?.granted ? (
           // Always dark, like the main scanner: a light overlay washes out the camera feed.
           <View style={styles.camera}>
-            <CameraView style={StyleSheet.absoluteFill} facing="back" barcodeScannerSettings={{ barcodeTypes: ["ean13"] }} onBarcodeScanned={handleScanned} />
+            <ScanCamera onBarcodeScanned={handleScanned} />
             <View style={styles.overlay}>
               <View style={styles.scanBox} />
-              <Text style={styles.hint}>Align the book's barcode within the frame</Text>
+              <Text style={styles.hint}>Hold the barcode in the frame, about 15 cm (6 in) away</Text>
               <Button variant="pill" onPress={() => setOpen(false)}>
                 Cancel
               </Button>
