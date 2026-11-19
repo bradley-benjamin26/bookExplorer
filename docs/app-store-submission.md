@@ -38,7 +38,7 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 - **Subtitle:** A short line such as "Explore how books connect" (30 characters max).
 - **Bundle ID:** `com.bbradle1.bookexplorer`. Register it under Certificates, Identifiers & Profiles, or let EAS create it.
 - **Primary category:** Reference or Books. Secondary category: optional.
-- **Age rating:** Complete the questionnaire. The app has no user-generated content, no messaging, no ads, and no mature content. Expect 4+. **Verify** the answers as you complete the questionnaire.
+- **Age rating:** Answer for the content a user can see in search results, including titles, descriptions, and covers from outside catalogs, not only the app's own screens. An earlier version of this plan said to answer "Infrequent/Mild" for every violence and sexual content question, and App Store Connect then returned "this app can't be made available on the App Store" ("Based on your selections"). Set the most severe categories (prolonged graphic or sadistic violence, and any graphic sexual content or nudity question) to None. Use "Infrequent/Mild" only for the milder ones: horror, mature themes, profanity, cartoon or fantasy violence, realistic violence, weapons, and the less severe sexual content question. Result: with graphic sexual content and nudity and prolonged graphic or sadistic realistic violence set to None, the questionnaire returned 13+ and no longer blocked the app. App Review can still object to what search surfaces, so mention in the review notes that results come from public book catalogs, and keep a maturity filter as the fallback if Apple raises it. Answer No to user-generated content and unrestricted web access. Use the rating the questionnaire returns. **Verify** each answer.
 - **Privacy policy URL:** `https://shelfthread.com/privacy.html`
 - **Support URL:** Must be a live page with contact details. The policy lists `support@shelfthread.com`. **Verify** that the mailbox exists.
 - **Marketing URL:** Optional, `https://shelfthread.com`.
@@ -67,7 +67,7 @@ Answer from what the app actually sends. The privacy policy at `apps/app/public/
 
 | Data type | Collected? | Linked to you? | Purpose | Basis in repo |
 |---|---|---|---|---|
-| Search History | Yes | No | App Functionality | Search terms are sent to the server (`apps/server/src/routes/searchRoutes`) |
+| Search History | Yes | No | App Functionality, Analytics (not Product Personalization: recommendations are computed on the device) | Search terms are sent to the server (`apps/server/src/routes/searchRoutes`) and the policy says popular searches are counted |
 | Identifiers: User ID | Yes, only for connected accounts | Yes | App Functionality | Hardcover user ID and username, Open Library username (`apps/app/src/api/client.ts`, `sessionStore.ts`) |
 | Other Data: Access tokens / keys | Yes, only for connected accounts | Yes | App Functionality | Hardcover tokens and Open Library keys stored on the server |
 | Diagnostics / Usage | Server logs only | No | App Functionality, Analytics | Server request logs with IP addresses, kept 30 days |
@@ -82,7 +82,7 @@ Notes for the answers:
 
 ## 5. Accessibility nutrition labels
 
-Apple's Accessibility Nutrition Labels describe which accessibility features the app supports. Declare only what you have tested on a device. Use the existing WCAG 2.2 AA work as a starting point.
+Apple's Accessibility Nutrition Labels describe which accessibility features the app supports. Declare only what you have tested on a device. The labels are set per device type, and the app has `supportsTablet: true`, so test and declare iPhone and iPad separately (the iOS simulator can run an iPad profile). If you don't want to test iPad for the first release, set `supportsTablet` to `false`. **Verify** the per-device selection in App Store Connect. Use the existing WCAG 2.2 AA work as a starting point.
 
 Features to test and declare:
 
@@ -97,6 +97,8 @@ Features to test and declare:
 | Reduced Motion | Check the graph animation with Reduce Motion on | **Verify** |
 | Captions / Audio Descriptions | The app has no audio or video | Not applicable |
 
+An accessibility statement page is at `apps/app/public/accessibility.html` (to be served at `https://shelfthread.com/accessibility.html`) and is linked from the app footer. It states only what a code review and contrast measurements support, and it says plainly that there is no independent audit and no VPAT. App Store Connect may offer an optional field for an accessibility information URL; if it does, use that URL. **Verify** Update the page's "How we checked" section and its date after you test on devices, and keep it consistent with the labels you declare.
+
 The worktree copy of `accessibilityFixPlan.txt` (under `.claude/worktrees/ux-refresh-a/`) describes the phases of the WCAG 2.2 AA work. Copy it into `docs/` if you want it in the repo. Note that the roadmap refers to it at the repo root, but it is not there.
 
 ## 6. Review risks
@@ -110,7 +112,7 @@ The worktree copy of `accessibilityFixPlan.txt` (under `.claude/worktrees/ux-ref
 
 Suggested review notes text:
 
-> Shelf Thread needs no account. Search works immediately. Connecting Hardcover or Open Library is optional and is in Settings. Camera access is used only to read book barcodes; typing an ISBN also works. Data stays on the device except for search requests to our server. The privacy policy is at https://shelfthread.com/privacy.html.
+> Shelf Thread needs no account. Search works immediately. Connecting Hardcover or Open Library is optional and is in Settings. Camera access is used only to read book barcodes; typing an ISBN also works. Data stays on the device except for search requests to our server. Book titles, descriptions, and covers come from public book catalogs (Open Library, Google Books, and Hardcover); the app does not host or add content, and users cannot post content to other users. The privacy policy is at https://shelfthread.com/privacy.html.
 
 ## 7. Build and submit
 
@@ -144,6 +146,7 @@ The `submit.production` block in `eas.json` is empty. Fill in your Apple ID, App
 - [ ] Complete the age rating questionnaire
 - [ ] Capture screenshots, including the Graph view
 - [ ] Complete App Privacy from §4 and check each answer against the code
+- [ ] Deploy `accessibility.html` so `https://shelfthread.com/accessibility.html` loads (the footer links to it)
 - [ ] Test each accessibility feature in §5 and declare only what passes
 - [ ] Write the review notes from §6
 - [ ] Build and submit with EAS (§7)
