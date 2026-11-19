@@ -7,41 +7,68 @@
     <meta name="description" content="What Shelf Thread collects, why, and how to delete it." />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="canonical" href="https://shelfthread.com/privacy.html" />
-    <!-- Inline styles and system fonts only: the site's CSP allows no outside stylesheets or fonts. -->
+    <!-- Inline styles and self-hosted fonts only: the site's CSP allows no outside stylesheets or fonts.
+         Fonts and colors are copies of the app's (src/theme.ts, src/themeColors.ts); update both together. -->
     <style>
+      @font-face { font-family: "Fraunces"; font-weight: 500; font-display: swap; src: url("/fonts/Fraunces_500Medium.ttf") format("truetype"); }
+      @font-face { font-family: "Fraunces"; font-weight: 600; font-display: swap; src: url("/fonts/Fraunces_600SemiBold.ttf") format("truetype"); }
+      @font-face { font-family: "Hanken Grotesk"; font-weight: 400; font-display: swap; src: url("/fonts/HankenGrotesk_400Regular.ttf") format("truetype"); }
+      @font-face { font-family: "Hanken Grotesk"; font-weight: 600; font-display: swap; src: url("/fonts/HankenGrotesk_600SemiBold.ttf") format("truetype"); }
       :root {
         color-scheme: light dark;
+        --shell: #E3EADF;
         --paper: #EDF3E8;
         --card: #F8FAF4;
         --ink: #202B25;
         --ink-faint: #4C5C50;
         --accent: #A84623;
         --rule: #B6C8B7;
+        --border: #C9D5C7;
+        --thread: #6A8071;
+        --node-author: #375663;
+        --node-work: #963B1B;
+        --node-subject: #506D4D;
       }
       @media (prefers-color-scheme: dark) {
         :root {
+          --shell: #0F1411;
           --paper: #161D19;
           --card: #1E2722;
           --ink: #E6EDE4;
           --ink-faint: #A9B7AC;
           --accent: #E58A63;
           --rule: #34423A;
+          --border: #2A352E;
+          --thread: #6F8575;
+          --node-author: #8FB4C4;
+          --node-work: #E58A63;
+          --node-subject: #9FC49A;
         }
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        background: var(--paper);
+        background: var(--shell);
         color: var(--ink);
-        font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font: 16px/1.6 "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         -webkit-text-size-adjust: 100%;
       }
-      main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
-      h1, h2 { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; font-weight: 600; line-height: 1.25; }
-      h1 { font-size: 2rem; margin: 0 0 0.25rem; }
-      h2 { font-size: 1.35rem; margin: 2.5rem 0 0.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+      .page { max-width: 720px; min-height: 100vh; margin: 0 auto; background: var(--paper); }
+      header { padding: 1rem; border-bottom: 1px solid var(--border); }
+      .wordmark { display: inline-block; font: 500 20px/1.3 "Fraunces", Georgia, serif; color: var(--ink); text-decoration: none; }
+      .thread { display: block; }
+      .thread .line { fill: none; stroke: var(--thread); stroke-width: 1.25; stroke-linecap: round; }
+      .thread .wind { stroke: var(--thread); stroke-width: 1.25; stroke-linecap: round; }
+      .thread .core { fill: var(--thread); fill-opacity: 0.18; }
+      .thread .flange { fill: var(--paper); stroke: var(--thread); stroke-width: 1.5; }
+      .thread circle { stroke: var(--paper); stroke-width: 1.5; }
+      .subtitle { margin: 0; color: var(--ink-faint); font-size: 14px; }
+      main { padding: 2rem 1rem 4rem; }
+      h1, h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; line-height: 1.25; }
+      h1 { font-size: 31px; margin: 0 0 0.25rem; }
+      h2 { font-size: 25px; margin: 2.5rem 0 0.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+      strong, th { font-weight: 600; }
       .updated { color: var(--ink-faint); margin: 0 0 2rem; }
-      .home { display: inline-block; margin-bottom: 1.5rem; }
       a { color: var(--accent); text-underline-offset: 2px; }
       a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
       ul { padding-left: 1.25rem; }
@@ -57,8 +84,27 @@
     </style>
   </head>
   <body>
+    <div class="page">
+    <header>
+      <a class="wordmark" href="/" aria-label="Shelf Thread home">Shelf Thread</a>
+      <!-- The app's ThreadMark (spool + thread through author, work and subject nodes), drawn at a fixed 120px width. -->
+      <svg class="thread" width="120" height="26" viewBox="0 0 120 26" aria-hidden="true">
+        <path class="line" d="M14.44 14.44 C17.41 14.44 20.37 10.54 23.33 10.54 C35.56 10.54 47.78 18.34 60 18.34 C72.22 18.34 84.44 10.54 96.67 10.54 C104.44 10.54 112.22 14.44 120 14.44" />
+        <circle cx="23.33" cy="10.54" r="3" fill="var(--node-author)" />
+        <circle cx="60" cy="18.34" r="3" fill="var(--node-work)" />
+        <circle cx="96.67" cy="10.54" r="3" fill="var(--node-subject)" />
+        <g transform="scale(0.7222)">
+          <rect class="core" x="6" y="7" width="14" height="22" />
+          <line class="wind" x1="6" y1="11" x2="20" y2="11" /><line class="wind" x1="6" y1="15" x2="20" y2="15" />
+          <line class="wind" x1="6" y1="19" x2="20" y2="19" /><line class="wind" x1="6" y1="23" x2="20" y2="23" />
+          <line class="wind" x1="6" y1="27" x2="20" y2="27" />
+          <rect class="flange" x="2" y="2" width="22" height="5" rx="2.5" />
+          <rect class="flange" x="2" y="29" width="22" height="5" rx="2.5" />
+        </g>
+      </svg>
+      <p class="subtitle">Privacy policy</p>
+    </header>
     <main>
-      <a class="home" href="/">← Shelf Thread</a>
       <h1>Privacy Policy</h1>
       <p class="updated">Last updated November 14, 2026</p>
 
@@ -142,5 +188,6 @@
       <p><strong>Changes.</strong> If we change this policy, we will update the date at the top and post the new version at <a href="https://shelfthread.com/privacy.html">shelfthread.com/privacy.html</a>. Significant changes will also be noted in the app.</p>
       <p><strong>Contact.</strong> Questions or requests: <a href="mailto:support@shelfthread.com">support@shelfthread.com</a>.</p>
     </main>
+    </div>
   </body>
 </html>

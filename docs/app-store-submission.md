@@ -1,0 +1,149 @@
+# App Store submission plan: Shelf Thread
+
+Written for: the developer submitting the first iOS build of Shelf Thread, working through App Store Connect and EAS for the first time.
+
+Items marked **Verify** are facts this repo cannot settle. Check them in the Apple or Expo dashboards before you submit.
+
+## 1. What the repo already gives you
+
+| Item | Value | Source |
+|---|---|---|
+| Display name | Shelf Thread | `apps/app/app.json` `expo.name` |
+| Bundle ID | `com.bbradle1.bookexplorer` | `apps/app/app.json` `ios.bundleIdentifier` |
+| Version | 1.0.0 | `apps/app/app.json` `expo.version` |
+| Build number | Auto-incremented by EAS on the `production` profile | `apps/app/eas.json` `build.production.autoIncrement` |
+| iOS app icon | 1024×1024 RGB PNG | `apps/app/assets/icon.png` |
+| Camera permission text | "Shelf Thread uses the camera to scan book barcodes." | `apps/app/app.json` `NSCameraUsageDescription` |
+| Orientation | Portrait | `apps/app/app.json` |
+| Tablet support | Yes (`supportsTablet: true`) | `apps/app/app.json` |
+| Privacy policy | Written, at `apps/app/public/privacy.html`, last updated November 14, 2026 | Served from the website, see §3 |
+
+## 2. Before the first build
+
+1. **Commit the working-tree changes.** `apps/app/public/privacy.html` has uncommitted edits, and `apps/app/public/fonts/` is untracked. The policy must be the version that ships on the website.
+2. **Verify the Expo owner.** `apps/app/app.json` sets `"owner": "engomia"`, and the EAS project ID is `90a4fb20-31a2-43e3-b63a-2afa3224cbc8`. Make sure the Expo account that owns this project is the one that will submit the build. **Verify**
+3. **Export compliance.** `apps/app/app.json` now sets `ios.config.usesNonExemptEncryption: false`. Expo writes this as `ITSAppUsesNonExemptEncryption` in Info.plist. The app uses only HTTPS and the iOS Keychain (via `expo-secure-store`), which fall under the standard-encryption exemption. The AES-256-GCM encryption of Hardcover and Open Library tokens happens on the server, not in the app. **Verify** that the exemption applies to your case.
+4. **Privacy manifest.** `apps/app/app.json` now sets `ios.privacyManifests`, and Expo writes it to `PrivacyInfo.xcprivacy` at build time. The data types match §4 and the three required-reason APIs (UserDefaults, file timestamps, system boot time) come from the earlier manifest. Check that the reasons still fit the code, and check the built app's manifest with Xcode's privacy report before you submit. **Verify**
+   - The data type identifiers are Apple's standard names. Confirm them against Apple's privacy manifest documentation. **Verify**
+   - Server IP-address logs are not in the manifest. Add them only if you decide they count as collected data (§4). **Verify**
+   - The old root-level `ios/` folder was deleted and regenerated as `apps/app/ios/` (gitignored), with the current bundle ID and privacy manifest. Its Xcode project is now named `ShelfThread`. `pod install` needs a UTF-8 locale (`LANG=en_US.UTF-8`) to run.
+   - Leftovers from an earlier root-level prebuild (a root `app.json` with the old `com.engomia` bundle ID, a root `android/` folder, and edits to the root `package.json` and `package-lock.json`) were removed. The root package files are back to their committed versions.
+5. **Confirm the policy URL is live.** The policy needs to load at `https://shelfthread.com/privacy.html` before you enter it in App Store Connect. **Verify**
+6. **Confirm the server is up.** Apple's reviewer will search for books, so the production server must answer when they test it.
+
+## 3. App Store Connect setup
+
+### App information
+- **Name:** Shelf Thread. Check that the name is free on the App Store. The store requires unique names. **Verify**
+- **Subtitle:** A short line such as "Explore how books connect" (30 characters max).
+- **Bundle ID:** `com.bbradle1.bookexplorer`. Register it under Certificates, Identifiers & Profiles, or let EAS create it.
+- **Primary category:** Reference or Books. Secondary category: optional.
+- **Age rating:** Complete the questionnaire. The app has no user-generated content, no messaging, no ads, and no mature content. Expect 4+. **Verify** the answers as you complete the questionnaire.
+- **Privacy policy URL:** `https://shelfthread.com/privacy.html`
+- **Support URL:** Must be a live page with contact details. The policy lists `support@shelfthread.com`. **Verify** that the mailbox exists.
+- **Marketing URL:** Optional, `https://shelfthread.com`.
+
+### Pricing and availability
+- Price: Free (the app has no in-app purchases or subscriptions).
+- Territories: Start with all, or limit to the United States for the first release.
+
+### Screenshots
+- Required sizes: 6.9" iPhone (1320×2868 or 1290×2796) and, if you keep iPad support, 13" iPad. The 6.9" set covers the smaller sizes.
+- Capture: search results, a book page, the Graph view, a saved list, and the barcode scanner.
+- Include a screenshot of the Graph view so the reviewer sees the core feature.
+
+### Description and keywords
+- Describe what the app does: searching books, exploring connections among books, authors and subjects, checking library availability, and optional sync with Hardcover and Open Library.
+- Keywords (100 characters): books, library, reading, ISBN, barcode, catalog, graph, Hardcover, Open Library, reading list.
+- Do not use competitor names as keywords. Describe the features instead.
+
+## 4. App Privacy ("nutrition label")
+
+Answer from what the app actually sends. The privacy policy at `apps/app/public/privacy.html` is the reference. **Verify** each answer against the code before you submit.
+
+**Tracking:** No. The app does not track users across other companies' apps or websites, and it does not use the advertising identifier.
+
+**Data collected** (apply "Data Linked to You" only where a user identity is attached; the app has no accounts, so most data falls under "Data Not Linked to You"):
+
+| Data type | Collected? | Linked to you? | Purpose | Basis in repo |
+|---|---|---|---|---|
+| Search History | Yes | No | App Functionality | Search terms are sent to the server (`apps/server/src/routes/searchRoutes`) |
+| Identifiers: User ID | Yes, only for connected accounts | Yes | App Functionality | Hardcover user ID and username, Open Library username (`apps/app/src/api/client.ts`, `sessionStore.ts`) |
+| Other Data: Access tokens / keys | Yes, only for connected accounts | Yes | App Functionality | Hardcover tokens and Open Library keys stored on the server |
+| Diagnostics / Usage | Server logs only | No | App Functionality, Analytics | Server request logs with IP addresses, kept 30 days |
+| Contact Info, Location, Contacts, Photos, Health, Financial, Sensitive Info | No | — | — | None found in the code |
+| User Content | Only if the user sends feedback | No | App Functionality | Feedback goes to a Google Form, not to the app (`FEEDBACK_FORM_URL`) |
+
+Notes for the answers:
+- **Server logs** record IP addresses. Apple's categories for this are Identifiers or Diagnostics, depending on how you read "collected". Pick one, keep it consistent with the policy, and check the Apple guidance when you fill it in. **Verify**
+- **Feedback** goes through Google Forms, which is a third-party service. Apple asks about data the app collects, so a link to a form may not count, but the policy discloses it. **Verify**
+- **Camera:** barcode frames are processed on the device and are not stored. Apple does not treat this as collected data.
+- **Local storage** (saved books, lists, history, preferences) stays on the device and is not collected. Do not declare it.
+
+## 5. Accessibility nutrition labels
+
+Apple's Accessibility Nutrition Labels describe which accessibility features the app supports. Declare only what you have tested on a device. Use the existing WCAG 2.2 AA work as a starting point.
+
+Features to test and declare:
+
+| Feature | What to test | Repo support |
+|---|---|---|
+| VoiceOver | Walk through search, book, graph list, saved, and scan screens | Button roles, labels, and a Graph List view (the non-visual alternative) per `docs/superpowers/plans/2026-10-21-feature-roadmap.md` |
+| Voice Control | Say the visible label of each button and link | Labels follow the visible text |
+| Larger Text (Dynamic Type) | Set the largest text size and check for clipping | **Verify** |
+| Sufficient Contrast | Check text and input borders in light and dark themes | Contrast tokens tuned 2026-10-26 |
+| Dark Interface | Confirm the dark theme | `userInterfaceStyle: automatic` and theme tokens |
+| Differentiate Without Color | Check that status (available, checked out, selected) is not shown by color alone | **Verify** |
+| Reduced Motion | Check the graph animation with Reduce Motion on | **Verify** |
+| Captions / Audio Descriptions | The app has no audio or video | Not applicable |
+
+The worktree copy of `accessibilityFixPlan.txt` (under `.claude/worktrees/ux-refresh-a/`) describes the phases of the WCAG 2.2 AA work. Copy it into `docs/` if you want it in the repo. Note that the roadmap refers to it at the repo root, but it is not there.
+
+## 6. Review risks
+
+- **Account deletion (Guideline 5.1.1(v)).** The app has no accounts of its own. Connected Hardcover and Open Library accounts can be disconnected in Settings, and "Delete all data" removes local data. Mention this in the review notes.
+- **Third-party sign-in (Guideline 4.8).** Hardcover and Open Library sign-in is optional and not used to create the app account, so Sign in with Apple should not be required. If the reviewer disagrees, the response is that connection is optional. **Verify** before you submit.
+- **Camera (Guideline 5.1.1).** Write in the review notes that the camera is only for barcode scanning, that typing an ISBN is an alternative, and that no images are saved.
+- **Reviewer access.** The app works without an account, so no demo login is needed. Say so in the notes.
+- **External links.** Bookshop.org, WorldCat, and library sites open in the browser through `expo-web-browser`. Mention this in the notes.
+- **Server dependency.** Search needs the production server. Describe this in the review notes and keep the server up during review.
+
+Suggested review notes text:
+
+> Shelf Thread needs no account. Search works immediately. Connecting Hardcover or Open Library is optional and is in Settings. Camera access is used only to read book barcodes; typing an ISBN also works. Data stays on the device except for search requests to our server. The privacy policy is at https://shelfthread.com/privacy.html.
+
+## 7. Build and submit
+
+```sh
+cd apps/app
+npx eas-cli build --platform ios --profile production
+npx eas-cli submit --platform ios --profile production
+```
+
+After the build finishes:
+1. In App Store Connect, open the uploaded build under the app's version and attach it.
+2. Fill in the App Privacy and Accessibility sections (§4 and §5).
+3. Add screenshots, description, and review notes (§3 and §6).
+4. Submit for review.
+
+The `submit.production` block in `eas.json` is empty. Fill in your Apple ID, App Store Connect app ID, and team ID there, or enter them when EAS prompts. **Verify**
+
+## 8. Checklist
+
+- [ ] Commit `privacy.html` and `fonts/`
+- [ ] Confirm the Expo owner and project
+- [x] Set `ios.config.usesNonExemptEncryption: false` in `app.json` (done)
+- [x] Add `ios.privacyManifests` to `app.json` (done)
+- [ ] Verify the export-compliance exemption and the privacy manifest identifiers (§2 items 3–4)
+- [ ] Check the built app's `PrivacyInfo.xcprivacy` in Xcode's privacy report
+- [x] Replace the stale root `ios/` folder with `apps/app/ios/` (done; regenerated and `pod install` run)
+- [x] Remove the root-level leftovers (`app.json`, `android/`, root `package.json` and `package-lock.json` edits) (done)
+- [ ] Confirm `https://shelfthread.com/privacy.html` and the support mailbox are live
+- [ ] Confirm the production server is up
+- [ ] Reserve the app name
+- [ ] Complete the age rating questionnaire
+- [ ] Capture screenshots, including the Graph view
+- [ ] Complete App Privacy from §4 and check each answer against the code
+- [ ] Test each accessibility feature in §5 and declare only what passes
+- [ ] Write the review notes from §6
+- [ ] Build and submit with EAS (§7)
