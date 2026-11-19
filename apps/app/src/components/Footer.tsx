@@ -7,6 +7,7 @@ const WIKIDATA_LOGO_URL =
   "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Wikidata_Stamp_Rec_Light.svg/960px-Wikidata_Stamp_Rec_Light.svg.png";
 const OPEN_LIBRARY_URL = "https://openlibrary.org";
 const PRIVACY_POLICY_URL = "https://shelfthread.com/privacy.html";
+const ACCESSIBILITY_URL = "https://shelfthread.com/accessibility.html";
 
 /** Attribution footer shown at the end of scrollable screens, since Wikidata- and Open Library-sourced data appears throughout the app. */
 export function Footer() {
@@ -25,6 +26,9 @@ export function Footer() {
       </Pressable>
       <Pressable ref={titleRef("Read the privacy policy")} onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} accessibilityRole="link">
         <Text style={styles.text}>Privacy policy</Text>
+      </Pressable>
+      <Pressable ref={titleRef("Read the accessibility statement")} onPress={() => Linking.openURL(ACCESSIBILITY_URL)} accessibilityRole="link">
+        <Text style={styles.text}>Accessibility</Text>
       </Pressable>
     </View>
   );

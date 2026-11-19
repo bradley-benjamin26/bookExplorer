@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessibility · Shelf Thread</title>
+    <meta name="description" content="How Shelf Thread supports people who use assistive technology, what we know does not work yet, and how to tell us." />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="canonical" href="https://shelfthread.com/accessibility.html" />
+    <!-- Inline styles and self-hosted fonts only: the site's CSP allows no outside stylesheets or fonts.
+         Same styles as privacy.html; fonts and colors are copies of the app's (src/theme.ts, src/themeColors.ts); update all together. -->
+    <style>
+      @font-face { font-family: "Fraunces"; font-weight: 500; font-display: swap; src: url("/fonts/Fraunces_500Medium.ttf") format("truetype"); }
+      @font-face { font-family: "Fraunces"; font-weight: 600; font-display: swap; src: url("/fonts/Fraunces_600SemiBold.ttf") format("truetype"); }
+      @font-face { font-family: "Hanken Grotesk"; font-weight: 400; font-display: swap; src: url("/fonts/HankenGrotesk_400Regular.ttf") format("truetype"); }
+      @font-face { font-family: "Hanken Grotesk"; font-weight: 600; font-display: swap; src: url("/fonts/HankenGrotesk_600SemiBold.ttf") format("truetype"); }
+      :root {
+        color-scheme: light dark;
+        --shell: #E3EADF;
+        --paper: #EDF3E8;
+        --card: #F8FAF4;
+        --ink: #202B25;
+        --ink-faint: #4C5C50;
+        --accent: #A84623;
+        --rule: #B6C8B7;
+        --border: #C9D5C7;
+        --thread: #6A8071;
+        --node-author: #375663;
+        --node-work: #963B1B;
+        --node-subject: #506D4D;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --shell: #0F1411;
+          --paper: #161D19;
+          --card: #1E2722;
+          --ink: #E6EDE4;
+          --ink-faint: #A9B7AC;
+          --accent: #E58A63;
+          --rule: #34423A;
+          --border: #2A352E;
+          --thread: #6F8575;
+          --node-author: #8FB4C4;
+          --node-work: #E58A63;
+          --node-subject: #9FC49A;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--shell);
+        color: var(--ink);
+        font: 16px/1.6 "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-text-size-adjust: 100%;
+      }
+      .page { max-width: 720px; min-height: 100vh; margin: 0 auto; background: var(--paper); }
+      header { padding: 1rem; border-bottom: 1px solid var(--border); }
+      .wordmark { display: inline-block; font: 500 20px/1.3 "Fraunces", Georgia, serif; color: var(--ink); text-decoration: none; }
+      .thread { display: block; }
+      .thread .line { fill: none; stroke: var(--thread); stroke-width: 1.25; stroke-linecap: round; }
+      .thread .wind { stroke: var(--thread); stroke-width: 1.25; stroke-linecap: round; }
+      .thread .core { fill: var(--thread); fill-opacity: 0.18; }
+      .thread .flange { fill: var(--paper); stroke: var(--thread); stroke-width: 1.5; }
+      .thread circle { stroke: var(--paper); stroke-width: 1.5; }
+      .subtitle { margin: 0; color: var(--ink-faint); font-size: 14px; }
+      main { padding: 2rem 1rem 4rem; }
+      h1, h2 { font-family: "Fraunces", Georgia, serif; font-weight: 600; line-height: 1.25; }
+      h1 { font-size: 31px; margin: 0 0 0.25rem; }
+      h2 { font-size: 25px; margin: 2.5rem 0 0.5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+      strong { font-weight: 600; }
+      .updated { color: var(--ink-faint); margin: 0 0 2rem; }
+      a { color: var(--accent); text-underline-offset: 2px; }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+      ul { padding-left: 1.25rem; }
+      li { margin: 0.35rem 0; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+    <header>
+      <a class="wordmark" href="/" aria-label="Shelf Thread home">Shelf Thread</a>
+      <!-- The app's ThreadMark (spool + thread through author, work and subject nodes), drawn at a fixed 120px width. -->
+      <svg class="thread" width="120" height="26" viewBox="0 0 120 26" aria-hidden="true">
+        <path class="line" d="M14.44 14.44 C17.41 14.44 20.37 10.54 23.33 10.54 C35.56 10.54 47.78 18.34 60 18.34 C72.22 18.34 84.44 10.54 96.67 10.54 C104.44 10.54 112.22 14.44 120 14.44" />
+        <circle cx="23.33" cy="10.54" r="3" fill="var(--node-author)" />
+        <circle cx="60" cy="18.34" r="3" fill="var(--node-work)" />
+        <circle cx="96.67" cy="10.54" r="3" fill="var(--node-subject)" />
+        <g transform="scale(0.7222)">
+          <rect class="core" x="6" y="7" width="14" height="22" />
+          <line class="wind" x1="6" y1="11" x2="20" y2="11" /><line class="wind" x1="6" y1="15" x2="20" y2="15" />
+          <line class="wind" x1="6" y1="19" x2="20" y2="19" /><line class="wind" x1="6" y1="23" x2="20" y2="23" />
+          <line class="wind" x1="6" y1="27" x2="20" y2="27" />
+          <rect class="flange" x="2" y="2" width="22" height="5" rx="2.5" />
+          <rect class="flange" x="2" y="29" width="22" height="5" rx="2.5" />
+        </g>
+      </svg>
+      <p class="subtitle">Accessibility</p>
+    </header>
+    <main>
+      <h1>Accessibility</h1>
+      <p class="updated">Last updated November 19, 2026</p>
+
+      <p>We want Shelf Thread to work for as many people as possible, including people who use screen readers, larger text, voice control, keyboards or reduced motion. Our target is <a href="https://www.w3.org/TR/WCAG22/">WCAG 2.2</a> Level AA. We have not reached that everywhere, and this page says what works, what does not yet, and how to tell us.</p>
+      <p>This page covers the Shelf Thread app for iOS and Android and the website at shelfthread.com.</p>
+
+      <h2 id="supported">What we have built in</h2>
+      <ul>
+        <li><strong>Screen readers.</strong> Buttons, links, tabs and toggles have labels and roles so VoiceOver and TalkBack can announce what they do. Error messages are announced as alerts. On iPhone and iPad, scan results and share confirmations are spoken aloud.</li>
+        <li><strong>Exploring connections without the picture.</strong> The graph of how books, authors and subjects connect also has a List view that describes each connection in words. It opens automatically when a screen reader or large text is on (in the iOS and Android apps), and anyone can switch to it with the List button.</li>
+        <li><strong>Text size.</strong> Text follows your device's text-size setting.</li>
+        <li><strong>Light and dark.</strong> The app follows your device's light or dark setting, and you can change it in Settings.</li>
+        <li><strong>Reduced motion.</strong> If you turn on Reduce Motion in your device settings, the graph and the decorative thread animation do not animate.</li>
+        <li><strong>Color contrast.</strong> We measured the main text, button, chip, outline and focus colors in both light and dark themes. Text meets the 4.5:1 ratio and control outlines meet 3:1.</li>
+        <li><strong>No camera needed.</strong> Scanning a barcode is optional. You can type an ISBN instead.</li>
+        <li><strong>Keyboard (website).</strong> The website can be used with a keyboard and has a skip-to-content link.</li>
+      </ul>
+
+      <h2 id="limits">What does not work well yet</h2>
+      <ul>
+        <li><strong>The graph picture.</strong> The graph is a drawing, so it is hard to use without sight or with very large text. Use the List view instead.</li>
+        <li><strong>Android scan announcements.</strong> On Android, a scanned book is added and shown on screen, but the app may not speak it aloud the way it does on iPhone and iPad.</li>
+        <li><strong>Keyboard focus on the website.</strong> We have added a clear focus outline to some controls, and we are still checking that it is visible on all of them.</li>
+        <li><strong>Large text layouts.</strong> We have not yet checked every screen at the largest device text sizes.</li>
+        <li><strong>Book information from other sources.</strong> Titles, descriptions and covers come from public book catalogs. Their quality varies. Covers are labeled with the book's title and author, but we cannot describe the artwork on them.</li>
+        <li><strong>Other websites.</strong> Links to library catalogs, Bookshop.org, WorldCat and other sites open outside Shelf Thread, and we do not control how accessible they are.</li>
+      </ul>
+
+      <h2 id="review">How we checked</h2>
+      <p>This statement is based on our own review of the app's code and measured color contrast. We have not had an independent audit, and we have not published a formal conformance report (a VPAT). We have not tested with every assistive technology or on every device. If we change what we know, we will update this page and its date.</p>
+
+      <h2 id="feedback">Tell us about a problem</h2>
+      <p>If something in Shelf Thread is hard or impossible for you to use, please let us know. Tell us what you were trying to do, what happened, and which device and assistive technology you use if you are comfortable sharing that.</p>
+      <ul>
+        <li>Email <a href="mailto:support@shelfthread.com">support@shelfthread.com</a>.</li>
+        <li>Or use Share feedback at the bottom of most screens in the app.</li>
+      </ul>
+      <p>We read every message and will use it to decide what to fix next. See also our <a href="/privacy.html">privacy policy</a>.</p>
+    </main>
+    </div>
+  </body>
+</html>
