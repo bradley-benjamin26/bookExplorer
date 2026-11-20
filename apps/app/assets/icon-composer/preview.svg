@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- All four layers stacked, for a quick look outside Icon Composer. Not an Icon Composer input. -->
+  <rect width="1024" height="1024" fill="#1E2722" />
+  <g transform="translate(80 40)">
+    <rect x="180" y="160" width="140" height="200" fill="#A9B7AC" fill-opacity="0.35" />
+    <line x1="180" y1="195" x2="320" y2="195" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="235" x2="320" y2="235" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="275" x2="320" y2="275" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="315" x2="320" y2="315" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <rect x="145" y="105" width="210" height="56" rx="28" fill="#E6EDE4" />
+    <rect x="145" y="359" width="210" height="56" rx="28" fill="#E6EDE4" />
+    <path d="M330 285 C450 285 540 300 610 340 C700 395 470 470 400 560 C340 640 600 700 650 790" fill="none" stroke="#E6EDE4" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="610" cy="340" r="52" fill="#8FB4C4" stroke="#1E2722" stroke-width="16" />
+    <circle cx="400" cy="560" r="52" fill="#E58A63" stroke="#1E2722" stroke-width="16" />
+    <circle cx="650" cy="790" r="52" fill="#9FC49A" stroke="#1E2722" stroke-width="16" />
+  </g>
+</svg>

@@ -12,7 +12,7 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 | Bundle ID | `com.bbradle1.bookexplorer` | `apps/app/app.json` `ios.bundleIdentifier` |
 | Version | 1.0.0 | `apps/app/app.json` `expo.version` |
 | Build number | Auto-incremented by EAS on the `production` profile | `apps/app/eas.json` `build.production.autoIncrement` |
-| iOS app icon | 1024×1024 RGB PNG | `apps/app/assets/icon.png` |
+| iOS app icon | `apps/app/assets/icon.png` is Expo's blank template icon (a blue chevron with guide circles), not your design. Replace it before submitting for review. Layered artwork for Icon Composer is in `apps/app/assets/icon-composer/`: 1024×1024 PNG layers with transparency in `png/` (`background.png`, `spool.png`, `thread.png`, `nodes.png`) and the same layers as SVG (Icon Composer rejected the SVGs, so use the PNGs). `preview.svg` and `png/preview.png` are stacked previews only. The finished Icon Composer file is `apps/app/assets/icon-composer/button.icon`, and `ios.icon` in `app.json` points at it, so the next build uses it on iOS. Build 2 shipped with the template icon. The top-level `icon` (`assets/icon.png`) is still the template; it only affects web and Expo Go. **Verify** in the build log that the icon is picked up (it needs a recent Xcode on the EAS build image). | `apps/app/assets/icon.png`, `apps/app/assets/icon-composer/` |
 | Camera permission text | "Shelf Thread uses the camera to scan book barcodes." | `apps/app/app.json` `NSCameraUsageDescription` |
 | Orientation | Portrait | `apps/app/app.json` |
 | Tablet support | Yes (`supportsTablet: true`) | `apps/app/app.json` |
@@ -25,11 +25,13 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 3. **Export compliance.** `apps/app/app.json` now sets `ios.config.usesNonExemptEncryption: false`. Expo writes this as `ITSAppUsesNonExemptEncryption` in Info.plist. The app uses only HTTPS and the iOS Keychain (via `expo-secure-store`), which fall under the standard-encryption exemption. The AES-256-GCM encryption of Hardcover and Open Library tokens happens on the server, not in the app. **Verify** that the exemption applies to your case.
 4. **Privacy manifest.** `apps/app/app.json` now sets `ios.privacyManifests`, and Expo writes it to `PrivacyInfo.xcprivacy` at build time. The data types match §4 and the three required-reason APIs (UserDefaults, file timestamps, system boot time) come from the earlier manifest. Check that the reasons still fit the code, and check the built app's manifest with Xcode's privacy report before you submit. **Verify**
    - The data type identifiers are Apple's standard names. Confirm them against Apple's privacy manifest documentation. **Verify**
+   - The camera plugin adds a microphone permission message on iOS and `RECORD_AUDIO` on Android by default, and the app never records audio. `app.json` now sets `microphonePermission: false` and `recordAudioAndroid: false` on `expo-camera`, and the duplicated manifest entries and Android permissions that appeared after the first EAS build were removed. A build made before this change (build 2) may still carry the microphone message, so rebuild before you submit for review. **Verify**
    - Server IP-address logs are not in the manifest. Add them only if you decide they count as collected data (§4). **Verify**
    - The old root-level `ios/` folder was deleted and regenerated as `apps/app/ios/` (gitignored), with the current bundle ID and privacy manifest. Its Xcode project is now named `ShelfThread`. `pod install` needs a UTF-8 locale (`LANG=en_US.UTF-8`) to run.
    - Leftovers from an earlier root-level prebuild (a root `app.json` with the old `com.engomia` bundle ID, a root `android/` folder, and edits to the root `package.json` and `package-lock.json`) were removed. The root package files are back to their committed versions.
 5. **Confirm the policy URL is live.** The policy needs to load at `https://shelfthread.com/privacy.html` before you enter it in App Store Connect. **Verify**
 6. **Confirm the server is up.** Apple's reviewer will search for books, so the production server must answer when they test it.
+7. **Give the production build its server URL.** `apps/app/src/api/client.ts` throws in a production build unless `EXPO_PUBLIC_API_BASE_URL` is set, and it sends `EXPO_PUBLIC_APP_SHARED_SECRET` as `X-App-Key` when set. Today `EXPO_PUBLIC_API_BASE_URL` exists only in `apps/app/.env`, which is gitignored, so EAS will not see it. Add these as EAS environment variables (or an `env` block in the `production` profile of `eas.json` for non-secret values) before you build. The production value is `https://api.shelfthread.com` (the static site is at shelfthread.com; the API is only on the `api` host), with no trailing slash. A request without an `X-App-Key` header succeeded on 2026-11-19, so `APP_SHARED_SECRET` appears to be unset on the production server and the app does not need `EXPO_PUBLIC_APP_SHARED_SECRET`. If you turn the secret on later, set the matching value in the same EAS environment. **Verify**
 
 ## 3. App Store Connect setup
 
@@ -51,11 +53,12 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 - Required sizes: 6.9" iPhone (1320×2868 or 1290×2796) and, if you keep iPad support, 13" iPad. The 6.9" set covers the smaller sizes.
 - Capture: search results, a book page, the Graph view, a saved list, and the barcode scanner.
 - Include a screenshot of the Graph view so the reviewer sees the core feature.
+- If the Xcode simulator is too heavy for your Mac, build with EAS, install the build on your own iPhone through TestFlight, and take the screenshots there. The pixel size must match what App Store Connect asks for, and if you have no iPad, set `supportsTablet` to `false` before building so you only need iPhone screenshots.
 
 ### Description and keywords
 - Describe what the app does: searching books, exploring connections among books, authors and subjects, checking library availability, and optional sync with Hardcover and Open Library.
-- Keywords (100 characters): books, library, reading, ISBN, barcode, catalog, graph, Hardcover, Open Library, reading list.
-- Do not use competitor names as keywords. Describe the features instead.
+- Keywords (100 characters max, comma-separated with no spaces): `recommendations,reading,lists,library,catalog,barcode,scanner,isbn,authors,similar,graph,discover` (97 characters). Words already in the app name or subtitle ("shelf", "thread", "explore", "books", "connect") are indexed anyway, so don't repeat them. Singular and plural forms count as one.
+- Do not use other companies' names (Hardcover, Open Library, Goodreads) as keywords. Apple's rules bar trademarked terms and other apps' names in metadata. Naming Hardcover and Open Library in the description, to say what the app connects to, is fine.
 
 ## 4. App Privacy ("nutrition label")
 
@@ -142,6 +145,7 @@ The `submit.production` block in `eas.json` is empty. Fill in your Apple ID, App
 - [x] Remove the root-level leftovers (`app.json`, `android/`, root `package.json` and `package-lock.json` edits) (done)
 - [ ] Confirm `https://shelfthread.com/privacy.html` and the support mailbox are live
 - [ ] Confirm the production server is up
+- [ ] Set `EXPO_PUBLIC_API_BASE_URL=https://api.shelfthread.com` as a production EAS environment variable (the shared secret only if you enable it on the server)
 - [ ] Reserve the app name
 - [ ] Complete the age rating questionnaire
 - [ ] Capture screenshots, including the Graph view
