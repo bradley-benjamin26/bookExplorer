@@ -13,6 +13,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bbradle1.bookexplorer",
+      "icon": "./assets/icon-composer/button.icon",
       "infoPlist": {
         "NSCameraUsageDescription": "Shelf Thread uses the camera to scan book barcodes."
       },

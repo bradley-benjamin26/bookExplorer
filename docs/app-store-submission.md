@@ -12,7 +12,7 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 | Bundle ID | `com.bbradle1.bookexplorer` | `apps/app/app.json` `ios.bundleIdentifier` |
 | Version | 1.0.0 | `apps/app/app.json` `expo.version` |
 | Build number | Auto-incremented by EAS on the `production` profile | `apps/app/eas.json` `build.production.autoIncrement` |
-| iOS app icon | 1024×1024 RGB PNG | `apps/app/assets/icon.png` |
+| iOS app icon | `apps/app/assets/icon.png` is Expo's blank template icon (a blue chevron with guide circles), not your design. Replace it before submitting for review. Layered artwork for Icon Composer is in `apps/app/assets/icon-composer/`: 1024×1024 PNG layers with transparency in `png/` (`background.png`, `spool.png`, `thread.png`, `nodes.png`) and the same layers as SVG (Icon Composer rejected the SVGs, so use the PNGs). `preview.svg` and `png/preview.png` are stacked previews only. The finished Icon Composer file is `apps/app/assets/icon-composer/button.icon`, and `ios.icon` in `app.json` points at it, so the next build uses it on iOS. Build 2 shipped with the template icon. The top-level `icon` (`assets/icon.png`) is still the template; it only affects web and Expo Go. **Verify** in the build log that the icon is picked up (it needs a recent Xcode on the EAS build image). | `apps/app/assets/icon.png`, `apps/app/assets/icon-composer/` |
 | Camera permission text | "Shelf Thread uses the camera to scan book barcodes." | `apps/app/app.json` `NSCameraUsageDescription` |
 | Orientation | Portrait | `apps/app/app.json` |
 | Tablet support | Yes (`supportsTablet: true`) | `apps/app/app.json` |
@@ -57,8 +57,8 @@ Items marked **Verify** are facts this repo cannot settle. Check them in the App
 
 ### Description and keywords
 - Describe what the app does: searching books, exploring connections among books, authors and subjects, checking library availability, and optional sync with Hardcover and Open Library.
-- Keywords (100 characters): books, library, reading, ISBN, barcode, catalog, graph, Hardcover, Open Library, reading list.
-- Do not use competitor names as keywords. Describe the features instead.
+- Keywords (100 characters max, comma-separated with no spaces): `recommendations,reading,lists,library,catalog,barcode,scanner,isbn,authors,similar,graph,discover` (97 characters). Words already in the app name or subtitle ("shelf", "thread", "explore", "books", "connect") are indexed anyway, so don't repeat them. Singular and plural forms count as one.
+- Do not use other companies' names (Hardcover, Open Library, Goodreads) as keywords. Apple's rules bar trademarked terms and other apps' names in metadata. Naming Hardcover and Open Library in the description, to say what the app connects to, is fine.
 
 ## 4. App Privacy ("nutrition label")
 

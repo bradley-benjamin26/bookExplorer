@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Thread leaving the spool and winding down through the three nodes. Transparent background. -->
+  <g transform="translate(80 40)">
+    <path d="M330 285 C450 285 540 300 610 340 C700 395 470 470 400 560 C340 640 600 700 650 790" fill="none" stroke="#E6EDE4" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- The spool from the app's ThreadMark, enlarged and in light tones for a dark background. Transparent background. -->
+  <g transform="translate(80 40)">
+    <rect x="180" y="160" width="140" height="200" fill="#A9B7AC" fill-opacity="0.35" />
+    <line x1="180" y1="195" x2="320" y2="195" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="235" x2="320" y2="235" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="275" x2="320" y2="275" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <line x1="180" y1="315" x2="320" y2="315" stroke="#A9B7AC" stroke-width="14" stroke-linecap="round" />
+    <rect x="145" y="105" width="210" height="56" rx="28" fill="#E6EDE4" />
+    <rect x="145" y="359" width="210" height="56" rx="28" fill="#E6EDE4" />
+  </g>
+</svg>
